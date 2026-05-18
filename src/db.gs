@@ -1,0 +1,136 @@
+// Thin DB wrapper around Google Sheets
+// All writes use LockService per FR-2
+
+var TABS = [
+  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
+  'Students', 'Indicators', 'SubjectWeights', 'Attendance',
+  'IndicatorScores', 'SummativeScores', 'Characteristics',
+  'ReadThinkWrite', 'AuditLog'
+];
+
+function getSheet(tabName) {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  var ss = SpreadsheetApp.openById(id);
+  var sheet = ss.getSheetByName(tabName);
+  if (!sheet) throw new Error('Tab not found: ' + tabName);
+  return sheet;
+}
+
+function dbGetAll(tabName) {
+  var sheet = getSheet(tabName);
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  var headers = data[0];
+  return data.slice(1).map(function(row) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = row[i]; });
+    return obj;
+  });
+}
+
+function dbInsert(tabName, row) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var values = headers.map(function(h) { return row[h] !== undefined ? row[h] : ''; });
+    sheet.appendRow(values);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function dbUpdate(tabName, idField, idValue, updates) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf(idField);
+    if (idCol === -1) throw new Error('ID column not found: ' + idField);
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][idCol] === idValue) {
+        Object.keys(updates).forEach(function(key) {
+          var col = headers.indexOf(key);
+          if (col !== -1) sheet.getRange(i + 1, col + 1).setValue(updates[key]);
+        });
+        return true;
+      }
+    }
+    return false;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function dbDelete(tabName, idField, idValue) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf(idField);
+    if (idCol === -1) throw new Error('ID column not found: ' + idField);
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (data[i][idCol] === idValue) {
+        sheet.deleteRow(i + 1);
+        return true;
+      }
+    }
+    return false;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function dbDeleteWhere(tabName, idField, prefix) {
+  // Delete rows where idField starts with prefix (used by test cleanup)
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf(idField);
+    if (idCol === -1) return 0;
+    var deleted = 0;
+    for (var i = data.length - 1; i >= 1; i--) {
+      var val = String(data[i][idCol]);
+      if (val.indexOf(prefix) === 0) {
+        sheet.deleteRow(i + 1);
+        deleted++;
+      }
+    }
+    return deleted;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function dbFind(tabName, field, value) {
+  var rows = dbGetAll(tabName);
+  return rows.filter(function(r) { return r[field] === value; });
+}
+
+function dbFindOne(tabName, field, value) {
+  var rows = dbFind(tabName, field, value);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+function generateId(prefix) {
+  return prefix + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+}
+
+function appendAuditLog(userId, entity, entityId, oldValue, newValue) {
+  dbInsert('AuditLog', {
+    timestamp: new Date().toISOString(),
+    user_id: userId,
+    entity: entity,
+    entity_id: entityId,
+    old_value: JSON.stringify(oldValue),
+    new_value: JSON.stringify(newValue)
+  });
+}

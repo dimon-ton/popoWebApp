@@ -1,0 +1,92 @@
+// Authentication: login, session management, role checks
+
+var SESSION_TTL_SECONDS = 43200; // 12 hours
+
+function handleLogin(e) {
+  var params = e.parameter;
+  var username = (params.username || '').trim();
+  var password = params.password || '';
+
+  if (!username || !password) {
+    var tmpl = HtmlService.createTemplateFromFile('login');
+    tmpl.data = { error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' };
+    return tmpl.evaluate().setTitle('PopoWebApp');
+  }
+
+  var users = dbGetAll('Users');
+  var user = null;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].username === username) {
+      user = users[i];
+      break;
+    }
+  }
+
+  if (!user) {
+    return loginError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  }
+
+  var hash = computeHash(password, user.salt);
+  if (hash !== user.password_hash) {
+    return loginError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  }
+
+  var token = generateToken();
+  var cache = CacheService.getScriptCache();
+  var sessionData = JSON.stringify({
+    user_id: user.user_id,
+    username: user.username,
+    full_name: user.full_name,
+    role: user.role,
+    expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
+  });
+  cache.put('session_' + token, sessionData, SESSION_TTL_SECONDS);
+
+  var tmpl = HtmlService.createTemplateFromFile('dashboard');
+  tmpl.data = { session: JSON.parse(sessionData), token: token };
+  return tmpl.evaluate().setTitle('PopoWebApp');
+}
+
+function getSession(token) {
+  if (!token) return null;
+  var cache = CacheService.getScriptCache();
+  var raw = cache.get('session_' + token);
+  if (!raw) return null;
+  var session = JSON.parse(raw);
+  if (Date.now() > session.expires_at) {
+    cache.remove('session_' + token);
+    return null;
+  }
+  return session;
+}
+
+function requireAdmin(session) {
+  if (!session || session.role !== 'admin') {
+    throw new Error('Forbidden: admin only');
+  }
+}
+
+function computeHash(password, salt) {
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    password + salt
+  );
+  return bytes.map(function(b) {
+    return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0');
+  }).join('');
+}
+
+function generateToken() {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var result = '';
+  for (var i = 0; i < 40; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function loginError(msg) {
+  var tmpl = HtmlService.createTemplateFromFile('login');
+  tmpl.data = { error: msg };
+  return tmpl.evaluate().setTitle('PopoWebApp');
+}

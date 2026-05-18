@@ -1,0 +1,116 @@
+# Iteration 2 Log
+
+## Metadata
+
+- **Task ID**: US-019
+- **Task Title**: Admin bulk-assigns one teacher to many subjects
+- **Description**: As an admin, I want to assign one teacher to many subjects in one class (or many classes for one subject) in a single action so onboarding a new teacher is fast.
+- **Status**: completed
+- **Task Completed**: Yes
+- **Promise Detected**: Yes
+- **Started At**: 2026-05-18T15:20:38.955Z
+- **Ended At**: 2026-05-18T15:23:35.483Z
+- **Duration**: 2m 56s
+- **Input Tokens**: 71
+- **Output Tokens**: 10724
+- **Total Tokens**: 10795
+- **Agent**: claude
+- **Model**: claude-sonnet-4-6
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I'll start by studying the progress file and existing codebase to understand what's already been implemented.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m
+[94m[Glob][0m [95mC:\Users\saich\Documents\popoWebApp[0m pattern: [96m**/*.gs[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\enrollments.gs[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m
+Now let me check the admin_enrollments.html to see if the bulk assign UI is already there:
+[94m[Glob][0m [95mC:\Users\saich\Documents\popoWebApp[0m pattern: [96m**/*.html[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\admin.spec.ts[0m
+Now let me read the rest of the admin.spec.ts to see if US-019 test already exists:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\admin.spec.ts[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m
+I now have a clear picture of what's already implemented. The server-side `handleBulkAssign` function in `enrollments.gs` is already complete. The `Code.gs` routes `bulk_assign` POST action to it. However, **US-019 is missing**:
+
+1. The **Bulk assign UI panel** in `admin_enrollments.html`
+2. The **Playwright test** for US-019 in `tests/admin.spec.ts`
+
+Let me implement both now.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\helpers\seed.ts[0m
+Now I have all the context I need. I'll implement:
+1. The **Bulk assign UI panel** in `admin_enrollments.html`
+2. The **US-019 Playwright test** in `tests/admin.spec.ts`
+
+Let me add the bulk assign panel to the HTML first. I'll add it as a collapsible section in the right panel area, accessible from the teacher tab:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m edit: "    .badge-unassigned { color: #888; font-style: i..." → "    .badge-unassigned { color: #888; font-style: i..."
+Now add the Bulk assign panel HTML in the right panel area, after the container div:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m edit: "  <!-- RIGHT -->
+  <div class="right-panel" id="ri..." → "  <!-- RIGHT -->
+  <div class="right-panel" id="ri..."
+Now add the "Bulk assign" tab button to the tab bar:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m edit: "      <button class="tab-btn active" id="tab-teach..." → "      <button class="tab-btn active" id="tab-teach..."
+Now update the `switchTab` JavaScript function to handle the bulk tab, and add the bulk assign JS functions:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m edit: "// ---- Tab switching ----
+function switchTab(tab)..." → "// ---- Tab switching ----
+function switchTab(tab)..."
+Now add the bulk assign JavaScript functions before the `// ---- Server-side data calls ----` comment:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\admin_enrollments.html[0m edit: "// ---- Server-side data calls ----
+// These actio..." → "// ---- US-019: Bulk assign ----
+var bulkMode = 'A..."
+Now add the US-019 Playwright test to `tests/admin.spec.ts`:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\tests\admin.spec.ts[0m edit: "  test('US-018: non-admin user gets 403 block scre..." → "  test('US-018: non-admin user gets 403 block scre..."
+Now run TypeScript type-check to verify no errors:
+[94m[Bash][0m TypeScript type-check all test files $ cd "C:\Users\saich\Documents\popoWebApp" && npx tsc --noEmit 2>&1
+
+[91m[Error: Exit code 2
+tests/admin.spec.ts(262,21): error TS2584: Cannot find name 'document'. Do you need to change your target library? Try changing the 'lib' compiler option to include 'dom'.
+tests/admin.spec.ts(262,65): error TS2304: Cannot find name 'HTMLSelectElement'.
+tests/admin.spec.ts(264,11): error TS18046: 'opt' is of type 'unknown'.
+tests/admin.spec.ts(264,26): error TS18046: 'opt' is of type 'unknown'.
+tests/admin.spec.ts(264,46): error TS18046: 'opt' is of type 'unknown'.
+tests/admin.spec.ts(264,66): error TS18046: 'opt' is of type 'unknown'.][0m
+The `page.evaluate` callback runs in the browser context but TypeScript doesn't know that. I need to use a typed approach. Let me fix this by using Playwright's `locator.evaluate` or just clicking the options directly:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\tests\admin.spec.ts[0m edit: "    // Multi-select all 3 test classes
+    await p..." → "    // Multi-select all 3 test classes via the sel..."
+[94m[Bash][0m TypeScript type-check after fix $ cd "C:\Users\saich\Documents\popoWebApp" && npx tsc --noEmit 2>&1
+
+[91m[Error: Exit code 2
+tests/admin.spec.ts(261,13): error TS2304: Cannot find name 'HTMLSelectElement'.
+tests/admin.spec.ts(263,11): error TS18046: 'opt' is of type 'unknown'.
+tests/admin.spec.ts(263,39): error TS18046: 'opt' is of type 'unknown'.][0m
+The tsconfig doesn't include the `dom` lib for the evaluate callback. Let me check:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tsconfig.json[0m
+The `lib` doesn't include `dom`. The simplest fix is to avoid using browser DOM types in the evaluate callback and use a plain untyped approach with `any`:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\tests\admin.spec.ts[0m edit: "    // Multi-select all 3 test classes via the sel..." → "    // Multi-select all 3 test classes via the sel..."
+[94m[Bash][0m TypeScript type-check after any cast fix $ cd "C:\Users\saich\Documents\popoWebApp" && npx tsc --noEmit 2>&1
+TypeScript passes clean. Now let me update the progress file:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "---
+
+## 2026-05-18 - US-018" → "### Playwright evaluate() DOM types
+- `page.evalua..."
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "---
+
+" → "---
+
+## 2026-05-18 - US-019
+- **What was implement..."
+
+[91m[Error: <tool_use_error>Found 2 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence, please provide more context to uniquely identify the instance.
+String: ---
+
+</tool_use_error>][0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "  - The `tests/.auth/auth.json` requires a one-tim..." → "  - The `tests/.auth/auth.json` requires a one-tim..."
+US-019 is complete. Here's a summary of what was done:
+
+**Server-side** (`enrollments.gs` + `Code.gs`) — already fully implemented in the US-018 iteration. `handleBulkAssign` runs under `LockService.getDocumentLock()`, writes one `Enrollments` row per pair (insert or update), appends `AuditLog` entries, returns `{ created, reassigned, unchanged }`, and calls `invalidateWorkloadCache()`.
+
+**UI** (`src/admin_enrollments.html`) — added:
+- A third tab "กำหนดกลุ่ม" (`#tab-bulk`) next to the existing tabs
+- `#bulkAssignTab` panel with mode A (many subjects, one class) and mode B (many classes, one subject)
+- `populateBulkDropdowns()` populates dropdowns lazily on tab open
+- `submitBulkAssign(mode)` POSTs to `bulk_assign` and shows the `N created / M reassigned / K unchanged` result in `#bulkResult`
+
+**Tests** (`tests/admin.spec.ts`) — added 3 US-019 tests seeding 3 classes + 1 teacher + 1 subject, running mode B bulk assign, and asserting the summary text and API-level enrollment rows. TypeScript check passes clean.
+
+<promise>COMPLETE</promise>

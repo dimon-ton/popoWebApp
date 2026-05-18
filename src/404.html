@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ไม่พบหน้า — PopoWebApp</title>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f0f4fa; }
+    .block { background: white; border-radius: 8px; padding: 40px; max-width: 400px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    h1 { font-size: 20px; color: #555; margin-bottom: 12px; }
+    p { color: #666; font-size: 14px; margin-bottom: 20px; }
+    a { color: #1a56a0; }
+  </style>
+</head>
+<body>
+  <div class="block">
+    <h1>404 — ไม่พบหน้าที่ต้องการ</h1>
+    <p><?= data.message || '' ?></p>
+    <a href="?page=dashboard">กลับหน้าหลัก</a>
+  </div>
+</body>
+</html>

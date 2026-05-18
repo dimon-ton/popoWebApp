@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการผู้สอน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar {
+      background: #1a56a0; color: white; padding: 12px 20px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .container { display: flex; height: calc(100vh - 50px); }
+
+    /* Left panel — teacher list */
+    .teacher-panel {
+      width: 280px; min-width: 220px; background: white;
+      border-right: 1px solid #ddd; display: flex; flex-direction: column;
+    }
+    .panel-header {
+      padding: 14px 16px; background: #f0f4fa; border-bottom: 1px solid #ddd;
+      font-weight: bold; font-size: 14px;
+    }
+    .tab-bar {
+      display: flex; border-bottom: 1px solid #ddd;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px; cursor: pointer; border: none; background: white;
+      font-size: 13px; color: #555; border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { border-bottom-color: #1a56a0; color: #1a56a0; font-weight: bold; }
+    .teacher-list { flex: 1; overflow-y: auto; }
+    .teacher-item {
+      padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .teacher-item:hover { background: #f0f4fa; }
+    .teacher-item.selected { background: #e3ecf8; border-left: 3px solid #1a56a0; }
+    .teacher-name { font-size: 14px; }
+    .pair-badge {
+      background: #1a56a0; color: white; border-radius: 12px;
+      padding: 2px 8px; font-size: 12px; min-width: 28px; text-align: center;
+    }
+
+    /* Right panel */
+    .right-panel {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .right-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .right-empty {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; color: #888; font-size: 15px;
+    }
+
+    /* All pairs tab */
+    .all-pairs-panel { flex: 1; overflow-y: auto; padding: 20px; }
+
+    /* Enrollment table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f0f4fa; padding: 10px 12px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #fafcff; }
+
+    /* Add pair form */
+    .add-pair-form {
+      background: white; border: 1px solid #ddd; border-radius: 6px;
+      padding: 16px; margin-bottom: 20px;
+    }
+    .add-pair-form h3 { font-size: 14px; margin-bottom: 12px; color: #444; }
+    .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+    .form-group label { font-size: 12px; color: #555; }
+    select, input[type="text"] {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 13px; font-family: inherit;
+    }
+    select:focus, input:focus { outline: none; border-color: #1a56a0; }
+    .btn {
+      padding: 8px 18px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 13px; font-family: inherit; transition: background 0.15s;
+    }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154a8e; }
+    .btn-danger { background: #dc3545; color: white; padding: 5px 12px; font-size: 12px; }
+    .btn-danger:hover { background: #c82333; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #333; color: white; padding: 10px 22px; border-radius: 6px;
+      font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999;
+    }
+    #toast.show { opacity: 1; }
+    #toast.success { background: #28a745; }
+    #toast.error { background: #dc3545; }
+
+    /* Dialog */
+    .dialog-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .dialog-overlay.open { display: flex; }
+    .dialog {
+      background: white; border-radius: 8px; padding: 24px; max-width: 440px; width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .dialog h3 { margin-bottom: 14px; font-size: 16px; }
+    .dialog p { font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 20px; }
+    .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .badge-unassigned { color: #888; font-style: italic; }
+
+    /* Bulk assign panel */
+    .bulk-panel {
+      background: white; border: 1px solid #ddd; border-radius: 6px;
+      padding: 16px; margin-bottom: 20px;
+    }
+    .bulk-panel h3 { font-size: 14px; margin-bottom: 12px; color: #444; }
+    .bulk-mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .bulk-mode-btn {
+      padding: 6px 14px; border: 1px solid #ccc; border-radius: 4px;
+      cursor: pointer; font-size: 12px; background: white; font-family: inherit;
+    }
+    .bulk-mode-btn.active {
+      background: #1a56a0; color: white; border-color: #1a56a0;
+    }
+    .bulk-result {
+      margin-top: 12px; padding: 10px 14px; border-radius: 4px;
+      font-size: 13px; background: #e8f5e9; color: #2e7d32; display: none;
+    }
+    .bulk-result.show { display: block; }
+    select[multiple] { min-height: 100px; }
+
+    /* Section headers */
+    .section-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; color: #1a56a0; }
+    .teacher-detail-header {
+      background: white; border: 1px solid #ddd; border-radius: 6px;
+      padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .teacher-detail-header .teacher-name-big { font-size: 18px; font-weight: bold; }
+    .teacher-detail-header .pair-count { color: #666; font-size: 14px; }
+    .no-data { color: #888; font-size: 14px; padding: 20px 0; }
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="?page=dashboard&token=<?= data.session ? data.session.token : '' ?>">หน้าหลัก</a>
+  <a href="?page=admin_users&token=<?= data.session ? data.session.token : '' ?>">จัดการผู้ใช้</a>
+  <a href="?page=admin_workload&token=<?= data.session ? data.session.token : '' ?>">ภาระงานครู</a>
+  <span style="margin-left:auto;font-size:13px">
+    <?= data.session ? data.session.full_name : '' ?> (admin)
+  </span>
+</div>
+
+<div class="container">
+  <!-- LEFT: Teacher list -->
+  <div class="teacher-panel">
+    <div class="panel-header">รายชื่อครู</div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-teacher" onclick="switchTab('teacher')">ครูรายคน</button>
+      <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">ทุกคู่</button>
+      <button class="tab-btn" id="tab-bulk" onclick="switchTab('bulk')">กำหนดกลุ่ม</button>
+    </div>
+    <div class="teacher-list" id="teacherList">
+      <div style="padding:16px;color:#888;font-size:13px">กำลังโหลด...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel" id="rightPanel">
+    <div class="right-content" id="teacherTab">
+      <div class="right-empty" id="emptyState">เลือกครูจากรายการทางซ้าย</div>
+      <div id="teacherDetail" style="display:none"></div>
+    </div>
+    <div class="all-pairs-panel" id="allPairsTab" style="display:none">
+      <div class="section-title">ทุกคู่ (class, subject) ในโรงเรียน</div>
+      <div id="allPairsContent">กำลังโหลด...</div>
+    </div>
+    <!-- US-019: Bulk assign panel -->
+    <div class="all-pairs-panel" id="bulkAssignTab" style="display:none">
+      <div class="section-title">กำหนดครูแบบกลุ่ม</div>
+      <div class="bulk-panel">
+        <h3>โหมด</h3>
+        <div class="bulk-mode-tabs">
+          <button class="bulk-mode-btn active" id="bulkModeABtn" onclick="switchBulkMode('A')">
+            (A) หลายวิชา — ชั้นเดียว
+          </button>
+          <button class="bulk-mode-btn" id="bulkModeBBtn" onclick="switchBulkMode('B')">
+            (B) หลายชั้น — วิชาเดียว
+          </button>
+        </div>
+
+        <!-- Mode A: pick class + teacher + multi-select subjects -->
+        <div id="bulkModeA">
+          <div class="form-row" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>ชั้นเรียน</label>
+              <select id="bulkAClassId"></select>
+            </div>
+            <div class="form-group">
+              <label>ครู</label>
+              <select id="bulkATeacherId"></select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label>วิชา (เลือกได้หลายรายการ)</label>
+            <select id="bulkASubjectIds" multiple></select>
+          </div>
+          <button class="btn btn-primary" id="bulkABtn" onclick="submitBulkAssign('A')">กำหนดครู</button>
+        </div>
+
+        <!-- Mode B: pick subject + teacher + multi-select classes -->
+        <div id="bulkModeB" style="display:none">
+          <div class="form-row" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>วิชา</label>
+              <select id="bulkBSubjectId"></select>
+            </div>
+            <div class="form-group">
+              <label>ครู</label>
+              <select id="bulkBTeacherId"></select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label>ชั้นเรียน (เลือกได้หลายรายการ)</label>
+            <select id="bulkBClassIds" multiple></select>
+          </div>
+          <button class="btn btn-primary" id="bulkBBtn" onclick="submitBulkAssign('B')">กำหนดครู</button>
+        </div>
+
+        <div class="bulk-result" id="bulkResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign confirmation dialog -->
+<div class="dialog-overlay" id="reassignDialog">
+  <div class="dialog">
+    <h3>ยืนยันการเปลี่ยนครูผู้สอน</h3>
+    <p id="reassignMsg"></p>
+    <div class="dialog-actions">
+      <button class="btn" onclick="closeReassignDialog()">ยกเลิก</button>
+      <button class="btn btn-primary" id="confirmReassignBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.session ? data.session.token : '' ?>';
+var WEB_APP_URL = window.location.href.split('?')[0];
+
+var allData = null;
+var selectedTeacherId = null;
+var pendingReassign = null;
+
+// ---- Init ----
+loadData();
+
+function loadData() {
+  callServer('get_enrollments_data', {}, function(data) {
+    if (data.error) { showToast(data.error, 'error'); return; }
+    allData = data;
+    renderTeacherList();
+    renderAllPairs();
+  });
+}
+
+function callServer(action, params, cb) {
+  params.token = TOKEN;
+  params.action = action;
+  var url = WEB_APP_URL + '?' + Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+  fetch(url, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(cb)
+    .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
+}
+
+function postServer(action, params, cb) {
+  params.token = TOKEN;
+  params.action = action;
+  var body = new URLSearchParams(params);
+  fetch(WEB_APP_URL, { method: 'POST', body: body, redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(cb)
+    .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
+}
+
+// ---- Tab switching ----
+function switchTab(tab) {
+  document.getElementById('tab-teacher').classList.toggle('active', tab === 'teacher');
+  document.getElementById('tab-allpairs').classList.toggle('active', tab === 'allpairs');
+  document.getElementById('tab-bulk').classList.toggle('active', tab === 'bulk');
+  document.getElementById('teacherTab').style.display = tab === 'teacher' ? '' : 'none';
+  document.getElementById('allPairsTab').style.display = tab === 'allpairs' ? '' : 'none';
+  document.getElementById('bulkAssignTab').style.display = tab === 'bulk' ? '' : 'none';
+  if (tab === 'bulk') populateBulkDropdowns();
+}
+
+// ---- Teacher list ----
+function renderTeacherList() {
+  var el = document.getElementById('teacherList');
+  if (!allData || !allData.teachers || allData.teachers.length === 0) {
+    el.innerHTML = '<div style="padding:16px;color:#888;font-size:13px">ไม่พบครูในระบบ</div>';
+    return;
+  }
+  el.innerHTML = allData.teachers.map(function(t) {
+    return '<div class="teacher-item" id="ti-' + t.user_id + '" onclick="selectTeacher(\'' + t.user_id + '\')">' +
+      '<span class="teacher-name">' + escHtml(t.full_name) + '</span>' +
+      '<span class="pair-badge" id="badge-' + t.user_id + '">' + t.pair_count + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function selectTeacher(userId) {
+  selectedTeacherId = userId;
+  // Highlight
+  document.querySelectorAll('.teacher-item').forEach(function(el) {
+    el.classList.remove('selected');
+  });
+  var item = document.getElementById('ti-' + userId);
+  if (item) item.classList.add('selected');
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('teacherDetail').style.display = '';
+  renderTeacherDetail(userId);
+}
+
+function renderTeacherDetail(userId) {
+  var teacher = allData.teachers.find(function(t) { return t.user_id === userId; });
+  if (!teacher) return;
+
+  callServer('get_teacher_enrollments', { teacher_user_id: userId }, function(data) {
+    if (data.error) { showToast(data.error, 'error'); return; }
+    renderDetailPanel(teacher, data.enrollments || []);
+  });
+}
+
+function renderDetailPanel(teacher, enrollments) {
+  var detail = document.getElementById('teacherDetail');
+
+  // Build class & subject dropdowns from allData
+  var classOptions = (allData.classes || []).map(function(c) {
+    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.level + '/' + c.section) + '</option>';
+  }).join('');
+  var subjectOptions = (allData.subjects || []).map(function(s) {
+    return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(s.subject_name) + '</option>';
+  }).join('');
+
+  var tableRows = enrollments.length === 0
+    ? '<tr><td colspan="3" class="no-data">ยังไม่มีคู่ที่กำหนด</td></tr>'
+    : enrollments.map(function(en) {
+        return '<tr>' +
+          '<td>' + escHtml(en.class_label) + '</td>' +
+          '<td>' + escHtml(en.subject_name) + '</td>' +
+          '<td><button class="btn btn-danger" onclick="removeEnrollment(\'' + en.enrollment_id + '\')" data-eid="' + en.enrollment_id + '">ลบ</button></td>' +
+        '</tr>';
+      }).join('');
+
+  detail.innerHTML =
+    '<div class="teacher-detail-header">' +
+      '<div>' +
+        '<div class="teacher-name-big">' + escHtml(teacher.full_name) + '</div>' +
+        '<div class="pair-count" id="pairCountLabel">' + enrollments.length + ' คู่ที่กำหนด</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="add-pair-form">' +
+      '<h3>เพิ่มคู่ (ชั้น, วิชา)</h3>' +
+      '<div class="form-row">' +
+        '<div class="form-group">' +
+          '<label>ชั้นเรียน</label>' +
+          '<select id="addClassId">' + classOptions + '</select>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>วิชา</label>' +
+          '<select id="addSubjectId">' + subjectOptions + '</select>' +
+        '</div>' +
+        '<button class="btn btn-primary" id="addPairBtn" onclick="addPair()">เพิ่ม</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="section-title">คู่ที่กำหนดให้ครู</div>' +
+    '<table id="enrollmentTable">' +
+      '<thead><tr><th>ชั้น</th><th>วิชา</th><th></th></tr></thead>' +
+      '<tbody id="enrollmentBody">' + tableRows + '</tbody>' +
+    '</table>';
+}
+
+function addPair() {
+  if (!selectedTeacherId) return;
+  var classId = document.getElementById('addClassId').value;
+  var subjectId = document.getElementById('addSubjectId').value;
+  var btn = document.getElementById('addPairBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  postServer('add_enrollment', {
+    teacher_user_id: selectedTeacherId,
+    class_id: classId,
+    subject_id: subjectId
+  }, function(data) {
+    btn.disabled = false;
+    btn.textContent = 'เพิ่ม';
+
+    if (data.error) { showToast(data.error, 'error'); return; }
+
+    if (data.status === 'conflict') {
+      // Show reassign dialog
+      pendingReassign = {
+        existing_enrollment_id: data.existing_enrollment_id,
+        new_teacher_user_id: selectedTeacherId,
+        class_id: classId,
+        subject_id: subjectId,
+        other_teacher_name: data.other_teacher_name
+      };
+      var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
+      var teacherName = teacher ? teacher.full_name : selectedTeacherId;
+      document.getElementById('reassignMsg').textContent =
+        'วิชานี้สอนโดย ' + data.other_teacher_name + ' อยู่แล้ว — ต้องการเปลี่ยนเป็น ' + teacherName + ' ใช่ไหม?';
+      document.getElementById('reassignDialog').classList.add('open');
+      return;
+    }
+
+    if (data.status === 'unchanged') {
+      showToast('คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว', 'success');
+      return;
+    }
+
+    showToast('เพิ่มสำเร็จ', 'success');
+    refreshEnrollments(data.enrollments);
+    updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
+    loadData(); // reload allData for All pairs tab
+  });
+}
+
+function removeEnrollment(enrollmentId) {
+  if (!confirm('ต้องการลบคู่นี้ออกใช่ไหม?')) return;
+  postServer('remove_enrollment', {
+    enrollment_id: enrollmentId,
+    teacher_user_id: selectedTeacherId
+  }, function(data) {
+    if (data.error) { showToast(data.error, 'error'); return; }
+    showToast('ลบสำเร็จ', 'success');
+    refreshEnrollments(data.enrollments);
+    updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
+    loadData();
+  });
+}
+
+function refreshEnrollments(enrollments) {
+  if (!enrollments) return;
+  var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
+  if (!teacher) return;
+  var tableRows = enrollments.length === 0
+    ? '<tr><td colspan="3" class="no-data">ยังไม่มีคู่ที่กำหนด</td></tr>'
+    : enrollments.map(function(en) {
+        return '<tr>' +
+          '<td>' + escHtml(en.class_label) + '</td>' +
+          '<td>' + escHtml(en.subject_name) + '</td>' +
+          '<td><button class="btn btn-danger" onclick="removeEnrollment(\'' + en.enrollment_id + '\')" data-eid="' + en.enrollment_id + '">ลบ</button></td>' +
+        '</tr>';
+      }).join('');
+  var tbody = document.getElementById('enrollmentBody');
+  if (tbody) tbody.innerHTML = tableRows;
+  var label = document.getElementById('pairCountLabel');
+  if (label) label.textContent = enrollments.length + ' คู่ที่กำหนด';
+}
+
+function updatePairCount(userId, count) {
+  var badge = document.getElementById('badge-' + userId);
+  if (badge && count !== null) badge.textContent = count;
+  // Also update allData
+  if (allData && allData.teachers) {
+    var t = allData.teachers.find(function(x) { return x.user_id === userId; });
+    if (t && count !== null) t.pair_count = count;
+  }
+}
+
+// ---- Reassign dialog ----
+document.getElementById('confirmReassignBtn').addEventListener('click', function() {
+  if (!pendingReassign) return;
+  this.disabled = true;
+  this.textContent = 'กำลังดำเนินการ...';
+  var self = this;
+  postServer('confirm_reassign', pendingReassign, function(data) {
+    self.disabled = false;
+    self.textContent = 'ยืนยัน';
+    closeReassignDialog();
+    if (data.error) { showToast(data.error, 'error'); return; }
+    showToast('เปลี่ยนครูผู้สอนสำเร็จ', 'success');
+    refreshEnrollments(data.enrollments);
+    loadData();
+  });
+});
+
+function closeReassignDialog() {
+  document.getElementById('reassignDialog').classList.remove('open');
+  pendingReassign = null;
+}
+
+// ---- All pairs tab ----
+function renderAllPairs() {
+  var el = document.getElementById('allPairsContent');
+  callServer('get_all_pairs_matrix', {}, function(data) {
+    if (data.error || !data.rows) {
+      el.innerHTML = '<div class="no-data">ไม่สามารถโหลดข้อมูลได้</div>';
+      return;
+    }
+    if (data.rows.length === 0) {
+      el.innerHTML = '<div class="no-data">ยังไม่มีข้อมูลชั้นเรียนหรือวิชา</div>';
+      return;
+    }
+    el.innerHTML = '<table>' +
+      '<thead><tr><th>ชั้น</th><th>วิชา</th><th>ครูผู้สอน</th></tr></thead>' +
+      '<tbody>' + data.rows.map(function(r) {
+        var teacherCell = r.teacher_name === 'ยังไม่ได้กำหนด'
+          ? '<span class="badge-unassigned">ยังไม่ได้กำหนด</span>'
+          : escHtml(r.teacher_name);
+        return '<tr>' +
+          '<td>' + escHtml(r.class_label) + '</td>' +
+          '<td>' + escHtml(r.subject_name) + '</td>' +
+          '<td>' + teacherCell + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  });
+}
+
+// ---- US-019: Bulk assign ----
+var bulkMode = 'A';
+
+function populateBulkDropdowns() {
+  if (!allData) return;
+  var classOptions = (allData.classes || []).map(function(c) {
+    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.level + '/' + c.section) + '</option>';
+  }).join('');
+  var subjectOptions = (allData.subjects || []).map(function(s) {
+    return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(s.subject_name) + '</option>';
+  }).join('');
+  var teacherOptions = (allData.teachers || []).map(function(t) {
+    return '<option value="' + escAttr(t.user_id) + '">' + escHtml(t.full_name) + '</option>';
+  }).join('');
+
+  // Mode A dropdowns
+  document.getElementById('bulkAClassId').innerHTML = classOptions;
+  document.getElementById('bulkASubjectIds').innerHTML = subjectOptions;
+  document.getElementById('bulkATeacherId').innerHTML = teacherOptions;
+
+  // Mode B dropdowns
+  document.getElementById('bulkBSubjectId').innerHTML = subjectOptions;
+  document.getElementById('bulkBClassIds').innerHTML = classOptions;
+  document.getElementById('bulkBTeacherId').innerHTML = teacherOptions;
+}
+
+function switchBulkMode(mode) {
+  bulkMode = mode;
+  document.getElementById('bulkModeABtn').classList.toggle('active', mode === 'A');
+  document.getElementById('bulkModeBBtn').classList.toggle('active', mode === 'B');
+  document.getElementById('bulkModeA').style.display = mode === 'A' ? '' : 'none';
+  document.getElementById('bulkModeB').style.display = mode === 'B' ? '' : 'none';
+  document.getElementById('bulkResult').classList.remove('show');
+}
+
+function submitBulkAssign(mode) {
+  var params = { mode: mode };
+  var btn;
+
+  if (mode === 'A') {
+    var classId = document.getElementById('bulkAClassId').value;
+    var teacherId = document.getElementById('bulkATeacherId').value;
+    var subjectSelect = document.getElementById('bulkASubjectIds');
+    var subjectIds = Array.from(subjectSelect.selectedOptions).map(function(o) { return o.value; });
+    if (!classId || !teacherId || subjectIds.length === 0) {
+      showToast('กรุณาเลือกชั้นเรียน ครู และวิชาอย่างน้อย 1 รายการ', 'error');
+      return;
+    }
+    params.class_id = classId;
+    params.teacher_user_id = teacherId;
+    params.subject_ids = subjectIds.join(',');
+    btn = document.getElementById('bulkABtn');
+  } else {
+    var subjectId = document.getElementById('bulkBSubjectId').value;
+    var teacherId2 = document.getElementById('bulkBTeacherId').value;
+    var classSelect = document.getElementById('bulkBClassIds');
+    var classIds = Array.from(classSelect.selectedOptions).map(function(o) { return o.value; });
+    if (!subjectId || !teacherId2 || classIds.length === 0) {
+      showToast('กรุณาเลือกวิชา ครู และชั้นเรียนอย่างน้อย 1 รายการ', 'error');
+      return;
+    }
+    params.subject_id = subjectId;
+    params.teacher_user_id = teacherId2;
+    params.class_ids = classIds.join(',');
+    btn = document.getElementById('bulkBBtn');
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+  document.getElementById('bulkResult').classList.remove('show');
+
+  postServer('bulk_assign', params, function(data) {
+    btn.disabled = false;
+    btn.textContent = 'กำหนดครู';
+    if (data.error) { showToast(data.error, 'error'); return; }
+    var msg = data.created + ' เพิ่มใหม่, ' + data.reassigned + ' เปลี่ยนครู, ' + data.unchanged + ' ไม่เปลี่ยน';
+    var resultEl = document.getElementById('bulkResult');
+    resultEl.textContent = msg;
+    resultEl.classList.add('show');
+    showToast('กำหนดครูแบบกลุ่มสำเร็จ', 'success');
+    loadData(); // refresh allData + teacher pair counts
+  });
+}
+
+// ---- Server-side data calls ----
+// These actions are GET-based for read operations
+var origCallServer = callServer;
+callServer = function(action, params, cb) {
+  // Map action names to server read functions
+  params.token = TOKEN;
+  var readActions = {
+    'get_enrollments_data': true,
+    'get_teacher_enrollments': true,
+    'get_all_pairs_matrix': true
+  };
+  if (readActions[action]) {
+    params.read_action = action;
+    var url = WEB_APP_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(TOKEN) + '&' +
+      Object.keys(params).filter(function(k) { return k !== 'action' && k !== 'token'; }).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+      }).join('&');
+    fetch(url, { redirect: 'follow' })
+      .then(function(r) { return r.json(); })
+      .then(cb)
+      .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
+  } else {
+    origCallServer(action, params, cb);
+  }
+};
+
+// ---- Toast ----
+var toastTimer = null;
+function showToast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (type || '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.className = ''; }, 3000);
+}
+
+// ---- Helpers ----
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s || '').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

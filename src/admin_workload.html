@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ภาระงานครู — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; }
+    .container { max-width: 960px; margin: 30px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f0f4fa; padding: 10px 12px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover td { background: #fafcff; }
+    tbody tr.active td { background: #e8f0fe; }
+    .drill-panel { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 16px; margin-top: 20px; display: none; }
+    .drill-panel.open { display: block; }
+    .drill-panel h3 { font-size: 15px; margin-bottom: 12px; color: #1a56a0; }
+    .drill-panel table th { background: #eef2fa; }
+    .drill-panel a { color: #1a56a0; text-decoration: none; font-size: 13px; }
+    .drill-panel a:hover { text-decoration: underline; }
+    .loading { color: #888; font-size: 14px; padding: 20px 0; }
+    .badge-count { display: inline-block; background: #1a56a0; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="?page=dashboard&token=<?= data.session ? data.session.token : '' ?>">หน้าหลัก</a>
+  <a href="?page=admin_enrollments&token=<?= data.session ? data.session.token : '' ?>">จัดการผู้สอน</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?> (admin)</span>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2>ภาระงานครู (Workload)</h2>
+    <div id="workloadContent" class="loading">กำลังโหลด...</div>
+    <div class="drill-panel" id="drillPanel">
+      <h3 id="drillTitle"></h3>
+      <table id="drillTable">
+        <thead><tr><th>ชั้น</th><th>วิชา</th><th>ลิงก์</th></tr></thead>
+        <tbody id="drillBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+var TOKEN = '<?= data.session ? data.session.token : '' ?>';
+var WEB_APP_URL = window.location.href.split('?')[0];
+
+loadWorkload();
+
+function loadWorkload() {
+  fetch(WEB_APP_URL + '?action=get_workload_data&token=' + encodeURIComponent(TOKEN), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { document.getElementById('workloadContent').textContent = 'เกิดข้อผิดพลาด: ' + data.error; return; }
+      renderWorkload(data.teachers || []);
+    })
+    .catch(function(err) { document.getElementById('workloadContent').textContent = 'Error: ' + err.message; });
+}
+
+function renderWorkload(teachers) {
+  // teachers already arrive sorted descending by pair_count from the server
+  if (teachers.length === 0) {
+    document.getElementById('workloadContent').textContent = 'ไม่พบครูในระบบ';
+    return;
+  }
+  var html = '<table id="workloadTable">' +
+    '<thead><tr>' +
+    '<th>ชื่อครู</th>' +
+    '<th>จำนวน (class, subject)</th>' +
+    '<th>รายวิชาที่สอน</th>' +
+    '<th>จำนวนนักเรียนรวม</th>' +
+    '</tr></thead>' +
+    '<tbody id="workloadBody">';
+  teachers.forEach(function(t, idx) {
+    html += '<tr id="row-' + esc(t.user_id) + '" data-idx="' + idx + '" onclick="showDrill(this, ' + idx + ')">' +
+      '<td class="teacher-name">' + esc(t.full_name) + '</td>' +
+      '<td class="pair-count">' + t.pair_count + '</td>' +
+      '<td class="subject-names">' + esc(t.subject_names) + '</td>' +
+      '<td class="student-count">' + t.student_count + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('workloadContent').innerHTML = html;
+  document.workloadTeachers = teachers;
+}
+
+function showDrill(row, idx) {
+  var t = document.workloadTeachers[idx];
+  if (!t) return;
+
+  // Toggle active highlight
+  var rows = document.querySelectorAll('#workloadBody tr');
+  rows.forEach(function(r) { r.classList.remove('active'); });
+  row.classList.add('active');
+
+  document.getElementById('drillTitle').textContent = t.full_name + ' — รายละเอียด (' + t.pair_count + ' คู่)';
+  var tbody = document.getElementById('drillBody');
+  tbody.innerHTML = '';
+
+  if (!t.pairs || t.pairs.length === 0) {
+    var emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = '<td colspan="3">ไม่มีข้อมูล</td>';
+    tbody.appendChild(emptyRow);
+  } else {
+    t.pairs.forEach(function(p) {
+      var tr = document.createElement('tr');
+      var gradeLink = WEB_APP_URL + '?page=gradebook&class_id=' + encodeURIComponent(p.class_id) +
+        '&subject_id=' + encodeURIComponent(p.subject_id) + '&token=' + encodeURIComponent(TOKEN);
+      tr.innerHTML =
+        '<td class="drill-class">' + esc(p.class_label) + '</td>' +
+        '<td class="drill-subject">' + esc(p.subject_name) + '</td>' +
+        '<td><a href="' + gradeLink + '" class="drill-link">เปิดเกรดบุ๊ก</a></td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  var panel = document.getElementById('drillPanel');
+  panel.classList.add('open');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+// Entry point for the Apps Script web app
+// Handles routing based on `page` parameter and auth checks
+
+function doGet(e) {
+  var params = e ? e.parameter : {};
+  var page = params.page || 'login';
+
+  // Handle test API endpoint (FR-14)
+  if (params.api) {
+    return handleTestApi(e);
+  }
+
+  var session = getSession(params.token);
+
+  // Unauthenticated: show login
+  if (!session && page !== 'login') {
+    return buildPage('login', { error: null });
+  }
+
+  // Admin-only pages
+  var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
+  if (adminPages.indexOf(page) !== -1) {
+    if (!session || session.role !== 'admin') {
+      return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
+    }
+  }
+
+  // Handle read-action JSON calls (from client JS)
+  var readAction = params.action;
+  if (readAction && session) {
+    return handleReadAction(readAction, params, session);
+  }
+
+  switch (page) {
+    case 'login':
+      return buildPage('login', { error: null });
+    case 'admin_enrollments':
+      return buildPage('admin_enrollments', { session: session });
+    case 'admin_workload':
+      return buildPage('admin_workload', { session: session });
+    case 'admin_users':
+      return buildPage('admin_users', { session: session });
+    case 'admin_setup':
+      return buildPage('admin_setup', { session: session });
+    case 'dashboard':
+      return buildPage('dashboard', { session: session });
+    default:
+      return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
+  }
+}
+
+function doPost(e) {
+  var params = e ? e.parameter : {};
+  var action = params.action || '';
+
+  if (action === 'login') {
+    return handleLogin(e);
+  }
+
+  var session = getSession(params.token);
+  if (!session) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  switch (action) {
+    // Enrollments (US-018)
+    case 'add_enrollment':
+      return handleAddEnrollment(e, session);
+    case 'remove_enrollment':
+      return handleRemoveEnrollment(e, session);
+    case 'confirm_reassign':
+      return handleConfirmReassign(e, session);
+    // Bulk assign (US-019)
+    case 'bulk_assign':
+      return handleBulkAssign(e, session);
+    default:
+      return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
+        .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function buildPage(pageName, data) {
+  var template = HtmlService.createTemplateFromFile(pageName);
+  template.data = data || {};
+  return template.evaluate()
+    .setTitle('PopoWebApp')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function handleReadAction(action, params, session) {
+  try {
+    var result;
+    switch (action) {
+      case 'get_enrollments_data':
+        requireAdmin(session);
+        result = getEnrollmentsData();
+        break;
+      case 'get_teacher_enrollments':
+        requireAdmin(session);
+        result = { enrollments: getTeacherEnrollments(params.teacher_user_id) };
+        break;
+      case 'get_all_pairs_matrix':
+        requireAdmin(session);
+        result = { rows: getAllPairsMatrix() };
+        break;
+      case 'get_workload_data':
+        requireAdmin(session);
+        result = getWorkloadData();
+        break;
+      default:
+        result = { error: 'Unknown read action: ' + action };
+    }
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

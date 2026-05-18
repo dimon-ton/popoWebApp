@@ -1,0 +1,108 @@
+{
+  "name": "PRD v2: PopoWebApp — School-wide Grade Book with Admin Assignment + Playwright MCP Testing",
+  "description": "This is **v2 of the PopoWebApp PRD** (supersedes `prd-popo-gradebook-webapp.md`). v2 keeps every user story from v1 (Excel parity — 17 stories) and adds two things:",
+  "branchName": "feature/prd-v2-popowebapp-school-wide-grade-book-with-admin-assignment-playwright-mcp-testing",
+  "userStories": [
+    {
+      "id": "US-018",
+      "title": "Admin assigns subjects to a teacher (teacher-first flow)",
+      "description": "As an admin, I want to select a teacher first and then add (class, subject) pairs to their schedule one by one, so I can clearly manage and grow each teacher's assignment list.",
+      "acceptanceCriteria": [
+        "Admin page `/admin/enrollments` shows a **teacher list** on the left panel — one row per teacher (role=teacher only) showing their name and current pair count.",
+        "Clicking a teacher opens a **right panel** showing all (class, subject) pairs currently assigned to that teacher as a table with columns: `ชั้น`, `วิชา`, and a \"Remove\" button per row.",
+        "The right panel has an **\"Add pair\" form** with two dropdowns: `class_id` (only classes not yet assigned to this teacher for the selected subject) and `subject_id`. Submitting appends the pair to the teacher's list.",
+        "If the selected (class, subject) is already assigned to a **different** teacher, the server responds with a confirmation dialog: \"วิชานี้สอนโดย [other teacher] อยู่แล้ว — ต้องการเปลี่ยนเป็น [this teacher] ใช่ไหม?\" Confirming reassigns and writes an audit-log row for both the removed and added assignment.",
+        "Clicking \"Remove\" on a row detaches that (class, subject) from the teacher; an audit-log row is written.",
+        "Each (class, subject) can have at most one teacher at any time (unique composite key enforced server-side).",
+        "Save/remove operations toast success and refresh the right panel inline without full-page reload.",
+        "Non-admin users hitting `/admin/enrollments` get a 403-style block screen.",
+        "A secondary read-only **\"All pairs\" tab** on the same page shows the full school matrix: every (class, subject) row with its assigned teacher or \"ยังไม่ได้กำหนด\" — useful for spotting gaps.",
+        "Playwright (`tests/admin.spec.ts -g US-018`):"
+      ],
+      "priority": 1,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-019",
+      "title": "Admin bulk-assigns one teacher to many subjects",
+      "description": "As an admin, I want to assign one teacher to many subjects in one class (or many classes for one subject) in a single action so onboarding a new teacher is fast.",
+      "acceptanceCriteria": [
+        "On `/admin/enrollments`, a \"Bulk assign\" panel offers two modes: **(A) Many subjects, one class:** pick a class, pick a teacher, multi-select subjects → apply. **(B) Many classes, one subject:** pick a subject, pick a teacher, multi-select classes → apply.",
+        "Submitting writes one `Enrollments` row per (class, subject), overwriting existing rows where present, inside a single `LockService.getDocumentLock()` block.",
+        "After submit, a result panel summarizes: `N created, M reassigned, K unchanged`.",
+        "Each created or reassigned tuple appends an `AuditLog` row.",
+        "Playwright (`tests/admin.spec.ts -g US-019`): seed 3 test classes + 1 teacher; bulk-assign mode B with 1 subject across all 3 classes; assert summary shows `3 created`; assert all 3 (class, subject) rows now have that teacher."
+      ],
+      "priority": 2,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-020",
+      "title": "Admin views teacher workload across the school",
+      "description": "As an admin, I want a dashboard showing each teacher and how many (class, subject) pairs they are assigned to, so I can balance workload.",
+      "acceptanceCriteria": [
+        "Admin page `/admin/workload` shows a table: one row per teacher with columns `ชื่อครู`, `จำนวน (class, subject)`, `รายวิชาที่สอน` (concatenated string), `จำนวนนักเรียนรวม` (sum of students across all assigned classes — distinct count so the same class counted once even if the teacher teaches two subjects there is fine; spec the formula in the row).",
+        "Default sort: workload count descending.",
+        "Click a teacher row → drill-down panel listing each (class, subject) they own with a link to the relevant grade-book page.",
+        "Excludes admin users.",
+        "Page renders in under 3s for up to 50 teachers and 500 enrollments (cache aggregates in `CacheService` for 60s).",
+        "Playwright (`tests/admin.spec.ts -g US-020`): seed 2 teachers with different workload counts (one with 3 enrollments, one with 1); visit `/admin/workload`; assert sort order (heavier first); click the heavier row; assert the drill-down lists exactly 3 (class, subject) lines."
+      ],
+      "priority": 3,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-021",
+      "title": "Playwright auth bootstrap (storageState)",
+      "description": "As the developer, I want a one-time bootstrap script that captures my logged-in browser session into `auth.json` so all later Playwright runs are non-interactive.",
+      "acceptanceCriteria": [
+        "`tests/auth.setup.ts` exists and is configured as a Playwright `setup` project that runs before all other test projects.",
+        "When run, it opens the production `/exec` URL in a non-headless Chromium with `pause()` after navigation.",
+        "On first execution: the human logs in (custom username/password) AND completes any Google \"authorize script\" consent if Apps Script demands it, then resumes the script.",
+        "After resume, the script calls `context.storageState({ path: 'tests/.auth/auth.json' })`.",
+        "All other test projects in `playwright.config.ts` set `use: { storageState: 'tests/.auth/auth.json' }`.",
+        "`tests/.auth/` is in `.gitignore`.",
+        "README documents: \"first time only, run `pnpm playwright test --project=setup` and follow the browser prompt.\" Subsequent runs use `pnpm playwright test`.",
+        "Verify: delete `auth.json`, run setup once with manual login, then run a sample story spec headless — it passes without prompting."
+      ],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-022",
+      "title": "Playwright test data isolation + cleanup helper",
+      "description": "As the developer, I want a shared helper that seeds and cleans `test_`-prefixed data so specs stay independent and never pollute production.",
+      "acceptanceCriteria": [
+        "`tests/helpers/seed.ts` exports: `seedTestClass({suffix, level, section})`, `seedTestSubject({suffix, name, code, group})`, `seedTestStudent({class_suffix, seq, full_name})`, `seedTestUser({suffix, role, password})`, `cleanupTestData()`.",
+        "Each seed function generates IDs prefixed with `test_<suffix>` (e.g. `test_class_us018a`).",
+        "Seed/cleanup functions invoke Apps Script via `fetch(WEB_APP_URL + '?api=...')` using a dedicated `Bearer` token stored in the Script Properties and matched server-side (the \"API token\" is a separate auth path from the username/password login — see FR-14).",
+        "`cleanupTestData()` deletes every row across all tabs where any ID column starts with `test_`.",
+        "A `beforeAll`/`afterAll` pair in each spec file uses these helpers.",
+        "`tests/helpers/seed.spec.ts` is a self-test that seeds, asserts, cleans up, asserts gone.",
+        "Verify: after a full test-suite run, query the production master Sheet for any rows with IDs starting `test_` — none should remain."
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-05-18T15:14:50.546Z",
+    "version": "1.0.0",
+    "sourcePrd": "tasks\\prd-popo-gradebook-webapp-v2.md",
+    "updatedAt": "2026-05-18T16:00:40.158Z"
+  }
+}

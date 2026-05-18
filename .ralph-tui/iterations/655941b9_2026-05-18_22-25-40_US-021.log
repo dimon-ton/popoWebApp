@@ -1,0 +1,77 @@
+# Iteration 4 Log
+
+## Metadata
+
+- **Task ID**: US-021
+- **Task Title**: Playwright auth bootstrap (storageState)
+- **Description**: As the developer, I want a one-time bootstrap script that captures my logged-in browser session into `auth.json` so all later Playwright runs are non-interactive.
+- **Status**: completed
+- **Task Completed**: Yes
+- **Promise Detected**: Yes
+- **Started At**: 2026-05-18T15:25:40.115Z
+- **Ended At**: 2026-05-18T15:27:03.237Z
+- **Duration**: 1m 23s
+- **Input Tokens**: 38
+- **Output Tokens**: 3191
+- **Total Tokens**: 3229
+- **Agent**: claude
+- **Model**: claude-sonnet-4-6
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I'll start by studying the progress file and existing codebase to understand the current state before implementing US-021.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m
+[94m[Glob][0m [95mC:\Users\saich\Documents\popoWebApp[0m pattern: [96m**/*[0m
+The progress log shows that `tests/auth.setup.ts` was already created during the US-018 iteration. Let me read the existing file to verify it meets all the US-021 acceptance criteria.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\auth.setup.ts[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\playwright.config.ts[0m
+Now let me check the `.gitignore` and README to verify the remaining acceptance criteria.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.gitignore[0m
+[94m[Glob][0m [95mC:\Users\saich\Documents\popoWebApp[0m pattern: [96mREADME*[0m
+There's no README file in the project root. The acceptance criteria requires README documentation. Let me check all criteria against what exists:
+
+1. ✅ `tests/auth.setup.ts` exists with proper `setup` configuration
+2. ✅ Opens production URL with `page.goto(webAppUrl)` and `page.pause()` for non-headless interaction
+3. ✅ Handles human login + Google consent flow during `pause()`
+4. ✅ Calls `context.storageState({ path: AUTH_FILE })` after resume
+5. ✅ `playwright.config.ts` has `storageState: 'tests/.auth/auth.json'` for chromium project
+6. ✅ `.gitignore` includes `tests/.auth/`
+7. ❌ README is missing — needs to document the first-time setup instructions
+
+I need to create a `README.md` with the required documentation.
+[94m[Write][0m [95mC:\Users\saich\Documents\popoWebApp\README.md[0m "# PopoWebApp
+
+Google Apps Script web app + Google Sheet as relational DB for school-wide grade book management.
+
+## Setup
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm... (2419 chars)"
+Now let me run the TypeScript type check to verify everything still compiles:
+[94m[PowerShell][0m Run TypeScript type check $ npx tsc --noEmit 2>&1
+TypeScript check passes with no errors. Now let me do a final verification of all acceptance criteria:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\auth.setup.ts[0m
+All acceptance criteria are satisfied. Let me update `progress.md`:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "---
+
+" → "---
+
+## 2026-05-18 - US-021
+- **What was implement..."
+
+[91m[Error: <tool_use_error>Found 4 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence, please provide more context to uniquely identify the instance.
+String: ---
+
+</tool_use_error>][0m
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "  - `evaluateAll()` with an `any[]` type cast avoi..." → "  - `evaluateAll()` with an `any[]` type cast avoi..."
+US-021 is complete. All acceptance criteria were already implemented during the US-018 iteration except the README, which I've now created. Summary:
+
+- `tests/auth.setup.ts` — opens production URL, calls `page.pause()` for human login, saves `context.storageState()` to `tests/.auth/auth.json`
+- `playwright.config.ts` — `setup` project matches `/auth\.setup\.ts/`, `chromium` project has `storageState` + `dependencies: ['setup']`
+- `.gitignore` — `tests/.auth/` excluded
+- `README.md` — **newly created**, documents the first-time `pnpm playwright test --project=setup` flow and subsequent headless usage
+
+<promise>COMPLETE</promise>

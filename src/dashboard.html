@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>หน้าหลัก — PopoWebApp</title>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; }
+    .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 16px; }
+    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    .menu-item { background: #f0f4fa; border-radius: 6px; padding: 16px; text-align: center; text-decoration: none; color: #1a56a0; font-size: 14px; transition: background 0.15s; }
+    .menu-item:hover { background: #e3ecf8; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <span class="navbar-title">PopoWebApp</span>
+    <? if (data.session && data.session.role === 'admin') { ?>
+    <a href="?page=admin_enrollments&token=<?= data.token || '' ?>">จัดการผู้สอน</a>
+    <a href="?page=admin_workload&token=<?= data.token || '' ?>">ภาระงานครู</a>
+    <a href="?page=admin_users&token=<?= data.token || '' ?>">จัดการผู้ใช้</a>
+    <? } ?>
+    <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
+      <? if (data.session && data.session.role === 'admin') { ?>
+      <div class="menu-grid">
+        <a class="menu-item" href="?page=admin_enrollments&token=<?= data.token || '' ?>">จัดการผู้สอน</a>
+        <a class="menu-item" href="?page=admin_workload&token=<?= data.token || '' ?>">ภาระงานครู</a>
+        <a class="menu-item" href="?page=admin_users&token=<?= data.token || '' ?>">จัดการผู้ใช้</a>
+        <a class="menu-item" href="?page=admin_setup&token=<?= data.token || '' ?>">ตั้งค่าโรงเรียน</a>
+      </div>
+      <? } ?>
+    </div>
+  </div>
+</body>
+</html>
