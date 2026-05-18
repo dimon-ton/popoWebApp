@@ -21,9 +21,9 @@
   <div class="navbar">
     <span class="navbar-title">PopoWebApp</span>
     <? if (data.session && data.session.role === 'admin') { ?>
-    <a href="?page=admin_enrollments&token=<?= data.token || '' ?>">จัดการผู้สอน</a>
-    <a href="?page=admin_workload&token=<?= data.token || '' ?>">ภาระงานครู</a>
-    <a href="?page=admin_users&token=<?= data.token || '' ?>">จัดการผู้ใช้</a>
+    <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
+    <a href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
+    <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
     <? } ?>
     <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
   </div>
@@ -32,13 +32,22 @@
       <h2>ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
       <? if (data.session && data.session.role === 'admin') { ?>
       <div class="menu-grid">
-        <a class="menu-item" href="?page=admin_enrollments&token=<?= data.token || '' ?>">จัดการผู้สอน</a>
-        <a class="menu-item" href="?page=admin_workload&token=<?= data.token || '' ?>">ภาระงานครู</a>
-        <a class="menu-item" href="?page=admin_users&token=<?= data.token || '' ?>">จัดการผู้ใช้</a>
-        <a class="menu-item" href="?page=admin_setup&token=<?= data.token || '' ?>">ตั้งค่าโรงเรียน</a>
+        <a class="menu-item" href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
+        <a class="menu-item" href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
+        <a class="menu-item" href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
+        <a class="menu-item" href="#" onclick="navigate('admin_setup'); return false;">ตั้งค่าโรงเรียน</a>
       </div>
       <? } ?>
     </div>
   </div>
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+</script>
 </body>
 </html>

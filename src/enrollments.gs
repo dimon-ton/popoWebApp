@@ -279,3 +279,181 @@ function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ---- google.script.run wrappers (called directly from client JS) ----
+
+function clientGetEnrollmentsData(token) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    return getEnrollmentsData();
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientGetTeacherEnrollments(token, teacherUserId) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    return { enrollments: getTeacherEnrollments(teacherUserId) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientGetAllPairsMatrix(token) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    return { rows: getAllPairsMatrix() };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientAddEnrollment(token, teacherUserId, classId, subjectId) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    if (!teacherUserId || !classId || !subjectId) return { error: 'Missing required fields' };
+
+    var enrollments = dbGetAll('Enrollments');
+    var existing = null;
+    for (var i = 0; i < enrollments.length; i++) {
+      if (enrollments[i].class_id === classId && enrollments[i].subject_id === subjectId) {
+        existing = enrollments[i]; break;
+      }
+    }
+
+    if (existing) {
+      if (existing.teacher_user_id === teacherUserId) {
+        return { status: 'unchanged', message: 'คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว' };
+      }
+      var otherTeacher = dbFindOne('Users', 'user_id', existing.teacher_user_id);
+      return {
+        status: 'conflict',
+        existing_enrollment_id: existing.enrollment_id,
+        other_teacher_name: otherTeacher ? otherTeacher.full_name : existing.teacher_user_id,
+        other_teacher_id: existing.teacher_user_id
+      };
+    }
+
+    var enrollmentId = generateId('enr');
+    dbInsert('Enrollments', {
+      enrollment_id: enrollmentId,
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherUserId,
+      dev_activity_result: ''
+    });
+    appendAuditLog(session.user_id, 'Enrollments', enrollmentId, null, {
+      class_id: classId, subject_id: subjectId, teacher_user_id: teacherUserId
+    });
+    invalidateWorkloadCache();
+    return { status: 'created', enrollment_id: enrollmentId, enrollments: getTeacherEnrollments(teacherUserId) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientRemoveEnrollment(token, enrollmentId, teacherUserId) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    if (!enrollmentId) return { error: 'Missing enrollment_id' };
+
+    var existing = dbFindOne('Enrollments', 'enrollment_id', enrollmentId);
+    if (!existing) return { error: 'Enrollment not found' };
+
+    appendAuditLog(session.user_id, 'Enrollments', enrollmentId, {
+      class_id: existing.class_id, subject_id: existing.subject_id, teacher_user_id: existing.teacher_user_id
+    }, null);
+    dbDelete('Enrollments', 'enrollment_id', enrollmentId);
+    invalidateWorkloadCache();
+    return { status: 'removed', enrollments: teacherUserId ? getTeacherEnrollments(teacherUserId) : [] };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientConfirmReassign(token, existingEnrollmentId, newTeacherUserId, classId, subjectId) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    if (!existingEnrollmentId || !newTeacherUserId) return { error: 'Missing required fields' };
+
+    var existing = dbFindOne('Enrollments', 'enrollment_id', existingEnrollmentId);
+    if (!existing) return { error: 'Enrollment not found' };
+
+    var oldTeacherId = existing.teacher_user_id;
+    appendAuditLog(session.user_id, 'Enrollments', existingEnrollmentId,
+      { class_id: classId, subject_id: subjectId, teacher_user_id: oldTeacherId },
+      { class_id: classId, subject_id: subjectId, teacher_user_id: newTeacherUserId }
+    );
+    dbUpdate('Enrollments', 'enrollment_id', existingEnrollmentId, { teacher_user_id: newTeacherUserId });
+    invalidateWorkloadCache();
+    return { status: 'reassigned', enrollments: getTeacherEnrollments(newTeacherUserId) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function clientBulkAssign(token, mode, teacherUserId, classId, subjectId, classIds, subjectIds) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+
+    var classIdList = classIds ? classIds.split(',') : [];
+    var subjectIdList = subjectIds ? subjectIds.split(',') : [];
+
+    var pairs = [];
+    if (mode === 'A') {
+      subjectIdList.forEach(function(sid) { pairs.push({ class_id: classId, subject_id: sid }); });
+    } else if (mode === 'B') {
+      classIdList.forEach(function(cid) { pairs.push({ class_id: cid, subject_id: subjectId }); });
+    }
+
+    var lock = LockService.getDocumentLock();
+    if (!lock.tryLock(30000)) return { error: 'Could not acquire lock. Please try again.' };
+
+    var created = 0, reassigned = 0, unchanged = 0;
+    try {
+      var enrollments = dbGetAll('Enrollments');
+      var pairMap = {};
+      enrollments.forEach(function(en) { pairMap[en.class_id + '|' + en.subject_id] = en; });
+
+      pairs.forEach(function(pair) {
+        var key = pair.class_id + '|' + pair.subject_id;
+        var ex = pairMap[key];
+        if (!ex) {
+          var newId = generateId('enr');
+          dbInsert('Enrollments', {
+            enrollment_id: newId, class_id: pair.class_id, subject_id: pair.subject_id,
+            teacher_user_id: teacherUserId, dev_activity_result: ''
+          });
+          appendAuditLog(session.user_id, 'Enrollments', newId, null, {
+            class_id: pair.class_id, subject_id: pair.subject_id, teacher_user_id: teacherUserId
+          });
+          created++;
+        } else if (ex.teacher_user_id === teacherUserId) {
+          unchanged++;
+        } else {
+          appendAuditLog(session.user_id, 'Enrollments', ex.enrollment_id,
+            { class_id: pair.class_id, subject_id: pair.subject_id, teacher_user_id: ex.teacher_user_id },
+            { class_id: pair.class_id, subject_id: pair.subject_id, teacher_user_id: teacherUserId }
+          );
+          dbUpdate('Enrollments', 'enrollment_id', ex.enrollment_id, { teacher_user_id: teacherUserId });
+          reassigned++;
+        }
+      });
+    } finally {
+      lock.releaseLock();
+    }
+
+    if (created > 0 || reassigned > 0) invalidateWorkloadCache();
+    return { status: 'ok', created: created, reassigned: reassigned, unchanged: unchanged };
+  } catch (err) {
+    return { error: err.message };
+  }
+}

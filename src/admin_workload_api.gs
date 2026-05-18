@@ -81,3 +81,13 @@ function getWorkloadData() {
 function invalidateWorkloadCache() {
   CacheService.getScriptCache().remove(WORKLOAD_CACHE_KEY);
 }
+
+function clientGetWorkloadData(token) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    return getWorkloadData();
+  } catch (err) {
+    return { error: err.message };
+  }
+}

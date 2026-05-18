@@ -90,3 +90,39 @@ function loginError(msg) {
   tmpl.data = { error: msg };
   return tmpl.evaluate().setTitle('PopoWebApp');
 }
+
+function serverLogin(username, password) {
+  try {
+    username = (username || '').trim();
+    password = password || '';
+
+    if (!username || !password) {
+      return { error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' };
+    }
+
+    var users = dbGetAll('Users');
+    var user = null;
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].username === username) { user = users[i]; break; }
+    }
+
+    if (!user) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+
+    var hash = computeHash(password, user.salt);
+    if (hash !== user.password_hash) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+
+    var token = generateToken();
+    var sessionData = {
+      user_id: user.user_id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role,
+      expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
+    };
+    CacheService.getScriptCache().put('session_' + token, JSON.stringify(sessionData), SESSION_TTL_SECONDS);
+
+    return { token: token, session: sessionData };
+  } catch (err) {
+    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+  }
+}

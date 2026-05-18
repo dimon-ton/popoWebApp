@@ -32,8 +32,8 @@
 <body>
 <div class="navbar">
   <span class="navbar-title">PopoWebApp</span>
-  <a href="?page=dashboard&token=<?= data.session ? data.session.token : '' ?>">หน้าหลัก</a>
-  <a href="?page=admin_enrollments&token=<?= data.session ? data.session.token : '' ?>">จัดการผู้สอน</a>
+  <a href="#" onclick="navigate('dashboard'); return false;">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
   <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?> (admin)</span>
 </div>
 
@@ -52,19 +52,25 @@
 </div>
 
 <script>
-var TOKEN = '<?= data.session ? data.session.token : '' ?>';
-var WEB_APP_URL = window.location.href.split('?')[0];
+var TOKEN = '<?= data.token ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
 
 loadWorkload();
 
 function loadWorkload() {
-  fetch(WEB_APP_URL + '?action=get_workload_data&token=' + encodeURIComponent(TOKEN), { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+  google.script.run
+    .withSuccessHandler(function(data) {
       if (data.error) { document.getElementById('workloadContent').textContent = 'เกิดข้อผิดพลาด: ' + data.error; return; }
       renderWorkload(data.teachers || []);
     })
-    .catch(function(err) { document.getElementById('workloadContent').textContent = 'Error: ' + err.message; });
+    .withFailureHandler(function(err) { document.getElementById('workloadContent').textContent = 'Error: ' + err.message; })
+    .clientGetWorkloadData(TOKEN);
 }
 
 function renderWorkload(teachers) {

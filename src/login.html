@@ -15,28 +15,86 @@
     input:focus { outline: none; border-color: #1a56a0; }
     button { width: 100%; padding: 11px; background: #1a56a0; color: white; border: none; border-radius: 4px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; }
     button:hover { background: #154a8e; }
-    .error { background: #fdecea; color: #c0392b; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; }
+    button:disabled { background: #7fa8d0; cursor: not-allowed; }
+    .error { background: #fdecea; color: #c0392b; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .error.show { display: block; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>PopoWebApp</h1>
     <p class="subtitle">ระบบสมุดเกรดโรงเรียน</p>
-    <? if (data.error) { ?>
-    <div class="error"><?= data.error ?></div>
-    <? } ?>
-    <form method="POST">
-      <input type="hidden" name="action" value="login">
-      <div class="form-group">
-        <label>ชื่อผู้ใช้ (Username)</label>
-        <input type="text" name="username" required autofocus>
-      </div>
-      <div class="form-group">
-        <label>รหัสผ่าน (Password)</label>
-        <input type="password" name="password" required>
-      </div>
-      <button type="submit">เข้าสู่ระบบ</button>
-    </form>
+    <div class="error" id="errBox">
+      <? if (data.error) { ?><?= data.error ?><? } ?>
+    </div>
+    <div class="form-group">
+      <label>ชื่อผู้ใช้ (Username)</label>
+      <input type="text" id="username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน (Password)</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <button id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
   </div>
+  <script>
+    var errBox = document.getElementById('errBox');
+    // Show server-side error passed via template (e.g. redirect after session expiry)
+    if (errBox.textContent.trim()) errBox.classList.add('show');
+
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.classList.add('show');
+    }
+
+    function doLogin() {
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+      var btn = document.getElementById('loginBtn');
+
+      if (!username || !password) {
+        showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'กำลังเข้าสู่ระบบ...';
+      errBox.classList.remove('show');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) {
+            showError(result.error);
+            btn.disabled = false;
+            btn.textContent = 'เข้าสู่ระบบ';
+          } else {
+            // Load dashboard HTML from server and replace page content
+            google.script.run
+              .withSuccessHandler(function(html) {
+                document.open();
+                document.write(html);
+                document.close();
+              })
+              .withFailureHandler(function(err) {
+                showError('เกิดข้อผิดพลาด: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'เข้าสู่ระบบ';
+              })
+              .getDashboardHtml(result.token);
+          }
+        })
+        .withFailureHandler(function(err) {
+          showError('เกิดข้อผิดพลาด: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = 'เข้าสู่ระบบ';
+        })
+        .serverLogin(username, password);
+    }
+
+    // Allow pressing Enter to submit
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
+  </script>
 </body>
 </html>

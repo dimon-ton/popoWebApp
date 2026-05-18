@@ -2,81 +2,96 @@
 // Handles routing based on `page` parameter and auth checks
 
 function doGet(e) {
-  var params = e ? e.parameter : {};
-  var page = params.page || 'login';
+  try {
+    var params = e ? e.parameter : {};
+    var page = params.page || 'login';
 
-  // Handle test API endpoint (FR-14)
-  if (params.api) {
-    return handleTestApi(e);
-  }
-
-  var session = getSession(params.token);
-
-  // Unauthenticated: show login
-  if (!session && page !== 'login') {
-    return buildPage('login', { error: null });
-  }
-
-  // Admin-only pages
-  var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
-  if (adminPages.indexOf(page) !== -1) {
-    if (!session || session.role !== 'admin') {
-      return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
+    // Handle test API endpoint (FR-14)
+    if (params.api) {
+      return handleTestApi(e);
     }
-  }
 
-  // Handle read-action JSON calls (from client JS)
-  var readAction = params.action;
-  if (readAction && session) {
-    return handleReadAction(readAction, params, session);
-  }
+    var session = getSession(params.token);
 
-  switch (page) {
-    case 'login':
+    // Unauthenticated: show login
+    if (!session && page !== 'login') {
       return buildPage('login', { error: null });
-    case 'admin_enrollments':
-      return buildPage('admin_enrollments', { session: session });
-    case 'admin_workload':
-      return buildPage('admin_workload', { session: session });
-    case 'admin_users':
-      return buildPage('admin_users', { session: session });
-    case 'admin_setup':
-      return buildPage('admin_setup', { session: session });
-    case 'dashboard':
-      return buildPage('dashboard', { session: session });
-    default:
-      return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
+    }
+
+    // Admin-only pages
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
+    if (adminPages.indexOf(page) !== -1) {
+      if (!session || session.role !== 'admin') {
+        return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
+      }
+    }
+
+    // Handle read-action JSON calls (from client JS)
+    var readAction = params.action;
+    if (readAction && session) {
+      return handleReadAction(readAction, params, session);
+    }
+
+    var token = params.token || '';
+    switch (page) {
+      case 'login':
+        return buildPage('login', { error: null });
+      case 'admin_enrollments':
+        return buildPage('admin_enrollments', { session: session, token: token });
+      case 'admin_workload':
+        return buildPage('admin_workload', { session: session, token: token });
+      case 'admin_users':
+        return buildPage('admin_users', { session: session, token: token });
+      case 'admin_setup':
+        return buildPage('admin_setup', { session: session, token: token });
+      case 'dashboard':
+        return buildPage('dashboard', { session: session, token: token });
+      default:
+        return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
+    }
+  } catch (err) {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
+      '<b>เกิดข้อผิดพลาด (GET):</b> ' + err.message + '</div>'
+    ).setTitle('PopoWebApp').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
 
 function doPost(e) {
-  var params = e ? e.parameter : {};
-  var action = params.action || '';
+  try {
+    var params = e ? e.parameter : {};
+    var action = params.action || '';
 
-  if (action === 'login') {
-    return handleLogin(e);
-  }
+    if (action === 'login') {
+      return handleLogin(e);
+    }
 
-  var session = getSession(params.token);
-  if (!session) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  switch (action) {
-    // Enrollments (US-018)
-    case 'add_enrollment':
-      return handleAddEnrollment(e, session);
-    case 'remove_enrollment':
-      return handleRemoveEnrollment(e, session);
-    case 'confirm_reassign':
-      return handleConfirmReassign(e, session);
-    // Bulk assign (US-019)
-    case 'bulk_assign':
-      return handleBulkAssign(e, session);
-    default:
-      return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
+    var session = getSession(params.token);
+    if (!session) {
+      return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    switch (action) {
+      // Enrollments (US-018)
+      case 'add_enrollment':
+        return handleAddEnrollment(e, session);
+      case 'remove_enrollment':
+        return handleRemoveEnrollment(e, session);
+      case 'confirm_reassign':
+        return handleConfirmReassign(e, session);
+      // Bulk assign (US-019)
+      case 'bulk_assign':
+        return handleBulkAssign(e, session);
+      default:
+        return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
+          .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
+      '<b>เกิดข้อผิดพลาด:</b> ' + err.message + '</div>'
+    ).setTitle('PopoWebApp').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
 
@@ -91,6 +106,33 @@ function buildPage(pageName, data) {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function getDashboardHtml(token) {
+  var session = getSession(token);
+  if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+  var tmpl = HtmlService.createTemplateFromFile('dashboard');
+  tmpl.data = { session: session, token: token };
+  return tmpl.evaluate().getContent();
+}
+
+// Generic page navigation — returns HTML string for document.write() navigation
+function getPageHtml(token, page) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
+    if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
+      return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
+    }
+    var tmpl = HtmlService.createTemplateFromFile(page);
+    tmpl.data = { session: session, token: token };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
 }
 
 function handleReadAction(action, params, session) {

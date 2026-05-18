@@ -149,9 +149,9 @@
 
 <div class="navbar">
   <span class="navbar-title">PopoWebApp</span>
-  <a href="?page=dashboard&token=<?= data.session ? data.session.token : '' ?>">หน้าหลัก</a>
-  <a href="?page=admin_users&token=<?= data.session ? data.session.token : '' ?>">จัดการผู้ใช้</a>
-  <a href="?page=admin_workload&token=<?= data.session ? data.session.token : '' ?>">ภาระงานครู</a>
+  <a href="#" onclick="navigate('dashboard'); return false;">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
+  <a href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
   <span style="margin-left:auto;font-size:13px">
     <?= data.session ? data.session.full_name : '' ?> (admin)
   </span>
@@ -254,8 +254,14 @@
 <div id="toast"></div>
 
 <script>
-var TOKEN = '<?= data.session ? data.session.token : '' ?>';
-var WEB_APP_URL = window.location.href.split('?')[0];
+var TOKEN = '<?= data.token ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
 
 var allData = null;
 var selectedTeacherId = null;
@@ -265,34 +271,15 @@ var pendingReassign = null;
 loadData();
 
 function loadData() {
-  callServer('get_enrollments_data', {}, function(data) {
-    if (data.error) { showToast(data.error, 'error'); return; }
-    allData = data;
-    renderTeacherList();
-    renderAllPairs();
-  });
-}
-
-function callServer(action, params, cb) {
-  params.token = TOKEN;
-  params.action = action;
-  var url = WEB_APP_URL + '?' + Object.keys(params).map(function(k) {
-    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-  }).join('&');
-  fetch(url, { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(cb)
-    .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
-}
-
-function postServer(action, params, cb) {
-  params.token = TOKEN;
-  params.action = action;
-  var body = new URLSearchParams(params);
-  fetch(WEB_APP_URL, { method: 'POST', body: body, redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(cb)
-    .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (data.error) { showToast(data.error, 'error'); return; }
+      allData = data;
+      renderTeacherList();
+      renderAllPairs();
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .clientGetEnrollmentsData(TOKEN);
 }
 
 // ---- Tab switching ----
@@ -339,10 +326,13 @@ function renderTeacherDetail(userId) {
   var teacher = allData.teachers.find(function(t) { return t.user_id === userId; });
   if (!teacher) return;
 
-  callServer('get_teacher_enrollments', { teacher_user_id: userId }, function(data) {
-    if (data.error) { showToast(data.error, 'error'); return; }
-    renderDetailPanel(teacher, data.enrollments || []);
-  });
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (data.error) { showToast(data.error, 'error'); return; }
+      renderDetailPanel(teacher, data.enrollments || []);
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .clientGetTeacherEnrollments(TOKEN, userId);
 }
 
 function renderDetailPanel(teacher, enrollments) {
@@ -404,57 +394,57 @@ function addPair() {
   btn.disabled = true;
   btn.textContent = 'กำลังบันทึก...';
 
-  postServer('add_enrollment', {
-    teacher_user_id: selectedTeacherId,
-    class_id: classId,
-    subject_id: subjectId
-  }, function(data) {
-    btn.disabled = false;
-    btn.textContent = 'เพิ่ม';
+  google.script.run
+    .withSuccessHandler(function(data) {
+      btn.disabled = false;
+      btn.textContent = 'เพิ่ม';
+      if (data.error) { showToast(data.error, 'error'); return; }
 
-    if (data.error) { showToast(data.error, 'error'); return; }
+      if (data.status === 'conflict') {
+        pendingReassign = {
+          existing_enrollment_id: data.existing_enrollment_id,
+          new_teacher_user_id: selectedTeacherId,
+          class_id: classId,
+          subject_id: subjectId,
+          other_teacher_name: data.other_teacher_name
+        };
+        var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
+        var teacherName = teacher ? teacher.full_name : selectedTeacherId;
+        document.getElementById('reassignMsg').textContent =
+          'วิชานี้สอนโดย ' + data.other_teacher_name + ' อยู่แล้ว — ต้องการเปลี่ยนเป็น ' + teacherName + ' ใช่ไหม?';
+        document.getElementById('reassignDialog').classList.add('open');
+        return;
+      }
 
-    if (data.status === 'conflict') {
-      // Show reassign dialog
-      pendingReassign = {
-        existing_enrollment_id: data.existing_enrollment_id,
-        new_teacher_user_id: selectedTeacherId,
-        class_id: classId,
-        subject_id: subjectId,
-        other_teacher_name: data.other_teacher_name
-      };
-      var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
-      var teacherName = teacher ? teacher.full_name : selectedTeacherId;
-      document.getElementById('reassignMsg').textContent =
-        'วิชานี้สอนโดย ' + data.other_teacher_name + ' อยู่แล้ว — ต้องการเปลี่ยนเป็น ' + teacherName + ' ใช่ไหม?';
-      document.getElementById('reassignDialog').classList.add('open');
-      return;
-    }
+      if (data.status === 'unchanged') {
+        showToast('คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว', 'success');
+        return;
+      }
 
-    if (data.status === 'unchanged') {
-      showToast('คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว', 'success');
-      return;
-    }
-
-    showToast('เพิ่มสำเร็จ', 'success');
-    refreshEnrollments(data.enrollments);
-    updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
-    loadData(); // reload allData for All pairs tab
-  });
+      showToast('เพิ่มสำเร็จ', 'success');
+      refreshEnrollments(data.enrollments);
+      updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
+      loadData();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false; btn.textContent = 'เพิ่ม';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .clientAddEnrollment(TOKEN, selectedTeacherId, classId, subjectId);
 }
 
 function removeEnrollment(enrollmentId) {
   if (!confirm('ต้องการลบคู่นี้ออกใช่ไหม?')) return;
-  postServer('remove_enrollment', {
-    enrollment_id: enrollmentId,
-    teacher_user_id: selectedTeacherId
-  }, function(data) {
-    if (data.error) { showToast(data.error, 'error'); return; }
-    showToast('ลบสำเร็จ', 'success');
-    refreshEnrollments(data.enrollments);
-    updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
-    loadData();
-  });
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (data.error) { showToast(data.error, 'error'); return; }
+      showToast('ลบสำเร็จ', 'success');
+      refreshEnrollments(data.enrollments);
+      updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
+      loadData();
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .clientRemoveEnrollment(TOKEN, enrollmentId, selectedTeacherId);
 }
 
 function refreshEnrollments(enrollments) {
@@ -492,15 +482,22 @@ document.getElementById('confirmReassignBtn').addEventListener('click', function
   this.disabled = true;
   this.textContent = 'กำลังดำเนินการ...';
   var self = this;
-  postServer('confirm_reassign', pendingReassign, function(data) {
-    self.disabled = false;
-    self.textContent = 'ยืนยัน';
-    closeReassignDialog();
-    if (data.error) { showToast(data.error, 'error'); return; }
-    showToast('เปลี่ยนครูผู้สอนสำเร็จ', 'success');
-    refreshEnrollments(data.enrollments);
-    loadData();
-  });
+  var pr = pendingReassign;
+  google.script.run
+    .withSuccessHandler(function(data) {
+      self.disabled = false;
+      self.textContent = 'ยืนยัน';
+      closeReassignDialog();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      showToast('เปลี่ยนครูผู้สอนสำเร็จ', 'success');
+      refreshEnrollments(data.enrollments);
+      loadData();
+    })
+    .withFailureHandler(function(err) {
+      self.disabled = false; self.textContent = 'ยืนยัน';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .clientConfirmReassign(TOKEN, pr.existing_enrollment_id, pr.new_teacher_user_id, pr.class_id, pr.subject_id);
 });
 
 function closeReassignDialog() {
@@ -511,28 +508,33 @@ function closeReassignDialog() {
 // ---- All pairs tab ----
 function renderAllPairs() {
   var el = document.getElementById('allPairsContent');
-  callServer('get_all_pairs_matrix', {}, function(data) {
-    if (data.error || !data.rows) {
-      el.innerHTML = '<div class="no-data">ไม่สามารถโหลดข้อมูลได้</div>';
-      return;
-    }
-    if (data.rows.length === 0) {
-      el.innerHTML = '<div class="no-data">ยังไม่มีข้อมูลชั้นเรียนหรือวิชา</div>';
-      return;
-    }
-    el.innerHTML = '<table>' +
-      '<thead><tr><th>ชั้น</th><th>วิชา</th><th>ครูผู้สอน</th></tr></thead>' +
-      '<tbody>' + data.rows.map(function(r) {
-        var teacherCell = r.teacher_name === 'ยังไม่ได้กำหนด'
-          ? '<span class="badge-unassigned">ยังไม่ได้กำหนด</span>'
-          : escHtml(r.teacher_name);
-        return '<tr>' +
-          '<td>' + escHtml(r.class_label) + '</td>' +
-          '<td>' + escHtml(r.subject_name) + '</td>' +
-          '<td>' + teacherCell + '</td>' +
-        '</tr>';
-      }).join('') + '</tbody></table>';
-  });
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (data.error || !data.rows) {
+        el.innerHTML = '<div class="no-data">ไม่สามารถโหลดข้อมูลได้</div>';
+        return;
+      }
+      if (data.rows.length === 0) {
+        el.innerHTML = '<div class="no-data">ยังไม่มีข้อมูลชั้นเรียนหรือวิชา</div>';
+        return;
+      }
+      el.innerHTML = '<table>' +
+        '<thead><tr><th>ชั้น</th><th>วิชา</th><th>ครูผู้สอน</th></tr></thead>' +
+        '<tbody>' + data.rows.map(function(r) {
+          var teacherCell = r.teacher_name === 'ยังไม่ได้กำหนด'
+            ? '<span class="badge-unassigned">ยังไม่ได้กำหนด</span>'
+            : escHtml(r.teacher_name);
+          return '<tr>' +
+            '<td>' + escHtml(r.class_label) + '</td>' +
+            '<td>' + escHtml(r.subject_name) + '</td>' +
+            '<td>' + teacherCell + '</td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
+    })
+    .withFailureHandler(function(err) {
+      el.innerHTML = '<div class="no-data">เกิดข้อผิดพลาด: ' + err.message + '</div>';
+    })
+    .clientGetAllPairsMatrix(TOKEN);
 }
 
 // ---- US-019: Bulk assign ----
@@ -606,44 +608,30 @@ function submitBulkAssign(mode) {
   btn.textContent = 'กำลังบันทึก...';
   document.getElementById('bulkResult').classList.remove('show');
 
-  postServer('bulk_assign', params, function(data) {
-    btn.disabled = false;
-    btn.textContent = 'กำหนดครู';
-    if (data.error) { showToast(data.error, 'error'); return; }
-    var msg = data.created + ' เพิ่มใหม่, ' + data.reassigned + ' เปลี่ยนครู, ' + data.unchanged + ' ไม่เปลี่ยน';
-    var resultEl = document.getElementById('bulkResult');
-    resultEl.textContent = msg;
-    resultEl.classList.add('show');
-    showToast('กำหนดครูแบบกลุ่มสำเร็จ', 'success');
-    loadData(); // refresh allData + teacher pair counts
-  });
+  var classIdArg = mode === 'A' ? params.class_id : '';
+  var subjectIdArg = mode === 'B' ? params.subject_id : '';
+  var classIdsArg = mode === 'B' ? params.class_ids : '';
+  var subjectIdsArg = mode === 'A' ? params.subject_ids : '';
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      btn.disabled = false;
+      btn.textContent = 'กำหนดครู';
+      if (data.error) { showToast(data.error, 'error'); return; }
+      var msg = data.created + ' เพิ่มใหม่, ' + data.reassigned + ' เปลี่ยนครู, ' + data.unchanged + ' ไม่เปลี่ยน';
+      var resultEl = document.getElementById('bulkResult');
+      resultEl.textContent = msg;
+      resultEl.classList.add('show');
+      showToast('กำหนดครูแบบกลุ่มสำเร็จ', 'success');
+      loadData();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false; btn.textContent = 'กำหนดครู';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .clientBulkAssign(TOKEN, params.mode, params.teacher_user_id, classIdArg, subjectIdArg, classIdsArg, subjectIdsArg);
 }
 
-// ---- Server-side data calls ----
-// These actions are GET-based for read operations
-var origCallServer = callServer;
-callServer = function(action, params, cb) {
-  // Map action names to server read functions
-  params.token = TOKEN;
-  var readActions = {
-    'get_enrollments_data': true,
-    'get_teacher_enrollments': true,
-    'get_all_pairs_matrix': true
-  };
-  if (readActions[action]) {
-    params.read_action = action;
-    var url = WEB_APP_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(TOKEN) + '&' +
-      Object.keys(params).filter(function(k) { return k !== 'action' && k !== 'token'; }).map(function(k) {
-        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-      }).join('&');
-    fetch(url, { redirect: 'follow' })
-      .then(function(r) { return r.json(); })
-      .then(cb)
-      .catch(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); });
-  } else {
-    origCallServer(action, params, cb);
-  }
-};
 
 // ---- Toast ----
 var toastTimer = null;
