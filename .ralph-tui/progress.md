@@ -143,3 +143,24 @@ after each iteration and it's included in prompts for context.
   - README documentation is the most commonly overlooked acceptance criterion — always check for it in stories that mention "README documents".
 
 ---
+
+## 2026-05-19 - US-022
+- **What was implemented:**
+  - All acceptance criteria were already met by work completed during the US-018 iteration. Verified each piece:
+    - `tests/helpers/seed.ts` exports `seedTestClass`, `seedTestSubject`, `seedTestStudent`, `seedTestUser`, `seedTestEnrollment`, `cleanupTestData`, and `queryTestRows`.
+    - Every seed function returns an ID with the `test_<entity>_<suffix>` prefix (e.g., `test_class_us022_c`).
+    - Server-side `testapi.gs` enforces the `test_` prefix invariant in `ensureTestPrefix()` and the `cleanup` op iterates over all 12 known tabs deleting any row whose ID column starts with `test_`.
+    - `tests/admin.spec.ts` uses `beforeAll`/`afterAll` with the helpers (verified at lines 25, 33, 214, 222, 305, 325).
+    - `tests/helpers/seed.spec.ts` is the self-test: seeds one of each entity type, asserts each appears via `queryTestRows`, calls `cleanupTestData()`, and asserts every tab now returns zero `test_` rows.
+  - TypeScript typecheck (`npx tsc --noEmit`) passes with no errors.
+
+- **Files changed:**
+  - None — all artifacts existed already from prior iterations.
+
+- **Learnings:**
+  - The `test_` prefix invariant is enforced on **both** sides: client-side by the helper generating the ID, and server-side by `ensureTestPrefix()` raising if a non-prefixed ID slips through. This double-guard is what makes cleanup safe — even a buggy or malicious seed call cannot create non-`test_` rows.
+  - The server-side `tabIdFields` map in `testapi.gs` (line 98–111) is the source of truth for which tabs are subject to cleanup — adding a new domain table requires extending this map, otherwise `test_`-prefixed rows in that tab will linger.
+  - `dbDeleteWhere` deletes bottom-to-top to avoid index-shift bugs — important when a single `cleanup` call may remove many rows in one tab.
+  - The self-test (`seed.spec.ts`) is itself the verification step for acceptance criterion 7 ("after a full test-suite run, no `test_` rows remain") — the final `cleanupTestData: no test_ rows remain after cleanup` test inspects all 5 main tabs and fails if anything lingers.
+
+---
