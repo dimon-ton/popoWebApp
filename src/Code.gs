@@ -60,6 +60,13 @@ function doGet(e) {
         });
       case 'class_students':
         return buildPage('class_students', { session: session, token: token, class_id: params.class_id || '' });
+      case 'class_attendance':
+        return buildPage('class_attendance', {
+          session: session, token: token,
+          class_id: params.class_id || '',
+          subject_id: params.subject_id || '',
+          week: parseInt(params.week) || 1
+        });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -171,6 +178,21 @@ function getClassStudentsPageHtml(token, class_id) {
     }
     var tmpl = HtmlService.createTemplateFromFile('class_students');
     tmpl.data = { session: session, token: token, class_id: class_id || '' };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-007: navigate to attendance page for a specific (class, subject, week)
+function getAttendancePageHtml(token, class_id, subject_id, week) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var tmpl = HtmlService.createTemplateFromFile('class_attendance');
+    tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '', week: parseInt(week) || 1 };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';

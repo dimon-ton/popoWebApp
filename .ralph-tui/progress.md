@@ -9,6 +9,8 @@ after each iteration and it's included in prompts for context.
 - **DEFAULT_WEIGHTS keys must be strings**: JavaScript object keys are always strings; define them as `'1'` and `'2'` and access with `DEFAULT_WEIGHTS[String(grp)]` to avoid integer/string key mismatch.
 - **Admin page guard in getPageHtml is a whitelist**: New admin pages must be added to both the `adminPages` array in `doGet` AND the identical array in `getPageHtml` for consistent protection (navigation and direct URL).
 - **preseedSubjects() is idempotent**: Checks existing IDs before inserting — safe to call multiple times without creating duplicates.
+- **Attendance upsert pattern (low-lock bulk write)**: For attendance saves, read the full sheet once into a local `data` array, loop over pending cells to find-and-update in sheet cells individually (via `getRange(row, col).setValue()`), and push newly inserted rows into the local `data` array so subsequent cells in the same batch can match against them — avoids a second full-sheet read mid-lock.
+- **formatDateISO helper in attendance.gs**: Converts any JS `Date` to `YYYY-MM-DD` string. Must be used consistently on both write and read paths to avoid date format mismatches when Google Sheets stores dates as Date objects vs. ISO strings.
 
 - **Extra-param page navigation**: `getPageHtml(token, page)` only injects `{ session, token }`. For pages that need an extra param (e.g. `class_id`), add a dedicated `getXxxPageHtml(token, extraParam)` function in `Code.gs` and call it from the parent page via `google.script.run`. Add a matching `case 'xxx'` in `doGet` that reads the extra param from `e.parameter`.
 - **GAS global scope**: All `.gs` files share one global scope — variables like `TAB_ORDER` defined in `setup.gs` are accessible from `Code.gs` without imports.
@@ -21,6 +23,27 @@ after each iteration and it's included in prompts for context.
 - **Playwright fresh-context test pattern**: For auth tests that need to test the login UI itself, use `test.use({ storageState: { cookies: [], origins: [] } })` inside the describe block to override the global `auth.json` storageState.
 
 - **Student page navigation pattern**: `getPageHtml(token, page)` only passes `session` and `token` as template data. For pages that need extra URL params (like `class_id`), add a dedicated `getXxxPageHtml(token, extra_param)` function that builds the template with the extra data. Call it from the parent page via `google.script.run.getXxxPageHtml(TOKEN, param)`.
+
+---
+
+## 2026-05-19 - US-007
+- Implemented attendance grid page `/class/:class_id/subject/:subject_id/attendance?week=N` (N=1–40).
+- Server functions in `src/attendance.gs`: `getAttendanceData()`, `serverSaveAttendance()`, `getAcademicYearStart()`, `formatDateISO()`.
+- `getAttendanceData()` returns students, week dates, attendance map (student→date→status), yearly totals per student, subject/class info, and `can_edit` flag.
+- `serverSaveAttendance()` does an upsert: reads full sheet once into memory, updates existing rows in-place via `sheet.getRange(row, col).setValue()`, inserts new rows via `appendRow()`, and pushes them into the local array to avoid re-reads mid-lock — all inside one LockService acquisition.
+- Academic year start is computed from `SchoolInfo.academic_year` (Thai year → CE, finds first Monday ≥ May 13); falls back to 2024-05-13.
+- Click-to-cycle cell UI: cycles `'' → '/' → 'ล' → 'ข' → ''` with color-coded backgrounds. Pending changes tracked in `pendingChanges` dict; cleared on successful save or reload.
+- Footer row shows yearly (cross-week) totals per student using `data-student-present/leave/absent` attributes for Playwright assertions.
+- Week navigation: prev/next buttons and a 1–40 jump dropdown.
+- Created `src/class_attendance.html` with all grid, nav, and save logic.
+- Added `case 'class_attendance'` to `doGet` router in `Code.gs`.
+- Added `getAttendancePageHtml(token, class_id, subject_id, week)` to `Code.gs` for programmatic navigation.
+- Created `tests/attendance.spec.ts` with 5 test cases: page load, cycle+save+reload assertion, footer counts, prev/next navigation, and jump dropdown.
+- Files changed: `src/attendance.gs` (new), `src/class_attendance.html` (new), `src/Code.gs`, `tests/attendance.spec.ts` (new)
+- **Learnings:**
+  - Google Sheets stores date cells as Date objects, not ISO strings — when reading from the sheet via `getDataRange().getValues()`, date cells come back as JS Date objects. Must use `formatDateISO()` on both the stored value and the comparison key to avoid mismatches.
+  - Attendance upsert should NOT use `dbInsert`/`dbUpdate` because they each acquire the lock independently — for a batch of N cells this would mean N lock acquisitions and N full-sheet reads. Instead, acquire the lock once, read the sheet once, and update/insert cells individually within the lock.
+  - `Object.values()` is available in GAS V8 but to be safe (and to avoid any edge cases) the client JS uses a fallback polyfill pattern.
 
 ---
 

@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-19T16:37:36.218Z",
-  "currentIteration": 22,
+  "updatedAt": "2026-05-19T16:42:54.655Z",
+  "currentIteration": 1,
   "maxIterations": 0,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -47,8 +47,8 @@
       {
         "id": "US-006",
         "title": "Indicator catalog (ตัวชี้วัด)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-007",
@@ -368,6 +368,16 @@
       "durationMs": 5669,
       "startedAt": "2026-05-19T12:21:33.454Z",
       "endedAt": "2026-05-19T12:21:39.123Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Indicator catalog (ตัวชี้วัด)",
+      "taskCompleted": true,
+      "durationMs": 151292,
+      "startedAt": "2026-05-19T16:35:04.923Z",
+      "endedAt": "2026-05-19T16:37:36.215Z"
     }
   ],
   "skippedTaskIds": [],
