@@ -19,7 +19,7 @@ function doGet(e) {
     }
 
     // Admin-only pages
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators'];
     if (adminPages.indexOf(page) !== -1) {
       if (!session || session.role !== 'admin') {
         return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
@@ -52,6 +52,12 @@ function doGet(e) {
         return buildPage('admin_classes', { session: session, token: token });
       case 'admin_subjects':
         return buildPage('admin_subjects', { session: session, token: token });
+      case 'admin_indicators':
+        return buildPage('admin_indicators', {
+          session: session, token: token,
+          subject_id: params.subject_id || '',
+          subject_name: params.subject_name || params.subject_id || ''
+        });
       case 'class_students':
         return buildPage('class_students', { session: session, token: token, class_id: params.class_id || '' });
       case 'dashboard':
@@ -144,7 +150,7 @@ function getPageHtml(token, page) {
     if (!session) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }
@@ -165,6 +171,26 @@ function getClassStudentsPageHtml(token, class_id) {
     }
     var tmpl = HtmlService.createTemplateFromFile('class_students');
     tmpl.data = { session: session, token: token, class_id: class_id || '' };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-006: navigate to indicators page for a specific subject
+function getIndicatorsPageHtml(token, subject_id) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    if (session.role !== 'admin') {
+      return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
+    }
+    var subj = dbFindOne('Subjects', 'subject_id', subject_id);
+    var subject_name = subj ? subj.subject_name : subject_id;
+    var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
+    tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';

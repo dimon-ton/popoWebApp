@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตัวชี้วัด — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 15px; color: #444; margin-bottom: 16px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
+    .form-group label { font-size: 12px; color: #555; }
+    input[type="text"], input[type="number"] {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 13px; font-family: inherit;
+    }
+    input:focus { outline: none; border-color: #1a56a0; }
+    button {
+      padding: 8px 18px; border: none; border-radius: 4px; font-size: 13px;
+      font-family: inherit; cursor: pointer;
+    }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154880; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-danger { background: #e74c3c; color: white; }
+    .btn-danger:hover { background: #c0392b; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f0f4fa; padding: 10px 12px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #fafcff; }
+    .toast {
+      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 6px; font-size: 14px; z-index: 1000;
+      display: none; max-width: 320px;
+    }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .preseed-btn { margin-bottom: 16px; }
+    .subject-label { font-size: 13px; color: #666; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">ตัวชี้วัด — <?= data.subject_name || data.subject_id ?></h2>
+  <p class="subject-label">รหัสวิชา: <strong><?= data.subject_id ?></strong></p>
+
+  <div class="card">
+    <h3>เพิ่มตัวชี้วัดใหม่</h3>
+    <div class="form-row">
+      <div class="form-group" style="flex:2;min-width:200px">
+        <label>รหัสตัวชี้วัด (code)</label>
+        <input type="text" id="newCode" placeholder="เช่น ต 1.1 ป.1/1">
+      </div>
+      <div class="form-group" style="flex:3;min-width:200px">
+        <label>คำอธิบาย</label>
+        <input type="text" id="newDesc" placeholder="คำอธิบาย (ไม่บังคับ)">
+      </div>
+      <div class="form-group" style="min-width:100px">
+        <label>คะแนนสูงสุด</label>
+        <input type="number" id="newMaxScore" value="3" min="1" max="10">
+      </div>
+      <div class="form-group" style="min-width:80px">
+        <label>ลำดับ</label>
+        <input type="number" id="newOrder" placeholder="0" min="0">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn-primary" id="addIndicatorBtn" onclick="addIndicator()">เพิ่ม</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>รายการตัวชี้วัด</h3>
+    <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedIndicators()">เพิ่มตัวชี้วัดเริ่มต้น (ภาษาอังกฤษ ป.1)</button>
+    <p class="loading-msg" id="indicatorsLoading">กำลังโหลด...</p>
+    <table id="indicatorsTable" style="display:none">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>รหัสตัวชี้วัด</th>
+          <th>คำอธิบาย</th>
+          <th>คะแนนสูงสุด</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="indicatorsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function loadIndicators() {
+  document.getElementById('indicatorsLoading').style.display = 'block';
+  document.getElementById('indicatorsTable').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      renderIndicators((result && result.indicators) ? result.indicators : []);
+    })
+    .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
+    .getIndicatorsList(TOKEN, SUBJECT_ID);
+}
+
+function renderIndicators(indicators) {
+  document.getElementById('indicatorsLoading').style.display = 'none';
+  var tbody = document.getElementById('indicatorsBody');
+  tbody.innerHTML = '';
+  if (indicators.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#aaa;text-align:center">ยังไม่มีตัวชี้วัด</td></tr>';
+  } else {
+    indicators.forEach(function(ind) {
+      var tr = document.createElement('tr');
+      tr.setAttribute('data-indicator-id', ind.indicator_id);
+      tr.innerHTML =
+        '<td>' + escHtml(ind.display_order) + '</td>' +
+        '<td>' + escHtml(ind.code) + '</td>' +
+        '<td>' + escHtml(ind.description) + '</td>' +
+        '<td>' + escHtml(ind.max_score) + '</td>' +
+        '<td><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')">ลบ</button></td>';
+      tbody.appendChild(tr);
+    });
+  }
+  document.getElementById('indicatorsTable').style.display = 'table';
+}
+
+function addIndicator() {
+  var code = document.getElementById('newCode').value.trim();
+  var description = document.getElementById('newDesc').value.trim();
+  var max_score = document.getElementById('newMaxScore').value.trim();
+  var display_order = document.getElementById('newOrder').value.trim();
+
+  if (!code) { showToast('กรุณากรอกรหัสตัวชี้วัด', 'error'); return; }
+
+  var btn = document.getElementById('addIndicatorBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('เพิ่มตัวชี้วัดสำเร็จ', 'success');
+      document.getElementById('newCode').value = '';
+      document.getElementById('newDesc').value = '';
+      document.getElementById('newMaxScore').value = '3';
+      document.getElementById('newOrder').value = '';
+      loadIndicators();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverAddIndicator(TOKEN, SUBJECT_ID, code, description, max_score, display_order);
+}
+
+function deleteIndicator(indicator_id) {
+  if (!confirm('ยืนยันการลบตัวชี้วัด?')) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('ลบตัวชี้วัดสำเร็จ', 'success');
+      loadIndicators();
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .serverDeleteIndicator(TOKEN, indicator_id);
+}
+
+function preseedIndicators() {
+  var btn = document.getElementById('preseedBtn');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('เพิ่มตัวชี้วัดเริ่มต้นสำเร็จ (' + (result.added || 0) + ' รายการ)', 'success');
+      loadIndicators();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .preseedIndicators(TOKEN, SUBJECT_ID);
+}
+
+loadIndicators();
+</script>
+</body>
+</html>

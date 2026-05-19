@@ -166,6 +166,65 @@ test.describe('US-005: Student roster CRUD', () => {
   });
 });
 
+// ---- US-006: Indicator catalog (ตัวชี้วัด) ----
+
+test.describe('US-006: Indicator catalog CRUD', () => {
+  let subjectId: string;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    subjectId = await seedTestSubject({ suffix: 'us006_eng', name: 'วิชาทดสอบ US006', code: 'US006' });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-006: open indicators page for test subject — heading visible', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_indicators&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText(subjectId);
+  });
+
+  test('US-006: add indicator test_ind_001 max_score=3 and assert it appears', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_indicators&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#indicatorsTable')).toBeVisible({ timeout: 20_000 });
+
+    await page.fill('#newCode', 'test_ind_001');
+    await page.fill('#newMaxScore', '3');
+    await page.fill('#newOrder', '1');
+    await page.click('#addIndicatorBtn');
+
+    await expect(page.locator('#toast')).toContainText('เพิ่มตัวชี้วัดสำเร็จ', { timeout: 15_000 });
+
+    // Row should appear with the code
+    await expect(page.locator('#indicatorsBody')).toContainText('test_ind_001', { timeout: 15_000 });
+  });
+
+  test('US-006: delete indicator and assert it is gone', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_indicators&subject_id=${subjectId}`);
+
+    await expect(page.locator('#indicatorsTable')).toBeVisible({ timeout: 20_000 });
+
+    // Dismiss confirm dialog automatically
+    page.on('dialog', async (dialog) => { await dialog.accept(); });
+
+    // Click delete on the first row (test_ind_001 we just added)
+    await page.locator('#indicatorsBody .btn-danger').first().click();
+
+    await expect(page.locator('#toast')).toContainText('ลบตัวชี้วัดสำเร็จ', { timeout: 15_000 });
+
+    // Row should be gone (empty state or no test_ind_001)
+    await expect(page.locator('#indicatorsBody')).not.toContainText('test_ind_001', { timeout: 15_000 });
+  });
+});
+
 // ---- US-001: Bootstrap master Sheet schema ----
 
 const EXPECTED_TABS = [

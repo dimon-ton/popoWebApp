@@ -24,6 +24,23 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-19 - US-006
+- Implemented `/admin/indicators/:subject_id` indicator catalog with full CRUD (add/delete).
+- Server functions in `src/indicators.gs`: `getIndicatorsList()`, `serverAddIndicator()`, `serverDeleteIndicator()`, `preseedIndicators()`.
+- Pre-seed: `preseedIndicators(token, subject_id)` is idempotent — seeds the 16 English Grade-1 indicator codes only if not already present.
+- Created `src/admin_indicators.html` with add form, sortable indicator table, preseed button.
+- Added `case 'admin_indicators'` to `doGet` router (reads `params.subject_id` and `params.subject_name`).
+- Added `admin_indicators` to both `adminPages` arrays in `doGet` and `getPageHtml`.
+- Added `getIndicatorsPageHtml(token, subject_id)` in `Code.gs` for client-side navigation from `admin_subjects.html` (carries subject_id + fetches subject_name from DB).
+- Added "ตัวชี้วัด" button per row in `admin_subjects.html` calling `getIndicatorsPageHtml`.
+- Added US-006 test block in `tests/admin.spec.ts`: seeds `test_subject_us006_eng`, navigates to indicators page, adds `test_ind_001`, asserts row appears, deletes it, asserts gone.
+- Files changed: `src/indicators.gs` (new), `src/admin_indicators.html` (new), `src/Code.gs`, `src/admin_subjects.html`, `tests/admin.spec.ts`
+- **Learnings:**
+  - `preseedIndicators` must be scoped to a subject_id — unlike `preseedSubjects()` which is school-wide, indicators are per-subject.
+  - The `admin_indicators` page receives `subject_id` via `e.parameter.subject_id` in `doGet`; also accessible via dedicated `getIndicatorsPageHtml(token, subject_id)` that resolves `subject_name` from the DB for display.
+  - For pages navigated via `google.script.run`, pass both `subject_id` and `subject_name` into the template data so the heading shows something human-readable without an extra round-trip from the client.
+---
+
 ## 2026-05-19 - US-005
 - Implemented `/class/:class_id/students` student roster page with full CRUD.
 - Server functions in `src/students.gs`: `getStudentsList()`, `serverAddStudent()`, `serverUpdateStudent()`, `serverDeleteStudent()`.

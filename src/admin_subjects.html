@@ -159,7 +159,10 @@ function renderSubjects(subjects) {
       '<td>' + escHtml(s.subject_code) + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
       '<td>กลุ่ม ' + escHtml(s.weight_group) + '</td>' +
-      '<td><button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')">ลบ</button></td>';
+      '<td>' +
+        '<button class="btn-primary" style="margin-right:6px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
+        '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')">ลบ</button>' +
+      '</td>';
     tbody.appendChild(tr);
   });
   document.getElementById('subjectsTable').style.display = 'table';
@@ -195,6 +198,13 @@ function addSubject() {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverAddSubject(TOKEN, subject_id, subject_name, subject_code, hours, weight_group, '');
+}
+
+function viewIndicators(subject_id) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getIndicatorsPageHtml(TOKEN, subject_id);
 }
 
 function deleteSubject(subject_id) {

@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-19T12:19:29.106Z",
-  "currentIteration": 4,
+  "updatedAt": "2026-05-19T16:37:36.218Z",
+  "currentIteration": 22,
   "maxIterations": 0,
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -41,8 +41,8 @@
       {
         "id": "US-005",
         "title": "Student roster — CRUD",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-006",
@@ -188,6 +188,186 @@
       "durationMs": 458438,
       "startedAt": "2026-05-19T12:07:34.899Z",
       "endedAt": "2026-05-19T12:15:13.337Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "US-005",
+      "taskTitle": "Student roster — CRUD",
+      "taskCompleted": true,
+      "durationMs": 254472,
+      "startedAt": "2026-05-19T12:15:14.631Z",
+      "endedAt": "2026-05-19T12:19:29.103Z"
+    },
+    {
+      "iteration": 6,
+      "status": "failed",
+      "taskId": "US-006",
+      "taskTitle": "Indicator catalog (ตัวชี้วัด)",
+      "taskCompleted": false,
+      "durationMs": 27136,
+      "startedAt": "2026-05-19T12:19:30.368Z",
+      "endedAt": "2026-05-19T12:19:57.504Z"
+    },
+    {
+      "iteration": 7,
+      "status": "failed",
+      "taskId": "US-007",
+      "taskTitle": "Attendance grid view and edit",
+      "taskCompleted": false,
+      "durationMs": 4806,
+      "startedAt": "2026-05-19T12:19:58.548Z",
+      "endedAt": "2026-05-19T12:20:03.354Z"
+    },
+    {
+      "iteration": 8,
+      "status": "failed",
+      "taskId": "US-008",
+      "taskTitle": "Formative indicator scoring (คะแนน1)",
+      "taskCompleted": false,
+      "durationMs": 4835,
+      "startedAt": "2026-05-19T12:20:04.397Z",
+      "endedAt": "2026-05-19T12:20:09.232Z"
+    },
+    {
+      "iteration": 9,
+      "status": "failed",
+      "taskId": "US-009",
+      "taskTitle": "Summative scoring and grade computation (คะแนน2)",
+      "taskCompleted": false,
+      "durationMs": 5002,
+      "startedAt": "2026-05-19T12:20:10.275Z",
+      "endedAt": "2026-05-19T12:20:15.277Z"
+    },
+    {
+      "iteration": 10,
+      "status": "failed",
+      "taskId": "US-010",
+      "taskTitle": "Subject weights configuration (คะแนนวิชา)",
+      "taskCompleted": false,
+      "durationMs": 4697,
+      "startedAt": "2026-05-19T12:20:16.321Z",
+      "endedAt": "2026-05-19T12:20:21.018Z"
+    },
+    {
+      "iteration": 11,
+      "status": "failed",
+      "taskId": "US-011",
+      "taskTitle": "Characteristics scoring (คุณลักษณะ)",
+      "taskCompleted": false,
+      "durationMs": 4732,
+      "startedAt": "2026-05-19T12:20:22.055Z",
+      "endedAt": "2026-05-19T12:20:26.787Z"
+    },
+    {
+      "iteration": 12,
+      "status": "failed",
+      "taskId": "US-012",
+      "taskTitle": "Read-Think-Write scoring (อ่านคิด)",
+      "taskCompleted": false,
+      "durationMs": 4772,
+      "startedAt": "2026-05-19T12:20:27.830Z",
+      "endedAt": "2026-05-19T12:20:32.602Z"
+    },
+    {
+      "iteration": 13,
+      "status": "failed",
+      "taskId": "US-013",
+      "taskTitle": "Cover report aggregates (ปก)",
+      "taskCompleted": false,
+      "durationMs": 4620,
+      "startedAt": "2026-05-19T12:20:33.640Z",
+      "endedAt": "2026-05-19T12:20:38.260Z"
+    },
+    {
+      "iteration": 14,
+      "status": "failed",
+      "taskId": "US-014",
+      "taskTitle": "PDF export of cover report",
+      "taskCompleted": false,
+      "durationMs": 5332,
+      "startedAt": "2026-05-19T12:20:39.299Z",
+      "endedAt": "2026-05-19T12:20:44.631Z"
+    },
+    {
+      "iteration": 15,
+      "status": "failed",
+      "taskId": "US-015",
+      "taskTitle": "Static reference pages",
+      "taskCompleted": false,
+      "durationMs": 10296,
+      "startedAt": "2026-05-19T12:20:45.667Z",
+      "endedAt": "2026-05-19T12:20:55.963Z"
+    },
+    {
+      "iteration": 16,
+      "status": "failed",
+      "taskId": "US-016",
+      "taskTitle": "Audit log",
+      "taskCompleted": false,
+      "durationMs": 5155,
+      "startedAt": "2026-05-19T12:20:56.999Z",
+      "endedAt": "2026-05-19T12:21:02.154Z"
+    },
+    {
+      "iteration": 17,
+      "status": "failed",
+      "taskId": "US-017",
+      "taskTitle": "Deployment and first-run setup wizard",
+      "taskCompleted": false,
+      "durationMs": 4947,
+      "startedAt": "2026-05-19T12:21:03.205Z",
+      "endedAt": "2026-05-19T12:21:08.152Z"
+    },
+    {
+      "iteration": 18,
+      "status": "failed",
+      "taskId": "US-018",
+      "taskTitle": "Admin assigns subjects to a teacher (teacher-first flow)",
+      "taskCompleted": false,
+      "durationMs": 4698,
+      "startedAt": "2026-05-19T12:21:09.204Z",
+      "endedAt": "2026-05-19T12:21:13.902Z"
+    },
+    {
+      "iteration": 19,
+      "status": "failed",
+      "taskId": "US-019",
+      "taskTitle": "Admin bulk-assigns one teacher to many pairs",
+      "taskCompleted": false,
+      "durationMs": 5449,
+      "startedAt": "2026-05-19T12:21:14.949Z",
+      "endedAt": "2026-05-19T12:21:20.398Z"
+    },
+    {
+      "iteration": 20,
+      "status": "failed",
+      "taskId": "US-020",
+      "taskTitle": "Admin views teacher workload dashboard",
+      "taskCompleted": false,
+      "durationMs": 4997,
+      "startedAt": "2026-05-19T12:21:21.439Z",
+      "endedAt": "2026-05-19T12:21:26.436Z"
+    },
+    {
+      "iteration": 21,
+      "status": "failed",
+      "taskId": "US-021",
+      "taskTitle": "Playwright auth bootstrap (storageState)",
+      "taskCompleted": false,
+      "durationMs": 4960,
+      "startedAt": "2026-05-19T12:21:27.468Z",
+      "endedAt": "2026-05-19T12:21:32.428Z"
+    },
+    {
+      "iteration": 22,
+      "status": "failed",
+      "taskId": "US-022",
+      "taskTitle": "Playwright seed/cleanup helper",
+      "taskCompleted": false,
+      "durationMs": 5669,
+      "startedAt": "2026-05-19T12:21:33.454Z",
+      "endedAt": "2026-05-19T12:21:39.123Z"
     }
   ],
   "skippedTaskIds": [],
