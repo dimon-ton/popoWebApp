@@ -34,9 +34,10 @@
         "Playwright (`tests/auth.spec.ts -g US-002`): navigate to app; assert login page visible;"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-003",
@@ -373,6 +374,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-19T11:59:03.595Z"
+    "updatedAt": "2026-05-19T12:03:04.852Z"
   }
 }

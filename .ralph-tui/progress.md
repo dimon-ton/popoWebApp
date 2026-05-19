@@ -10,6 +10,9 @@ after each iteration and it's included in prompts for context.
 - **Client-side GAS calls**: HTML pages call server functions via `google.script.run.withSuccessHandler(fn).functionName(args)`. No `fetch`/HTTP from the HTML side.
 - **Test API pattern**: All seed/cleanup calls go through `?api=<op>&auth_token=<TOKEN>` query params, gated by `TEST_API_TOKEN` Script Property.
 - **TAB_ORDER in setup.gs**: The 14-tab schema is defined there as `TAB_ORDER` + `TAB_SCHEMA`. Any function in Code.gs can reference `TAB_ORDER` directly.
+- **Session token in localStorage**: After login, `popo_token` is stored in `localStorage`. `login.html` checks for it on load and auto-navigates to dashboard if valid. Dashboard writes it back via `localStorage.setItem`. Logout calls `serverLogout(token)` to remove the cache entry then `getLoginHtml()` to replace the page.
+- **Navigation via document.write**: All page navigation in GAS web app works by calling a server function that returns full HTML, then calling `document.open(); document.write(html); document.close()`. This replaces the entire page content including scripts. Playwright handles this fine.
+- **Playwright fresh-context test pattern**: For auth tests that need to test the login UI itself, use `test.use({ storageState: { cookies: [], origins: [] } })` inside the describe block to override the global `auth.json` storageState.
 
 ---
 
@@ -23,5 +26,19 @@ after each iteration and it's included in prompts for context.
   - The backend schema (`setupDatabase()`) was already fully implemented from a prior commit; US-001 only needed the dev-status UI + test.
   - `getLastRow()` returns 1 for a tab with only a header row — so `≥ 1` correctly validates that the header row exists.
   - `TAB_ORDER` is defined in `setup.gs` but usable in `Code.gs` because GAS merges all `.gs` files into one global scope.
+---
+
+## 2026-05-19 - US-002
+- Implemented localStorage-based session persistence: after `serverLogin()` returns a token, `login.html` stores it as `popo_token` in `localStorage`; on re-visit, login page checks localStorage and auto-navigates to dashboard if token is valid.
+- Added logout button to `dashboard.html`: calls `serverLogout(token)` (removes cache entry) then `getLoginHtml()` to replace page with login form; also clears `localStorage.popo_token`.
+- Added `serverLogout(token)` and `getLoginHtml()` to `auth.gs`.
+- Dashboard now calls `localStorage.setItem('popo_token', TOKEN)` on load to persist the server-rendered token.
+- Created `tests/auth.spec.ts` with US-002 describe block covering: login page visible, wrong password error, correct credentials → dashboard heading, logout → back to login + localStorage cleared.
+- Tests use `test.use({ storageState: { cookies: [], origins: [] } })` to override the global `auth.json` and start with a fresh (unauthenticated) state.
+- Files changed: `src/login.html`, `src/dashboard.html`, `src/auth.gs`, `tests/auth.spec.ts` (new)
+- **Learnings:**
+  - GAS `doGet` reads `e.parameter.token` server-side before any client JS runs — so token can't come from localStorage at the server side. The design uses `doGet` only for the initial shell (login page), then all navigation is via `document.write` with the token passed through JS variables.
+  - `test.use({ storageState: ... })` inside a `describe` block overrides the project-level storageState from `playwright.config.ts` for that describe block only — this is the right pattern for testing the login flow itself.
+  - `CacheService.getScriptCache()` (not `getUserCache()`) is used for sessions — `getUserCache()` requires Google login; `getScriptCache()` is shared but keyed by the random token.
 ---
 

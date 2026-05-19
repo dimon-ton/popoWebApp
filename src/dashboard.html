@@ -26,6 +26,7 @@
     <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
     <? } ?>
     <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+    <button id="logoutBtn" onclick="doLogout()" style="margin-left:12px;padding:6px 14px;background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer;">ออกจากระบบ</button>
   </div>
   <div class="container">
     <div class="card">
@@ -42,11 +43,32 @@
   </div>
 <script>
 var TOKEN = '<?= data.token || '' ?>';
+// Persist token to localStorage so it survives page refreshes
+if (TOKEN) localStorage.setItem('popo_token', TOKEN);
+
 function navigate(page) {
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
     .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
     .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
 }
 </script>
 </body>

@@ -91,6 +91,19 @@ function loginError(msg) {
   return tmpl.evaluate().setTitle('PopoWebApp');
 }
 
+function serverLogout(token) {
+  if (token) {
+    CacheService.getScriptCache().remove('session_' + token);
+  }
+  return { ok: true };
+}
+
+function getLoginHtml() {
+  var tmpl = HtmlService.createTemplateFromFile('login');
+  tmpl.data = { error: null };
+  return tmpl.evaluate().getContent();
+}
+
 function serverLogin(username, password) {
   try {
     username = (username || '').trim();

@@ -47,6 +47,21 @@
       errBox.classList.add('show');
     }
 
+    // On load: if a valid token is in localStorage, go straight to dashboard
+    (function() {
+      var stored = localStorage.getItem('popo_token');
+      if (stored) {
+        google.script.run
+          .withSuccessHandler(function(html) {
+            if (html) { document.open(); document.write(html); document.close(); }
+          })
+          .withFailureHandler(function() {
+            localStorage.removeItem('popo_token');
+          })
+          .getDashboardHtml(stored);
+      }
+    })();
+
     function doLogin() {
       var username = document.getElementById('username').value.trim();
       var password = document.getElementById('password').value;
@@ -68,7 +83,7 @@
             btn.disabled = false;
             btn.textContent = 'เข้าสู่ระบบ';
           } else {
-            // Load dashboard HTML from server and replace page content
+            localStorage.setItem('popo_token', result.token);
             google.script.run
               .withSuccessHandler(function(html) {
                 document.open();
