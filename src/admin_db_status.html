@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DB Status — PopoWebApp</title>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #1a56a0; color: white; padding: 10px 14px; text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #eee; }
+    tr:last-child td { border-bottom: none; }
+    .count { font-weight: bold; color: #1a56a0; }
+    .loading { color: #888; font-size: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <span class="navbar-title">PopoWebApp — DB Status</span>
+    <span style="margin-left:auto;font-size:13px">dev only</span>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>สถานะฐานข้อมูล (DB Status)</h2>
+      <p class="loading" id="loading">กำลังโหลด...</p>
+      <table id="statusTable" style="display:none">
+        <thead>
+          <tr><th>ชื่อ Tab</th><th>จำนวนแถว (รวม Header)</th></tr>
+        </thead>
+        <tbody id="statusBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    google.script.run
+      .withSuccessHandler(function(rows) {
+        document.getElementById('loading').style.display = 'none';
+        var tbody = document.getElementById('statusBody');
+        rows.forEach(function(r) {
+          var tr = document.createElement('tr');
+          tr.setAttribute('data-tab', r.tab);
+          tr.innerHTML = '<td>' + r.tab + '</td><td class="count" data-count="' + r.count + '">' + r.count + '</td>';
+          tbody.appendChild(tr);
+        });
+        document.getElementById('statusTable').style.display = 'table';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('loading').textContent = 'Error: ' + err.message;
+      })
+      .getDbStatus();
+  </script>
+</body>
+</html>

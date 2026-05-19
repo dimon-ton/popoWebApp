@@ -1,0 +1,31 @@
+- table [ref=e2]:
+  - rowgroup [ref=e3]:
+    - row "แอปพลิเคชันนี้สร้างโดยผู้ใช้ Google Apps Script" [ref=e4]:
+      - cell "แอปพลิเคชันนี้สร้างโดยผู้ใช้ Google Apps Script" [ref=e5]:
+        - banner "แอปพลิเคชันนี้สร้างโดยผู้ใช้ Google Apps Script" [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - img [ref=e10]
+              - alert [ref=e12]: แอปพลิเคชันนี้สร้างโดยผู้ใช้ Google Apps Script
+            - generic [ref=e13]:
+              - link "รายงานการละเมิด" [ref=e14] [cursor=pointer]:
+                - /url: https://drive.google.com/abuse?id=AKkXjozi17iSgDBr_eeZ6PnqpAMPtsdy2W9tUljXSo-YlAWHsy4N7oMsXQoT-HHszLhSESSczTjMEo-3RIU0-1DEp1dajNDa7QKha7tY%3A0&docurl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbwxQFWNKu-uiNba56dXR_qC-vPUjdX89igTxl00X51VIDP3mlYQUO3u1p41_bCbjFwZ%2Fexec
+              - link "ดูข้อมูลเพิ่มเติม" [ref=e15] [cursor=pointer]:
+                - /url: https://developers.google.com/apps-script
+          - button "ปิด" [ref=e16]:
+            - img [ref=e17]
+    - row [ref=e19]:
+      - cell [ref=e20]:
+        - iframe [active] [ref=e21]:
+          - iframe [active] [ref=f41e2]:
+            - generic [active] [ref=f42e52]:
+              - generic [ref=f42e53]:
+                - generic [ref=f42e54]: PopoWebApp
+                - link "หน้าหลัก" [ref=f42e55] [cursor=pointer]:
+                  - /url: "#"
+                - link "จัดการผู้สอน" [ref=f42e56] [cursor=pointer]:
+                  - /url: "#"
+                - generic [ref=f42e57]: ผู้ดูแลระบบ (admin)
+              - generic [ref=f42e59]:
+                - heading "ภาระงานครู (Workload)" [level=2] [ref=f42e60]
+                - generic [ref=f42e61]: ไม่พบครูในระบบ

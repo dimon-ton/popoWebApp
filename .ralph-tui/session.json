@@ -1,113 +1,154 @@
 {
   "version": 1,
-  "sessionId": "655941b9-9dde-418c-b3d9-57867bd70fdf",
+  "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
-  "startedAt": "2026-05-18T15:15:10.986Z",
-  "updatedAt": "2026-05-18T22:14:44.328Z",
-  "currentIteration": 1,
+  "startedAt": "2026-05-19T11:55:20.368Z",
+  "updatedAt": "2026-05-19T11:59:03.596Z",
+  "currentIteration": 0,
   "maxIterations": 0,
-  "tasksCompleted": 4,
+  "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
     "plugin": "json",
-    "prdPath": "./prd.json",
-    "totalTasks": 5,
+    "prdPath": ".\\prd.json",
+    "totalTasks": 22,
     "tasks": [
+      {
+        "id": "US-001",
+        "title": "Bootstrap master Sheet schema",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-002",
+        "title": "Auth — login form and session",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-003",
+        "title": "Auth — user management and password reset",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-004",
+        "title": "School info, classes, and subjects setup",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-005",
+        "title": "Student roster — CRUD",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-006",
+        "title": "Indicator catalog (ตัวชี้วัด)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-007",
+        "title": "Attendance grid view and edit",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-008",
+        "title": "Formative indicator scoring (คะแนน1)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-009",
+        "title": "Summative scoring and grade computation (คะแนน2)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-010",
+        "title": "Subject weights configuration (คะแนนวิชา)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-011",
+        "title": "Characteristics scoring (คุณลักษณะ)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-012",
+        "title": "Read-Think-Write scoring (อ่านคิด)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-013",
+        "title": "Cover report aggregates (ปก)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-014",
+        "title": "PDF export of cover report",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-015",
+        "title": "Static reference pages",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-016",
+        "title": "Audit log",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-017",
+        "title": "Deployment and first-run setup wizard",
+        "status": "open",
+        "completedInSession": false
+      },
       {
         "id": "US-018",
         "title": "Admin assigns subjects to a teacher (teacher-first flow)",
-        "status": "completed",
-        "completedInSession": true
+        "status": "open",
+        "completedInSession": false
       },
       {
         "id": "US-019",
-        "title": "Admin bulk-assigns one teacher to many subjects",
-        "status": "completed",
-        "completedInSession": true
+        "title": "Admin bulk-assigns one teacher to many pairs",
+        "status": "open",
+        "completedInSession": false
       },
       {
         "id": "US-020",
-        "title": "Admin views teacher workload across the school",
-        "status": "completed",
-        "completedInSession": true
+        "title": "Admin views teacher workload dashboard",
+        "status": "open",
+        "completedInSession": false
       },
       {
         "id": "US-021",
         "title": "Playwright auth bootstrap (storageState)",
-        "status": "completed",
-        "completedInSession": true
+        "status": "open",
+        "completedInSession": false
       },
       {
         "id": "US-022",
-        "title": "Playwright test data isolation + cleanup helper",
+        "title": "Playwright seed/cleanup helper",
         "status": "open",
         "completedInSession": false
       }
     ]
   },
-  "iterations": [
-    {
-      "iteration": 1,
-      "status": "completed",
-      "taskId": "US-018",
-      "taskTitle": "Admin assigns subjects to a teacher (teacher-first flow)",
-      "taskCompleted": true,
-      "durationMs": 284871,
-      "startedAt": "2026-05-18T15:15:52.983Z",
-      "endedAt": "2026-05-18T15:20:37.854Z"
-    },
-    {
-      "iteration": 2,
-      "status": "completed",
-      "taskId": "US-019",
-      "taskTitle": "Admin bulk-assigns one teacher to many subjects",
-      "taskCompleted": true,
-      "durationMs": 176528,
-      "startedAt": "2026-05-18T15:20:38.955Z",
-      "endedAt": "2026-05-18T15:23:35.483Z"
-    },
-    {
-      "iteration": 3,
-      "status": "completed",
-      "taskId": "US-020",
-      "taskTitle": "Admin views teacher workload across the school",
-      "taskCompleted": true,
-      "durationMs": 122224,
-      "startedAt": "2026-05-18T15:23:36.549Z",
-      "endedAt": "2026-05-18T15:25:38.773Z"
-    },
-    {
-      "iteration": 4,
-      "status": "completed",
-      "taskId": "US-021",
-      "taskTitle": "Playwright auth bootstrap (storageState)",
-      "taskCompleted": true,
-      "durationMs": 83122,
-      "startedAt": "2026-05-18T15:25:40.115Z",
-      "endedAt": "2026-05-18T15:27:03.237Z"
-    },
-    {
-      "iteration": 5,
-      "status": "failed",
-      "taskId": "US-022",
-      "taskTitle": "Playwright test data isolation + cleanup helper",
-      "taskCompleted": false,
-      "durationMs": 41714,
-      "startedAt": "2026-05-18T15:27:04.342Z",
-      "endedAt": "2026-05-18T15:27:46.056Z"
-    },
-    {
-      "iteration": 1,
-      "status": "failed",
-      "taskId": "US-022",
-      "taskTitle": "Playwright test data isolation + cleanup helper",
-      "taskCompleted": false,
-      "durationMs": 5399,
-      "startedAt": "2026-05-18T16:00:40.154Z",
-      "endedAt": "2026-05-18T16:00:45.553Z"
-    }
-  ],
+  "iterations": [],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [],

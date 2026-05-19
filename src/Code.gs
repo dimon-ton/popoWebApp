@@ -19,7 +19,7 @@ function doGet(e) {
     }
 
     // Admin-only pages
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status'];
     if (adminPages.indexOf(page) !== -1) {
       if (!session || session.role !== 'admin') {
         return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
@@ -44,6 +44,8 @@ function doGet(e) {
         return buildPage('admin_users', { session: session, token: token });
       case 'admin_setup':
         return buildPage('admin_setup', { session: session, token: token });
+      case 'admin_db_status':
+        return buildPage('admin_db_status', { session: session, token: token });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -123,7 +125,7 @@ function getPageHtml(token, page) {
     if (!session) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }
@@ -133,6 +135,18 @@ function getPageHtml(token, page) {
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
   }
+}
+
+// US-001: returns row counts for all DB tabs (admin-only, dev tool)
+function getDbStatus() {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  if (!id) throw new Error('DB_SHEET_ID not set. Run setupDatabase() first.');
+  var ss = SpreadsheetApp.openById(id);
+  return TAB_ORDER.map(function(tabName) {
+    var sheet = ss.getSheetByName(tabName);
+    var count = sheet ? sheet.getLastRow() : 0;
+    return { tab: tabName, count: count };
+  });
 }
 
 function handleReadAction(action, params, session) {

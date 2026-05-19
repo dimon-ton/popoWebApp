@@ -1,23 +1,18 @@
 {
-  "name": "PRD v2: PopoWebApp — School-wide Grade Book with Admin Assignment + Playwright MCP Testing",
-  "description": "This is **v2 of the PopoWebApp PRD** (supersedes `prd-popo-gradebook-webapp.md`). v2 keeps every user story from v1 (Excel parity — 17 stories) and adds two things:",
-  "branchName": "feature/prd-v2-popowebapp-school-wide-grade-book-with-admin-assignment-playwright-mcp-testing",
+  "name": "PopoWebApp — School Grade Book Web App (Final / Single Source of Truth)",
+  "description": "Convert the Thai elementary-school grade-book Excel (`ภาษาอังกฤษ ป.1.xlsx`, 18 sheets) into a school-wide web application used by all teachers and one admin at โรงเรียนบ้านโพนแท่น.",
+  "branchName": "feature/popowebapp-school-grade-book-web-app-final-single-source-of-truth",
   "userStories": [
     {
-      "id": "US-018",
-      "title": "Admin assigns subjects to a teacher (teacher-first flow)",
-      "description": "As an admin, I want to select a teacher first and then add (class, subject) pairs to their schedule one by one, so I can clearly manage and grow each teacher's assignment list.",
+      "id": "US-001",
+      "title": "Bootstrap master Sheet schema",
+      "description": "As the developer, I want a single master Google Sheet with all tables pre-created so the rest of the app has a stable database to read and write.",
       "acceptanceCriteria": [
-        "Admin page `/admin/enrollments` shows a **teacher list** on the left panel — one row per teacher (role=teacher only) showing their name and current pair count.",
-        "Clicking a teacher opens a **right panel** showing all (class, subject) pairs currently assigned to that teacher as a table with columns: `ชั้น`, `วิชา`, and a \"Remove\" button per row.",
-        "The right panel has an **\"Add pair\" form** with two dropdowns: `class_id` (only classes not yet assigned to this teacher for the selected subject) and `subject_id`. Submitting appends the pair to the teacher's list.",
-        "If the selected (class, subject) is already assigned to a **different** teacher, the server responds with a confirmation dialog: \"วิชานี้สอนโดย [other teacher] อยู่แล้ว — ต้องการเปลี่ยนเป็น [this teacher] ใช่ไหม?\" Confirming reassigns and writes an audit-log row for both the removed and added assignment.",
-        "Clicking \"Remove\" on a row detaches that (class, subject) from the teacher; an audit-log row is written.",
-        "Each (class, subject) can have at most one teacher at any time (unique composite key enforced server-side).",
-        "Save/remove operations toast success and refresh the right panel inline without full-page reload.",
-        "Non-admin users hitting `/admin/enrollments` get a 403-style block screen.",
-        "A secondary read-only **\"All pairs\" tab** on the same page shows the full school matrix: every (class, subject) row with its assigned teacher or \"ยังไม่ได้กำหนด\" — useful for spotting gaps.",
-        "Playwright (`tests/admin.spec.ts -g US-018`):"
+        "Create one Google Sheet titled `popoWebApp_DB`.",
+        "Create exactly these 14 tabs: `Users`, `Classes`, `Subjects`, `Students`, `Enrollments`,",
+        "Each tab has a header row matching the field list in FR-1. First row is frozen and bold.",
+        "Sheet ID is stored as Apps Script Script Property `DB_SHEET_ID`.",
+        "Playwright (`tests/admin.spec.ts -g US-001`): visit the app as admin; navigate to a"
       ],
       "priority": 1,
       "passes": true,
@@ -26,84 +21,358 @@
       "completionNotes": "Completed by agent"
     },
     {
-      "id": "US-019",
-      "title": "Admin bulk-assigns one teacher to many subjects",
-      "description": "As an admin, I want to assign one teacher to many subjects in one class (or many classes for one subject) in a single action so onboarding a new teacher is fast.",
+      "id": "US-002",
+      "title": "Auth — login form and session",
+      "description": "As a teacher or admin, I want to log in with username and password so my edits are attributed to me and I only see what I am allowed to see.",
       "acceptanceCriteria": [
-        "On `/admin/enrollments`, a \"Bulk assign\" panel offers two modes: **(A) Many subjects, one class:** pick a class, pick a teacher, multi-select subjects → apply. **(B) Many classes, one subject:** pick a subject, pick a teacher, multi-select classes → apply.",
-        "Submitting writes one `Enrollments` row per (class, subject), overwriting existing rows where present, inside a single `LockService.getDocumentLock()` block.",
-        "After submit, a result panel summarizes: `N created, M reassigned, K unchanged`.",
-        "Each created or reassigned tuple appends an `AuditLog` row.",
-        "Playwright (`tests/admin.spec.ts -g US-019`): seed 3 test classes + 1 teacher; bulk-assign mode B with 1 subject across all 3 classes; assert summary shows `3 created`; assert all 3 (class, subject) rows now have that teacher."
+        "`doGet` shows a login page when no valid session token is in `localStorage`.",
+        "Login form posts `username` + `password` to a server function.",
+        "Server looks up `Users` row by `username`, verifies `SHA_256(password+salt)` against",
+        "On success, write `{user_id, role, expires_at}` to `CacheService.getUserCache()` with a",
+        "Subsequent requests include the token; expired/invalid tokens redirect to login.",
+        "Logout button clears the token from `localStorage` and the cache.",
+        "Playwright (`tests/auth.spec.ts -g US-002`): navigate to app; assert login page visible;"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
+    },
+    {
+      "id": "US-003",
+      "title": "Auth — user management and password reset",
+      "description": "As an admin, I want to create teacher accounts and reset passwords so I can onboard and support staff.",
+      "acceptanceCriteria": [
+        "Admin-only `/admin/users` page lists all rows in `Users` tab (username, full name, role).",
+        "\"Add user\" form: `username`, `full_name`, `role` (teacher/admin), initial password.",
+        "\"Reset password\" button per row opens a form; same hashing flow on save.",
+        "Non-admin session hitting `/admin/users` receives a 403 block screen.",
+        "Playwright (`tests/auth.spec.ts -g US-003`): log in as admin; visit `/admin/users`;"
+      ],
+      "priority": 3,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-004",
+      "title": "School info, classes, and subjects setup",
+      "description": "As an admin, I want to record the school identity, academic year, the list of classes, and the list of subjects so everything else has reference data to build on.",
+      "acceptanceCriteria": [
+        "`/admin/school` form: school name, อำเภอ, จังหวัด, ปีการศึกษา — saved to `SchoolInfo` tab.",
+        "`/admin/classes` CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`.",
+        "`/admin/subjects` CRUD: `subject_id`, `subject_name`, `subject_code`, `hours_per_year`,",
+        "Pre-seed all 11 subjects from the source Excel on first run (see FR-7 for the list and",
+        "Playwright (`tests/admin.spec.ts -g US-004`): log in as admin; edit school name to"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-005",
+      "title": "Student roster — CRUD",
+      "description": "As a homeroom teacher, I want to add and edit the student list for my class so all subjects share one roster.",
+      "acceptanceCriteria": [
+        "`/class/:class_id/students` list view filtered by `class_id`, ordered by `seq_no`.",
+        "Columns: `seq_no` (เลขที่), `student_code` (เลขประจำตัว), `citizen_id`",
+        "Add/edit/delete forms with citizen-ID uniqueness validation within the class.",
+        "Only the homeroom teacher of that class or an admin can edit; other teachers see read-only.",
+        "Playwright (`tests/admin.spec.ts -g US-005`): log in as admin; open `test_class_p1_1`;"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-006",
+      "title": "Indicator catalog (ตัวชี้วัด)",
+      "description": "As an admin, I want a per-subject catalog of learning indicator codes so teachers can score against them.",
+      "acceptanceCriteria": [
+        "`/admin/indicators/:subject_id` CRUD: `indicator_id`, `subject_id`, `code`",
+        "Pre-seed the 16 English Grade-1 indicator codes from source `คะแนน1` on first run:",
+        "Playwright (`tests/admin.spec.ts -g US-006`): log in as admin; open indicators for"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-007",
+      "title": "Attendance grid view and edit",
+      "description": "As a teacher, I want to mark daily attendance per period on a weekly grid so I can track each student's presence over the whole year.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/attendance?week=N` (N = 1–40).",
+        "Grid: rows = students ordered by `seq_no`, columns = the 7 calendar days of week N with",
+        "Each cell is a single-character input accepting `/` (present), `ล` (leave), `ข` (absent),",
+        "\"Save week\" writes/upserts rows to `Attendance`: `attendance_id`, `student_id`,",
+        "`LockService.getDocumentLock().tryLock(30000)` wraps every write; released in `finally`.",
+        "Previous / Next week navigation buttons; \"Jump to week\" dropdown.",
+        "Footer row: per-student totals — `present`, `leave`, `absent`, `total hours so far`.",
+        "Playwright (`tests/attendance.spec.ts -g US-007`): log in as teacher assigned to"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-008",
+      "title": "Formative indicator scoring (คะแนน1)",
+      "description": "As a teacher, I want to enter a 0–3 score per student per indicator so the formative part of the grade is recorded.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/formative`.",
+        "Grid: rows = students, columns = indicators ordered by `display_order`, each cell numeric",
+        "Row total and class column-average shown live via JavaScript (no server round-trip).",
+        "Save writes to `IndicatorScores`: `id`, `student_id`, `subject_id`, `indicator_id`,",
+        "Row total is stored/accessible as `formative_total` for use in US-009.",
+        "Playwright (`tests/scoring.spec.ts -g US-008`): log in as teacher; open formative page for"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-009",
+      "title": "Summative scoring and grade computation (คะแนน2)",
+      "description": "As a teacher, I want to enter coursework, midterm, and final scores and have the system auto-compute the 0–4 grade exactly as the Excel does.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/summative`.",
+        "Columns per student: `ระหว่างเรียน` (max from `SubjectWeights.coursework_max`),",
+        "Grade ladder applied to `รวมทั้งหมด`:",
+        "`สอบแก้ตัว` overrides the displayed `final_grade` without changing `computed_grade`.",
+        "Write to `SummativeScores`: `id`, `student_id`, `subject_id`, `coursework`, `midterm`,",
+        "Playwright (`tests/scoring.spec.ts -g US-009`):"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-010",
+      "title": "Subject weights configuration (คะแนนวิชา)",
+      "description": "As an admin, I want to configure how each subject's 100 points is split across assessment periods so the summative form shows correct column maxima.",
+      "acceptanceCriteria": [
+        "`/admin/weights` shows one row per subject with editable fields: `coursework_max`,",
+        "Save validates that `pre_mid_max + mid_max + post_mid_max + final_exam_max = 100`; shows",
+        "Default values: group-1 → 25/20/25/30=100; group-2 → 30/20/30/20=100.",
+        "Summative scoring page (US-009) reads max values from this tab at render time; changing",
+        "Playwright (`tests/admin.spec.ts -g US-010`): log in as admin; change `test_subject_eng`"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-011",
+      "title": "Characteristics scoring (คุณลักษณะ)",
+      "description": "As a teacher, I want to score each student on 8 affective traits and see the auto-computed label.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/characteristics`.",
+        "Grid: rows = students, 8 trait columns (0–10 each):",
+        "Computed total (max 80) shown live. Label by ladder:",
+        "Write to `Characteristics`: `id`, `student_id`, `subject_id`, `t1..t8`, `total`, `label`,",
+        "Playwright (`tests/scoring.spec.ts -g US-011`):"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-012",
+      "title": "Read-Think-Write scoring (อ่านคิด)",
+      "description": "As a teacher, I want to score each student on 10 read-think-write sub-items and see the auto-label.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/readthinkwrite`.",
+        "Grid: rows = students, 10 columns (0–10 each) grouped visually:",
+        "Computed total (max 100) and label:",
+        "Write to `ReadThinkWrite`: `id`, `student_id`, `subject_id`, `r1..r3`, `t1..t4`,",
+        "Playwright (`tests/scoring.spec.ts -g US-012`):"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-013",
+      "title": "Cover report aggregates (ปก)",
+      "description": "As a teacher, I want a one-page summary showing grade distributions and class headers — the digital twin of the `ปก` Excel sheet.",
+      "acceptanceCriteria": [
+        "Page `/class/:class_id/subject/:subject_id/report`.",
+        "Header: school name, อำเภอ, จังหวัด, ปีการศึกษา, ชั้น, รหัสวิชา, เวลาเรียน,",
+        "Grade distribution table: count of students at each grade level 4, 3.5, 3, 2.5, 2, 1.5,",
+        "กิจกรรมพัฒนาผู้เรียน: ผ่าน / ไม่ผ่าน / ร / มส counts. Per-student result set via a",
+        "Characteristics distribution: counts at ดีเยี่ยม / ดี / ผ่านเกณฑ์ / ไม่ผ่าน + percentages.",
+        "Read-Think-Write distribution: same four-bucket counts + percentages.",
+        "Playwright (`tests/scoring.spec.ts -g US-013`): using the English-Grade-1 sample data"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-014",
+      "title": "PDF export of cover report",
+      "description": "As a teacher, I want to download the cover report as a PDF that visually matches the original Excel `ปก` page so I can print and obtain signatures.",
+      "acceptanceCriteria": [
+        "A hidden Google Sheet template mirrors the `ปก` layout: merged cells, school header,",
+        "\"Export PDF\" button on `/report` page: server copies the template, fills values from",
+        "PDF is A4 portrait; Thai fonts render without mojibake.",
+        "Playwright (`tests/scoring.spec.ts -g US-014`): click \"Export PDF\"; assert a download"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-015",
+      "title": "Static reference pages",
+      "description": "As a teacher, I want read-only reference pages for instructions and score scales so I don't have to open the original Excel.",
+      "acceptanceCriteria": [
+        "`/help` renders static Thai text from `วิธีทำ1` / `วิธีทำ2` content.",
+        "`/subjects/:subject_id/description` renders the `description` field from `Subjects`.",
+        "`/subjects/:subject_id/indicators` lists all indicators for that subject (read-only).",
+        "`/weights` renders the `SubjectWeights` table for all subjects (read-only).",
+        "Playwright (`tests/admin.spec.ts -g US-015`): visit `/help`; assert at least one Thai"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-016",
+      "title": "Audit log",
+      "description": "As an admin, I want a searchable trail of every data change so I can investigate grade disputes.",
+      "acceptanceCriteria": [
+        "On every write to `Attendance`, `IndicatorScores`, `SummativeScores`, `Characteristics`,",
+        "Admin-only `/admin/audit` page with filters: by `user_id`, date range, `entity`.",
+        "Playwright (`tests/admin.spec.ts -g US-016`): log in as teacher; edit one summative score;"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-017",
+      "title": "Deployment and first-run setup wizard",
+      "description": "As the deployer, I want to run a one-time setup wizard after a fresh deploy so a new school can start using the app from scratch.",
+      "acceptanceCriteria": [
+        "`.clasp.json.example` committed (no real project ID); README documents deploy steps.",
+        "If `DB_SHEET_ID` script property is unset, first visit shows a setup wizard:",
+        "After wizard completes, redirects to login page.",
+        "Playwright (`tests/auth.spec.ts -g US-017`): clear Script Properties; visit the app URL;"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-018",
+      "title": "Admin assigns subjects to a teacher (teacher-first flow)",
+      "description": "As an admin, I want to select a teacher first and then add (class, subject) pairs to their schedule one by one, so I can clearly manage and grow each teacher's teaching load.",
+      "acceptanceCriteria": [
+        "Page `/admin/enrollments` has a **left panel** listing all teachers (role=teacher only),",
+        "Clicking a teacher opens a **right panel** with:",
+        "If the chosen (class, subject) is already owned by a **different** teacher, the server",
+        "\"Remove\" button detaches the pair from the teacher; an `AuditLog` row is written.",
+        "Each (class, subject) can have at most one teacher at any time — unique composite key",
+        "Save/remove toast success and refresh the right panel inline (no full-page reload).",
+        "Non-admin users hitting `/admin/enrollments` get a 403 block screen.",
+        "A secondary read-only **\"All pairs\" tab** on the same page shows every (class, subject)",
+        "Playwright (`tests/admin.spec.ts -g US-018`):"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-019",
+      "title": "Admin bulk-assigns one teacher to many pairs",
+      "description": "As an admin, I want to assign one teacher to many (class, subject) pairs at once so I can onboard a new teacher quickly.",
+      "acceptanceCriteria": [
+        "A \"Bulk assign\" panel on `/admin/enrollments` offers two modes:",
+        "Submitting writes one `Enrollments` row per (class, subject), overwriting existing rows",
+        "After submit, a result panel shows: `N created, M reassigned, K unchanged`.",
+        "Each created or reassigned row appends an `AuditLog` row.",
+        "If `LockService` cannot acquire within 30s, abort with no partial writes and show error.",
+        "Playwright (`tests/admin.spec.ts -g US-019`): seed 3 test classes + 1 test teacher + 1"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
     },
     {
       "id": "US-020",
-      "title": "Admin views teacher workload across the school",
-      "description": "As an admin, I want a dashboard showing each teacher and how many (class, subject) pairs they are assigned to, so I can balance workload.",
+      "title": "Admin views teacher workload dashboard",
+      "description": "As an admin, I want a dashboard showing each teacher's teaching load so I can balance assignments across the school.",
       "acceptanceCriteria": [
-        "Admin page `/admin/workload` shows a table: one row per teacher with columns `ชื่อครู`, `จำนวน (class, subject)`, `รายวิชาที่สอน` (concatenated string), `จำนวนนักเรียนรวม` (sum of students across all assigned classes — distinct count so the same class counted once even if the teacher teaches two subjects there is fine; spec the formula in the row).",
-        "Default sort: workload count descending.",
-        "Click a teacher row → drill-down panel listing each (class, subject) they own with a link to the relevant grade-book page.",
-        "Excludes admin users.",
-        "Page renders in under 3s for up to 50 teachers and 500 enrollments (cache aggregates in `CacheService` for 60s).",
-        "Playwright (`tests/admin.spec.ts -g US-020`): seed 2 teachers with different workload counts (one with 3 enrollments, one with 1); visit `/admin/workload`; assert sort order (heavier first); click the heavier row; assert the drill-down lists exactly 3 (class, subject) lines."
+        "`/admin/workload` table: one row per teacher (excludes admin users), columns:",
+        "Default sort: pair count descending (heaviest workload first).",
+        "Clicking a teacher row opens a drill-down panel listing each (class, subject) pair they",
+        "Page renders in under 3 seconds for 50 teachers / 500 enrollments.",
+        "Playwright (`tests/admin.spec.ts -g US-020`): seed `test_teacher_heavy` (3 enrollments)"
       ],
-      "priority": 3,
-      "passes": true,
+      "priority": 4,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-021",
       "title": "Playwright auth bootstrap (storageState)",
-      "description": "As the developer, I want a one-time bootstrap script that captures my logged-in browser session into `auth.json` so all later Playwright runs are non-interactive.",
+      "description": "As the developer, I want a one-time script that captures my logged-in session into `auth.json` so all later Playwright test runs are fully non-interactive.",
       "acceptanceCriteria": [
-        "`tests/auth.setup.ts` exists and is configured as a Playwright `setup` project that runs before all other test projects.",
-        "When run, it opens the production `/exec` URL in a non-headless Chromium with `pause()` after navigation.",
-        "On first execution: the human logs in (custom username/password) AND completes any Google \"authorize script\" consent if Apps Script demands it, then resumes the script.",
-        "After resume, the script calls `context.storageState({ path: 'tests/.auth/auth.json' })`.",
-        "All other test projects in `playwright.config.ts` set `use: { storageState: 'tests/.auth/auth.json' }`.",
+        "`tests/auth.setup.ts` configured as a Playwright `setup` project that runs before all",
+        "When run, opens the production `/exec` URL in **non-headless** Chromium and calls",
+        "After the human resumes, script calls",
+        "All other test projects use `storageState: 'tests/.auth/auth.json'` (see FR-17).",
         "`tests/.auth/` is in `.gitignore`.",
-        "README documents: \"first time only, run `pnpm playwright test --project=setup` and follow the browser prompt.\" Subsequent runs use `pnpm playwright test`.",
-        "Verify: delete `auth.json`, run setup once with manual login, then run a sample story spec headless — it passes without prompting."
+        "README documents: *\"First time only: run `pnpm playwright test --project=setup` and",
+        "Verify: delete `auth.json`; run `--project=setup` with manual login; then run"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-022",
-      "title": "Playwright test data isolation + cleanup helper",
-      "description": "As the developer, I want a shared helper that seeds and cleans `test_`-prefixed data so specs stay independent and never pollute production.",
+      "title": "Playwright seed/cleanup helper",
+      "description": "As the developer, I want a shared helper that seeds and cleans `test_`-prefixed data so specs stay independent and never pollute real production data.",
       "acceptanceCriteria": [
-        "`tests/helpers/seed.ts` exports: `seedTestClass({suffix, level, section})`, `seedTestSubject({suffix, name, code, group})`, `seedTestStudent({class_suffix, seq, full_name})`, `seedTestUser({suffix, role, password})`, `cleanupTestData()`.",
-        "Each seed function generates IDs prefixed with `test_<suffix>` (e.g. `test_class_us018a`).",
-        "Seed/cleanup functions invoke Apps Script via `fetch(WEB_APP_URL + '?api=...')` using a dedicated `Bearer` token stored in the Script Properties and matched server-side (the \"API token\" is a separate auth path from the username/password login — see FR-14).",
-        "`cleanupTestData()` deletes every row across all tabs where any ID column starts with `test_`.",
-        "A `beforeAll`/`afterAll` pair in each spec file uses these helpers.",
-        "`tests/helpers/seed.spec.ts` is a self-test that seeds, asserts, cleans up, asserts gone.",
-        "Verify: after a full test-suite run, query the production master Sheet for any rows with IDs starting `test_` — none should remain."
+        "`tests/helpers/seed.ts` exports: `seedTestClass`, `seedTestSubject`, `seedTestStudent`,",
+        "All generated IDs/names/codes are prefixed with `test_<suffix>`.",
+        "Seed/cleanup functions call the Apps Script test API (`?api=...`) with a `Bearer` token",
+        "`cleanupTestData()` deletes every row across all tabs where any ID column starts `test_`.",
+        "Each spec file wraps its seeds in `beforeAll` / cleanup in `afterAll`.",
+        "`tests/helpers/seed.spec.ts` self-test: seed one of each entity; assert they exist;",
+        "After a full test suite run, query the master Sheet for `test_` rows — none should remain."
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     }
   ],
   "metadata": {
-    "createdAt": "2026-05-18T15:14:50.546Z",
+    "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
-    "sourcePrd": "tasks\\prd-popo-gradebook-webapp-v2.md",
-    "updatedAt": "2026-05-18T22:14:44.326Z"
+    "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
+    "updatedAt": "2026-05-19T11:59:03.595Z"
   }
 }

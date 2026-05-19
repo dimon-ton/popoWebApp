@@ -1,5 +1,5 @@
 /**
- * Admin feature tests — US-018, US-019, US-020
+ * Admin feature tests — US-001, US-018, US-019, US-020
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
@@ -12,6 +12,34 @@ import {
   cleanupTestData,
   queryTestRows,
 } from './helpers/seed';
+
+// ---- US-001: Bootstrap master Sheet schema ----
+
+const EXPECTED_TABS = [
+  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
+  'Students', 'Indicators', 'SubjectWeights', 'Attendance',
+  'IndicatorScores', 'SummativeScores', 'Characteristics',
+  'ReadThinkWrite', 'AuditLog',
+];
+
+test.describe('US-001: Bootstrap master Sheet schema', () => {
+  test('US-001: all 14 tabs visible with row count ≥ 1 on db-status page', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_db_status`);
+
+    // Wait for the table to render (the JS call populates it async)
+    await expect(page.locator('#statusTable')).toBeVisible({ timeout: 30_000 });
+
+    // Assert all 14 tabs appear with row count ≥ 1
+    for (const tab of EXPECTED_TABS) {
+      const row = page.locator(`tr[data-tab="${tab}"]`);
+      await expect(row).toBeVisible({ timeout: 15_000 });
+
+      const countText = await row.locator('[data-count]').getAttribute('data-count');
+      expect(Number(countText)).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
 
 // ---- US-018: Admin assigns subjects to a teacher (teacher-first flow) ----
 

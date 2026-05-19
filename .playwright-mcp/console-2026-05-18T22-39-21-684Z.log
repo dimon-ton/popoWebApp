@@ -1,0 +1,15 @@
+[    2369ms] [WARNING] Unrecognized feature: 'ambient-light-sensor'. @ https://script.google.com/macros/s/AKfycbwxQFWNKu-uiNba56dXR_qC-vPUjdX89igTxl00X51VIDP3mlYQUO3u1p41_bCbjFwZ/exec:10
+[    2369ms] [WARNING] Unrecognized feature: 'speaker'. @ https://script.google.com/macros/s/AKfycbwxQFWNKu-uiNba56dXR_qC-vPUjdX89igTxl00X51VIDP3mlYQUO3u1p41_bCbjFwZ/exec:10
+[    2369ms] [WARNING] Unrecognized feature: 'vibrate'. @ https://script.google.com/macros/s/AKfycbwxQFWNKu-uiNba56dXR_qC-vPUjdX89igTxl00X51VIDP3mlYQUO3u1p41_bCbjFwZ/exec:10
+[    2369ms] [WARNING] Unrecognized feature: 'vr'. @ https://script.google.com/macros/s/AKfycbwxQFWNKu-uiNba56dXR_qC-vPUjdX89igTxl00X51VIDP3mlYQUO3u1p41_bCbjFwZ/exec:10
+[    2371ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[    3221ms] [WARNING] Unrecognized feature: 'ambient-light-sensor'. @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[    3221ms] [WARNING] Unrecognized feature: 'speaker'. @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[    3221ms] [WARNING] Unrecognized feature: 'vibrate'. @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[    3221ms] [WARNING] Unrecognized feature: 'vr'. @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[    3581ms] [ERROR] Framing 'https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/' violates the following report-only Content Security Policy directive: "frame-ancestors 'self'". The violation has been logged, but no further action has been taken.
+ @ :0
+[    4199ms] [ERROR] Blocked autofocusing on a <input> element in a cross-origin subframe. @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[    4218ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/userCodeAppPanel:0
+[   24648ms] [ERROR] Framing 'https://n-kz2a2nz4yo2tvmzgiih4z3vyldmidbprgbomgyi-0lu-script.googleusercontent.com/' violates the following report-only Content Security Policy directive: "frame-ancestors 'self'". The violation has been logged, but no further action has been taken.
+ @ :0
