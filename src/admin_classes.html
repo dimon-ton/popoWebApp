@@ -175,7 +175,10 @@ function renderClasses(classes) {
       '<td>' + escHtml(c.level) + '</td>' +
       '<td>' + escHtml(c.section) + '</td>' +
       '<td>' + escHtml(teacherName) + '</td>' +
-      '<td><button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')">ลบ</button></td>';
+      '<td>' +
+      '<button class="btn-secondary" onclick="viewStudents(\'' + escHtml(c.class_id) + '\')" style="margin-right:6px;background:#1a56a0;color:white;font-size:12px;padding:5px 12px">นักเรียน</button>' +
+      '<button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')">ลบ</button>' +
+      '</td>';
     tbody.appendChild(tr);
   });
   document.getElementById('classesTable').style.display = 'table';
@@ -220,6 +223,13 @@ function deleteClass(class_id) {
     })
     .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .serverDeleteClass(TOKEN, class_id);
+}
+
+function viewStudents(class_id) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getClassStudentsPageHtml(TOKEN, class_id);
 }
 
 loadTeachers();

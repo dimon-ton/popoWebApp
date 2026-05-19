@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ทะเบียนนักเรียน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 1000px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 15px; color: #444; margin-bottom: 16px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+    .form-group label { font-size: 12px; color: #555; }
+    input[type="text"], input[type="number"] {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 13px; font-family: inherit;
+    }
+    input:focus { outline: none; border-color: #1a56a0; }
+    button {
+      padding: 8px 18px; border: none; border-radius: 4px; font-size: 13px;
+      font-family: inherit; cursor: pointer;
+    }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154880; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-danger { background: #e74c3c; color: white; font-size: 12px; padding: 5px 12px; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-secondary { background: #6c757d; color: white; font-size: 12px; padding: 5px 12px; }
+    .btn-secondary:hover { background: #5a6268; }
+    .btn-save { background: #27ae60; color: white; font-size: 12px; padding: 5px 12px; }
+    .btn-save:hover { background: #219150; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f0f4fa; padding: 10px 12px; text-align: left; border-bottom: 2px solid #ddd; font-size: 12px; }
+    td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    tr:hover td { background: #fafcff; }
+    .readonly-notice { font-size: 13px; color: #888; margin-bottom: 12px; padding: 10px; background: #fff8e1; border-radius: 4px; border-left: 3px solid #f0a500; }
+    .toast {
+      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 6px; font-size: 14px; z-index: 1000;
+      display: none; max-width: 320px;
+    }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .edit-field { width: 100%; padding: 4px 6px; border: 1px solid #1a56a0; border-radius: 3px; font-size: 12px; font-family: inherit; }
+    .action-btns { display: flex; gap: 4px; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <?!= data.session && data.session.role === 'admin' ? '<a href="#" onclick="navigate(\'admin_classes\')">ชั้นเรียน</a>' : '' ?>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">ทะเบียนนักเรียน</h2>
+
+  <div id="addCard" class="card" style="display:none">
+    <h3>เพิ่มนักเรียน</h3>
+    <div class="form-row">
+      <div class="form-group" style="min-width:60px">
+        <label>เลขที่</label>
+        <input type="number" id="newSeqNo" min="1" placeholder="1">
+      </div>
+      <div class="form-group" style="min-width:110px">
+        <label>เลขประจำตัว</label>
+        <input type="text" id="newStudentCode" placeholder="รหัสนักเรียน">
+      </div>
+      <div class="form-group" style="min-width:140px">
+        <label>เลขประจำตัวประชาชน</label>
+        <input type="text" id="newCitizenId" placeholder="13 หลัก" maxlength="13">
+      </div>
+      <div class="form-group" style="min-width:200px">
+        <label>ชื่อ-สกุล</label>
+        <input type="text" id="newFullName" placeholder="ชื่อ นามสกุล">
+      </div>
+      <div class="form-group" style="min-width:110px">
+        <label>วันเกิด</label>
+        <input type="text" id="newDob" placeholder="01 ม.ค. 60">
+      </div>
+      <div class="form-group" style="min-width:120px">
+        <label>หมายเหตุ</label>
+        <input type="text" id="newNote" placeholder="">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn-primary" id="addStudentBtn" onclick="addStudent()">เพิ่มนักเรียน</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 id="tableHeading">รายชื่อนักเรียน</h3>
+    <div id="readonlyNotice" class="readonly-notice" style="display:none">คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูประจำชั้นหรือผู้ดูแลระบบแก้ไขได้</div>
+    <p class="loading-msg" id="studentsLoading">กำลังโหลด...</p>
+    <table id="studentsTable" style="display:none">
+      <thead>
+        <tr>
+          <th>เลขที่</th>
+          <th>เลขประจำตัว</th>
+          <th>เลขประจำตัวประชาชน</th>
+          <th>ชื่อ-สกุล</th>
+          <th>วันเกิด</th>
+          <th>หมายเหตุ</th>
+          <th id="actionHeader"></th>
+        </tr>
+      </thead>
+      <tbody id="studentsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?= data.class_id || '' ?>';
+var CAN_EDIT = false;
+
+function navigate(page, extra) {
+  var args = [TOKEN, page];
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function loadStudents() {
+  document.getElementById('studentsLoading').style.display = 'block';
+  document.getElementById('studentsTable').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      CAN_EDIT = result.can_edit === true;
+      var info = result.class_info || {};
+      document.getElementById('pageHeading').textContent =
+        'ทะเบียนนักเรียน — ' + escHtml(info.level || '') + '/' + escHtml(info.section || '') +
+        ' (' + escHtml(CLASS_ID) + ')';
+      document.getElementById('tableHeading').textContent =
+        'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';
+      if (CAN_EDIT) {
+        document.getElementById('addCard').style.display = 'block';
+        document.getElementById('actionHeader').textContent = 'จัดการ';
+        document.getElementById('readonlyNotice').style.display = 'none';
+      } else {
+        document.getElementById('addCard').style.display = 'none';
+        document.getElementById('actionHeader').textContent = '';
+        document.getElementById('readonlyNotice').style.display = 'block';
+      }
+      renderStudents(result.students || []);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('studentsLoading').style.display = 'none';
+      showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getStudentsList(TOKEN, CLASS_ID);
+}
+
+function renderStudents(students) {
+  document.getElementById('studentsLoading').style.display = 'none';
+  var tbody = document.getElementById('studentsBody');
+  tbody.innerHTML = '';
+  students.forEach(function(s) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-student-id', s.student_id);
+    var actionCell = CAN_EDIT
+      ? '<td><div class="action-btns">' +
+          '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')">แก้ไข</button>' +
+          '<button class="btn-danger" onclick="deleteStudent(\'' + escHtml(s.student_id) + '\')">ลบ</button>' +
+        '</div></td>'
+      : '<td></td>';
+    tr.innerHTML =
+      '<td class="cell-seq_no">' + escHtml(s.seq_no) + '</td>' +
+      '<td class="cell-student_code">' + escHtml(s.student_code) + '</td>' +
+      '<td class="cell-citizen_id">' + escHtml(s.citizen_id) + '</td>' +
+      '<td class="cell-full_name">' + escHtml(s.full_name) + '</td>' +
+      '<td class="cell-dob">' + escHtml(s.dob) + '</td>' +
+      '<td class="cell-note">' + escHtml(s.note) + '</td>' +
+      actionCell;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('studentsTable').style.display = 'table';
+}
+
+function startEdit(student_id) {
+  var tr = document.querySelector('tr[data-student-id="' + student_id + '"]');
+  if (!tr) return;
+  var fields = ['seq_no','student_code','citizen_id','full_name','dob','note'];
+  fields.forEach(function(f) {
+    var td = tr.querySelector('.cell-' + f);
+    var val = td.textContent;
+    td.innerHTML = '<input class="edit-field" data-field="' + f + '" value="' + escHtml(val) + '">';
+  });
+  var actionDiv = tr.querySelector('.action-btns');
+  actionDiv.innerHTML =
+    '<button class="btn-save" onclick="saveEdit(\'' + escHtml(student_id) + '\')">บันทึก</button>' +
+    '<button class="btn-secondary" onclick="cancelEdit(\'' + escHtml(student_id) + '\')">ยกเลิก</button>';
+}
+
+function cancelEdit(student_id) {
+  loadStudents();
+}
+
+function saveEdit(student_id) {
+  var tr = document.querySelector('tr[data-student-id="' + student_id + '"]');
+  if (!tr) return;
+  var get = function(f) {
+    var inp = tr.querySelector('input[data-field="' + f + '"]');
+    return inp ? inp.value : '';
+  };
+  var btn = tr.querySelector('.btn-save');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); if (btn) btn.disabled = false; return; }
+      showToast('บันทึกข้อมูลนักเรียนสำเร็จ', 'success');
+      loadStudents();
+    })
+    .withFailureHandler(function(err) {
+      if (btn) btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverUpdateStudent(TOKEN, student_id,
+      get('seq_no'), get('student_code'), get('citizen_id'),
+      get('full_name'), get('dob'), get('note'));
+}
+
+function addStudent() {
+  var seq_no = document.getElementById('newSeqNo').value.trim();
+  var student_code = document.getElementById('newStudentCode').value.trim();
+  var citizen_id = document.getElementById('newCitizenId').value.trim();
+  var full_name = document.getElementById('newFullName').value.trim();
+  var dob = document.getElementById('newDob').value.trim();
+  var note = document.getElementById('newNote').value.trim();
+
+  if (!full_name) { showToast('กรุณากรอกชื่อ-สกุล', 'error'); return; }
+
+  var btn = document.getElementById('addStudentBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('เพิ่มนักเรียนสำเร็จ', 'success');
+      document.getElementById('newSeqNo').value = '';
+      document.getElementById('newStudentCode').value = '';
+      document.getElementById('newCitizenId').value = '';
+      document.getElementById('newFullName').value = '';
+      document.getElementById('newDob').value = '';
+      document.getElementById('newNote').value = '';
+      loadStudents();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverAddStudent(TOKEN, CLASS_ID, seq_no, student_code, citizen_id, full_name, dob, note);
+}
+
+function deleteStudent(student_id) {
+  if (!confirm('ยืนยันการลบนักเรียนนี้?')) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('ลบนักเรียนสำเร็จ', 'success');
+      loadStudents();
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .serverDeleteStudent(TOKEN, student_id);
+}
+
+loadStudents();
+</script>
+</body>
+</html>

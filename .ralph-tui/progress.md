@@ -10,6 +10,7 @@ after each iteration and it's included in prompts for context.
 - **Admin page guard in getPageHtml is a whitelist**: New admin pages must be added to both the `adminPages` array in `doGet` AND the identical array in `getPageHtml` for consistent protection (navigation and direct URL).
 - **preseedSubjects() is idempotent**: Checks existing IDs before inserting — safe to call multiple times without creating duplicates.
 
+- **Extra-param page navigation**: `getPageHtml(token, page)` only injects `{ session, token }`. For pages that need an extra param (e.g. `class_id`), add a dedicated `getXxxPageHtml(token, extraParam)` function in `Code.gs` and call it from the parent page via `google.script.run`. Add a matching `case 'xxx'` in `doGet` that reads the extra param from `e.parameter`.
 - **GAS global scope**: All `.gs` files share one global scope — variables like `TAB_ORDER` defined in `setup.gs` are accessible from `Code.gs` without imports.
 - **Page routing**: `doGet` switches on `e.parameter.page`; `buildPage(name, data)` renders the named HTML template. Admin pages are listed in `adminPages` array in both `doGet` and `getPageHtml`.
 - **Client-side GAS calls**: HTML pages call server functions via `google.script.run.withSuccessHandler(fn).functionName(args)`. No `fetch`/HTTP from the HTML side.
@@ -19,6 +20,26 @@ after each iteration and it's included in prompts for context.
 - **Navigation via document.write**: All page navigation in GAS web app works by calling a server function that returns full HTML, then calling `document.open(); document.write(html); document.close()`. This replaces the entire page content including scripts. Playwright handles this fine.
 - **Playwright fresh-context test pattern**: For auth tests that need to test the login UI itself, use `test.use({ storageState: { cookies: [], origins: [] } })` inside the describe block to override the global `auth.json` storageState.
 
+- **Student page navigation pattern**: `getPageHtml(token, page)` only passes `session` and `token` as template data. For pages that need extra URL params (like `class_id`), add a dedicated `getXxxPageHtml(token, extra_param)` function that builds the template with the extra data. Call it from the parent page via `google.script.run.getXxxPageHtml(TOKEN, param)`.
+
+---
+
+## 2026-05-19 - US-005
+- Implemented `/class/:class_id/students` student roster page with full CRUD.
+- Server functions in `src/students.gs`: `getStudentsList()`, `serverAddStudent()`, `serverUpdateStudent()`, `serverDeleteStudent()`.
+- Access control: admin or homeroom teacher of the class can edit; others see read-only view with a notice banner.
+- citizen_id uniqueness validated within the class on add and edit.
+- All writes call `appendAuditLog()` per FR-12.
+- Created `src/class_students.html` with add form, editable table (inline edit-in-place), and delete with confirm dialog.
+- Added `case 'class_students'` to router in `Code.gs` (reads `params.class_id`).
+- Added `getClassStudentsPageHtml(token, class_id)` to `Code.gs` for client-side navigation (needed because `getPageHtml` doesn't carry extra params).
+- Added "นักเรียน" button per row in `admin_classes.html` that calls `viewStudents(class_id)` → `getClassStudentsPageHtml`.
+- Added US-005 test block in `tests/admin.spec.ts`: seeds `test_class_us005_c1`, adds a student with all fields, edits note, deletes row.
+- Files changed: `src/students.gs` (new), `src/class_students.html` (new), `src/Code.gs`, `src/admin_classes.html`, `tests/admin.spec.ts`
+- **Learnings:**
+  - `getPageHtml(token, page)` only injects `{ session, token }` into templates — pages needing extra data (class_id, subject_id) require their own dedicated navigation function in Code.gs.
+  - Inline edit-in-place: replace cell textContent with `<input>` on "Edit" click; on "Save" call the update server function; on success `loadStudents()` re-renders from DB.
+  - For delete with `window.confirm`, register `page.on('dialog', async d => d.accept())` in Playwright before the click that triggers the confirm — order matters.
 ---
 
 ## 2026-05-19 - US-004

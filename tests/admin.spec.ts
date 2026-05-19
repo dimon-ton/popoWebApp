@@ -84,6 +84,88 @@ test.describe('US-004: School info, classes, and subjects', () => {
   });
 });
 
+// ---- US-005: Student roster — CRUD ----
+
+test.describe('US-005: Student roster CRUD', () => {
+  let classId: string;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us005_c1', level: 'ป.1', section: '1' });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-005: add student and assert row appears', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+
+    // Wait for page heading
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    // Add form should be visible (admin can edit)
+    await expect(page.locator('#addCard')).toBeVisible({ timeout: 15_000 });
+
+    await page.fill('#newSeqNo', '1');
+    await page.fill('#newStudentCode', 'S001');
+    await page.fill('#newCitizenId', '1459700000001');
+    await page.fill('#newFullName', 'test_นักเรียนทดสอบ');
+    await page.fill('#newDob', '01 ม.ค. 60');
+    await page.fill('#newNote', '');
+    await page.click('#addStudentBtn');
+
+    await expect(page.locator('#toast')).toContainText('เพิ่มนักเรียนสำเร็จ', { timeout: 15_000 });
+
+    // Row should appear in table
+    await expect(page.locator('#studentsBody')).toContainText('test_นักเรียนทดสอบ', { timeout: 15_000 });
+    await expect(page.locator('#studentsBody')).toContainText('1459700000001');
+  });
+
+  test('US-005: edit note field and assert updated', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+
+    await expect(page.locator('#studentsTable')).toBeVisible({ timeout: 20_000 });
+
+    // Click edit on the first row (the student we added)
+    const editBtn = page.locator('#studentsBody .btn-secondary').first();
+    await editBtn.click();
+
+    // Note field should now be an input
+    const noteInput = page.locator('#studentsBody input[data-field="note"]').first();
+    await noteInput.fill('test_note_updated');
+
+    // Save
+    await page.locator('#studentsBody .btn-save').first().click();
+
+    await expect(page.locator('#toast')).toContainText('บันทึกข้อมูลนักเรียนสำเร็จ', { timeout: 15_000 });
+
+    // Reload and assert note persisted
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+    await expect(page.locator('#studentsTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#studentsBody')).toContainText('test_note_updated', { timeout: 15_000 });
+  });
+
+  test('US-005: delete student and assert row gone', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+
+    await expect(page.locator('#studentsTable')).toBeVisible({ timeout: 20_000 });
+
+    // Dismiss confirm dialog automatically
+    page.on('dialog', async (dialog) => { await dialog.accept(); });
+
+    // Click delete on the first student row
+    await page.locator('#studentsBody .btn-danger').first().click();
+
+    await expect(page.locator('#toast')).toContainText('ลบนักเรียนสำเร็จ', { timeout: 15_000 });
+
+    // Row should be gone
+    await expect(page.locator('#studentsBody')).not.toContainText('test_นักเรียนทดสอบ', { timeout: 15_000 });
+  });
+});
+
 // ---- US-001: Bootstrap master Sheet schema ----
 
 const EXPECTED_TABS = [

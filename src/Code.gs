@@ -52,6 +52,8 @@ function doGet(e) {
         return buildPage('admin_classes', { session: session, token: token });
       case 'admin_subjects':
         return buildPage('admin_subjects', { session: session, token: token });
+      case 'class_students':
+        return buildPage('class_students', { session: session, token: token, class_id: params.class_id || '' });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -148,6 +150,21 @@ function getPageHtml(token, page) {
     }
     var tmpl = HtmlService.createTemplateFromFile(page);
     tmpl.data = { session: session, token: token };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-005: navigate to class students page — carries class_id parameter
+function getClassStudentsPageHtml(token, class_id) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var tmpl = HtmlService.createTemplateFromFile('class_students');
+    tmpl.data = { session: session, token: token, class_id: class_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
