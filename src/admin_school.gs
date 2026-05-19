@@ -194,3 +194,104 @@ function getTeachersList(token) {
   var users = dbGetAll('Users');
   return { teachers: users.filter(function(u) { return u.role === 'teacher'; }) };
 }
+
+// ── Subject Weights (US-010) ──────────────────────────────────────────────────
+
+// Returns all subject weights joined with subject info for the admin/weights page.
+function getWeightsList(token) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var subjects = dbGetAll('Subjects');
+  var weights = dbGetAll('SubjectWeights');
+  var weightMap = {};
+  weights.forEach(function(w) { weightMap[w.subject_id] = w; });
+
+  var result = subjects.map(function(s) {
+    var w = weightMap[s.subject_id] || {};
+    return {
+      subject_id: s.subject_id,
+      subject_name: s.subject_name,
+      weight_group: s.weight_group,
+      coursework_max: w.coursework_max !== undefined ? w.coursework_max : '',
+      final_max: w.final_max !== undefined ? w.final_max : '',
+      pre_mid_max: w.pre_mid_max !== undefined ? w.pre_mid_max : '',
+      mid_max: w.mid_max !== undefined ? w.mid_max : '',
+      post_mid_max: w.post_mid_max !== undefined ? w.post_mid_max : '',
+      final_exam_max: w.final_exam_max !== undefined ? w.final_exam_max : ''
+    };
+  });
+  return { weights: result };
+}
+
+// Saves (upserts) weight rows for all subjects.
+// rows: array of { subject_id, pre_mid_max, mid_max, post_mid_max, final_exam_max, coursework_max, final_max }
+// Server-side validates pre_mid + mid + post_mid + final_exam === 100 for each row.
+function serverSaveWeights(token, rows) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!rows || rows.length === 0) return { ok: true };
+
+  // Validate all rows before writing anything
+  var errors = [];
+  rows.forEach(function(r) {
+    var total = Number(r.pre_mid_max) + Number(r.mid_max) + Number(r.post_mid_max) + Number(r.final_exam_max);
+    if (total !== 100) errors.push(r.subject_id);
+  });
+  if (errors.length > 0) {
+    return { error: 'รวมต้องเท่ากับ 100 — ' + errors.join(', ') };
+  }
+
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
+  try {
+    var sheet = getSheet('SubjectWeights');
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var sidCol = headers.indexOf('subject_id');
+    var cwCol = headers.indexOf('coursework_max');
+    var fmCol = headers.indexOf('final_max');
+    var pmCol = headers.indexOf('pre_mid_max');
+    var midCol = headers.indexOf('mid_max');
+    var postCol = headers.indexOf('post_mid_max');
+    var feCol = headers.indexOf('final_exam_max');
+
+    rows.forEach(function(r) {
+      var found = false;
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][sidCol] === r.subject_id) {
+          sheet.getRange(i + 1, cwCol + 1).setValue(Number(r.coursework_max));
+          sheet.getRange(i + 1, fmCol + 1).setValue(Number(r.final_max));
+          sheet.getRange(i + 1, pmCol + 1).setValue(Number(r.pre_mid_max));
+          sheet.getRange(i + 1, midCol + 1).setValue(Number(r.mid_max));
+          sheet.getRange(i + 1, postCol + 1).setValue(Number(r.post_mid_max));
+          sheet.getRange(i + 1, feCol + 1).setValue(Number(r.final_exam_max));
+          data[i][cwCol] = Number(r.coursework_max);
+          data[i][fmCol] = Number(r.final_max);
+          data[i][pmCol] = Number(r.pre_mid_max);
+          data[i][midCol] = Number(r.mid_max);
+          data[i][postCol] = Number(r.post_mid_max);
+          data[i][feCol] = Number(r.final_exam_max);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        var newRow = headers.map(function() { return ''; });
+        newRow[sidCol] = r.subject_id;
+        newRow[cwCol] = Number(r.coursework_max);
+        newRow[fmCol] = Number(r.final_max);
+        newRow[pmCol] = Number(r.pre_mid_max);
+        newRow[midCol] = Number(r.mid_max);
+        newRow[postCol] = Number(r.post_mid_max);
+        newRow[feCol] = Number(r.final_exam_max);
+        sheet.appendRow(newRow);
+        data.push(newRow);
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  appendAuditLog(session.user_id, 'SubjectWeights', 'all', null, { rows_saved: rows.length });
+  return { ok: true };
+}

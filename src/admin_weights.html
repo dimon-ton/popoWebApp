@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>กำหนดน้ำหนักคะแนน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 1100px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 15px; color: #444; margin-bottom: 16px; }
+    button {
+      padding: 8px 18px; border: none; border-radius: 4px; font-size: 13px;
+      font-family: inherit; cursor: pointer;
+    }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154880; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f0f4fa; padding: 10px 8px; text-align: center; border-bottom: 2px solid #ddd; font-size: 12px; }
+    th.left { text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+    td.left { text-align: left; }
+    tr:hover td { background: #fafcff; }
+    input[type="number"] {
+      width: 70px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 13px; font-family: inherit; text-align: center;
+    }
+    input:focus { outline: none; border-color: #1a56a0; }
+    input.invalid { border-color: #e74c3c; background: #fff5f5; }
+    .sum-cell { font-weight: bold; }
+    .sum-cell.ok { color: #27ae60; }
+    .sum-cell.bad { color: #e74c3c; }
+    .toast {
+      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 6px; font-size: 14px; z-index: 1000;
+      display: none; max-width: 320px;
+    }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .save-bar { margin-top: 16px; }
+    .legend { font-size: 12px; color: #666; margin-top: 8px; }
+    .col-group { background: #e8f0fa; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
+  <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
+  <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">กำหนดน้ำหนักคะแนนวิชา (คะแนนวิชา)</h2>
+
+  <div class="card">
+    <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
+    <p class="loading-msg" id="weightsLoading">กำลังโหลด...</p>
+    <div id="weightsTableWrap" style="display:none">
+      <table id="weightsTable">
+        <thead>
+          <tr>
+            <th class="left" rowspan="2">วิชา</th>
+            <th class="left" rowspan="2">กลุ่ม</th>
+            <th colspan="4" class="col-group">ระหว่างเรียน (coursework)</th>
+            <th rowspan="2">สอบปลายภาค<br>(final_exam_max)</th>
+            <th rowspan="2">รวม<br>(ต้องเท่ากับ 100)</th>
+          </tr>
+          <tr>
+            <th class="col-group">ก่อนกลางภาค<br>(pre_mid)</th>
+            <th class="col-group">กลางภาค<br>(mid)</th>
+            <th class="col-group">หลังกลางภาค<br>(post_mid)</th>
+            <th class="col-group">รวมระหว่างเรียน<br>(coursework_max)</th>
+          </tr>
+        </thead>
+        <tbody id="weightsBody"></tbody>
+      </table>
+      <p class="legend">หมายเหตุ: pre_mid + mid + post_mid + final_exam_max ต้องรวมกันได้ 100 คะแนน</p>
+      <div class="save-bar">
+        <button class="btn-primary" id="saveWeightsBtn" onclick="saveWeights()">บันทึกน้ำหนักคะแนน</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+var weightsData = [];
+
+function loadWeights() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      weightsData = (result && result.weights) ? result.weights : [];
+      renderWeights(weightsData);
+    })
+    .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
+    .getWeightsList(TOKEN);
+}
+
+function renderWeights(weights) {
+  document.getElementById('weightsLoading').style.display = 'none';
+  var tbody = document.getElementById('weightsBody');
+  tbody.innerHTML = '';
+  weights.forEach(function(w) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-subject-id', w.subject_id);
+    var preMid = Number(w.pre_mid_max) || 0;
+    var mid = Number(w.mid_max) || 0;
+    var postMid = Number(w.post_mid_max) || 0;
+    var finalExam = Number(w.final_exam_max) || 0;
+    var cwMax = preMid + mid + postMid;
+    var total = preMid + mid + postMid + finalExam;
+    var sumClass = total === 100 ? 'sum-cell ok' : 'sum-cell bad';
+    tr.innerHTML =
+      '<td class="left">' + escHtml(w.subject_name || w.subject_id) + '</td>' +
+      '<td class="left">กลุ่ม ' + escHtml(w.weight_group || '') + '</td>' +
+      '<td class="col-group"><input type="number" class="pre-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + preMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td class="col-group"><input type="number" class="mid" data-sid="' + escHtml(w.subject_id) + '" value="' + mid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td class="col-group"><input type="number" class="post-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + postMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td class="col-group cw-sum" id="cw-' + escHtml(w.subject_id) + '">' + cwMax + '</td>' +
+      '<td><input type="number" class="final-exam" data-sid="' + escHtml(w.subject_id) + '" value="' + finalExam + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td class="' + sumClass + '" id="sum-' + escHtml(w.subject_id) + '">' + total + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('weightsTableWrap').style.display = 'block';
+}
+
+function updateRow(input) {
+  var sid = input.getAttribute('data-sid');
+  var tr = input.closest('tr');
+  var preMid = parseInt(tr.querySelector('.pre-mid').value) || 0;
+  var mid = parseInt(tr.querySelector('.mid').value) || 0;
+  var postMid = parseInt(tr.querySelector('.post-mid').value) || 0;
+  var finalExam = parseInt(tr.querySelector('.final-exam').value) || 0;
+  var cwSum = preMid + mid + postMid;
+  var total = cwSum + finalExam;
+  document.getElementById('cw-' + sid).textContent = cwSum;
+  var sumCell = document.getElementById('sum-' + sid);
+  sumCell.textContent = total;
+  sumCell.className = total === 100 ? 'sum-cell ok' : 'sum-cell bad';
+}
+
+function saveWeights() {
+  // Collect all rows; validate each row sums to 100
+  var rows = [];
+  var hasError = false;
+  var errorSubjects = [];
+
+  document.querySelectorAll('#weightsBody tr').forEach(function(tr) {
+    var sid = tr.getAttribute('data-subject-id');
+    var preMid = parseInt(tr.querySelector('.pre-mid').value) || 0;
+    var mid = parseInt(tr.querySelector('.mid').value) || 0;
+    var postMid = parseInt(tr.querySelector('.post-mid').value) || 0;
+    var finalExam = parseInt(tr.querySelector('.final-exam').value) || 0;
+    var total = preMid + mid + postMid + finalExam;
+    if (total !== 100) {
+      hasError = true;
+      errorSubjects.push(sid);
+    }
+    var cwMax = preMid + mid + postMid;
+    var finalMax = 100 - cwMax;
+    rows.push({
+      subject_id: sid,
+      pre_mid_max: preMid,
+      mid_max: mid,
+      post_mid_max: postMid,
+      final_exam_max: finalExam,
+      coursework_max: cwMax,
+      final_max: finalMax
+    });
+  });
+
+  if (hasError) {
+    showToast('รวมต้องเท่ากับ 100 — (' + errorSubjects.join(', ') + ')', 'error');
+    return;
+  }
+
+  var btn = document.getElementById('saveWeightsBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกน้ำหนักคะแนนสำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveWeights(TOKEN, rows);
+}
+
+loadWeights();
+</script>
+</body>
+</html>

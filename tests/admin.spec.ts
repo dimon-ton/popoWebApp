@@ -9,6 +9,7 @@ import {
   seedTestSubject,
   seedTestUser,
   seedTestEnrollment,
+  seedTestSubjectWeights,
   cleanupTestData,
   queryTestRows,
 } from './helpers/seed';
