@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าโรงเรียน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 700px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 15px; color: #444; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .form-group label { font-size: 13px; color: #555; }
+    input[type="text"], input[type="number"], select, textarea {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 14px; font-family: inherit; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #1a56a0; }
+    button {
+      padding: 9px 20px; border: none; border-radius: 4px; font-size: 14px;
+      font-family: inherit; cursor: pointer;
+    }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154880; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .toast {
+      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 6px; font-size: 14px; z-index: 1000;
+      display: none; max-width: 320px;
+    }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
+  <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
+  <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">ข้อมูลโรงเรียน</h2>
+
+  <div class="card">
+    <h3>ตั้งค่าข้อมูลโรงเรียน</h3>
+    <div class="form-group">
+      <label>ชื่อโรงเรียน</label>
+      <input type="text" id="schoolName" placeholder="ชื่อโรงเรียน">
+    </div>
+    <div class="form-group">
+      <label>อำเภอ</label>
+      <input type="text" id="district" placeholder="อำเภอ">
+    </div>
+    <div class="form-group">
+      <label>จังหวัด</label>
+      <input type="text" id="province" placeholder="จังหวัด">
+    </div>
+    <div class="form-group">
+      <label>ปีการศึกษา</label>
+      <input type="text" id="academicYear" placeholder="เช่น 2567">
+    </div>
+    <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function loadSchoolInfo() {
+  google.script.run
+    .withSuccessHandler(function(info) {
+      if (!info) return;
+      document.getElementById('schoolName').value = info.school_name || '';
+      document.getElementById('district').value = info.district || '';
+      document.getElementById('province').value = info.province || '';
+      document.getElementById('academicYear').value = info.academic_year || '';
+    })
+    .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
+    .getSchoolInfo();
+}
+
+function saveSchoolInfo() {
+  var btn = document.getElementById('saveSchoolBtn');
+  btn.disabled = true;
+  var school_name = document.getElementById('schoolName').value.trim();
+  var district = document.getElementById('district').value.trim();
+  var province = document.getElementById('province').value.trim();
+  var academic_year = document.getElementById('academicYear').value.trim();
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกข้อมูลโรงเรียนสำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year);
+}
+
+loadSchoolInfo();
+</script>
+</body>
+</html>

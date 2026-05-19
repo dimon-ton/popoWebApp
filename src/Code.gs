@@ -19,7 +19,7 @@ function doGet(e) {
     }
 
     // Admin-only pages
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects'];
     if (adminPages.indexOf(page) !== -1) {
       if (!session || session.role !== 'admin') {
         return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
@@ -46,6 +46,12 @@ function doGet(e) {
         return buildPage('admin_setup', { session: session, token: token });
       case 'admin_db_status':
         return buildPage('admin_db_status', { session: session, token: token });
+      case 'admin_school':
+        return buildPage('admin_school', { session: session, token: token });
+      case 'admin_classes':
+        return buildPage('admin_classes', { session: session, token: token });
+      case 'admin_subjects':
+        return buildPage('admin_subjects', { session: session, token: token });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -136,7 +142,7 @@ function getPageHtml(token, page) {
     if (!session) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }

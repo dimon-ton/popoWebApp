@@ -5,6 +5,11 @@ after each iteration and it's included in prompts for context.
 
 ## Codebase Patterns (Study These First)
 
+- **SchoolInfo is a single-row table**: Always read row 0 from `dbGetAll('SchoolInfo')` for the current values. To update, write directly to sheet row 2 (the data row) rather than using `dbUpdate()` keyed on `school_name`, which would break if the name itself changes.
+- **DEFAULT_WEIGHTS keys must be strings**: JavaScript object keys are always strings; define them as `'1'` and `'2'` and access with `DEFAULT_WEIGHTS[String(grp)]` to avoid integer/string key mismatch.
+- **Admin page guard in getPageHtml is a whitelist**: New admin pages must be added to both the `adminPages` array in `doGet` AND the identical array in `getPageHtml` for consistent protection (navigation and direct URL).
+- **preseedSubjects() is idempotent**: Checks existing IDs before inserting — safe to call multiple times without creating duplicates.
+
 - **GAS global scope**: All `.gs` files share one global scope — variables like `TAB_ORDER` defined in `setup.gs` are accessible from `Code.gs` without imports.
 - **Page routing**: `doGet` switches on `e.parameter.page`; `buildPage(name, data)` renders the named HTML template. Admin pages are listed in `adminPages` array in both `doGet` and `getPageHtml`.
 - **Client-side GAS calls**: HTML pages call server functions via `google.script.run.withSuccessHandler(fn).functionName(args)`. No `fetch`/HTTP from the HTML side.
@@ -14,6 +19,23 @@ after each iteration and it's included in prompts for context.
 - **Navigation via document.write**: All page navigation in GAS web app works by calling a server function that returns full HTML, then calling `document.open(); document.write(html); document.close()`. This replaces the entire page content including scripts. Playwright handles this fine.
 - **Playwright fresh-context test pattern**: For auth tests that need to test the login UI itself, use `test.use({ storageState: { cookies: [], origins: [] } })` inside the describe block to override the global `auth.json` storageState.
 
+---
+
+## 2026-05-19 - US-004
+- Implemented `/admin/school` form for school info (school_name, district, province, academic_year) with direct row-2 write.
+- Implemented `/admin/classes` CRUD page: list, add, delete classes with teacher dropdown.
+- Implemented `/admin/subjects` CRUD page: list, add, delete subjects with pre-seed button for all 11 FR-7 subjects.
+- Auto-seeds `SubjectWeights` entry when a new subject is created (default weights by group).
+- `preseedSubjects()` server function is idempotent — skips existing subject/weight IDs.
+- Added `admin_school`, `admin_classes`, `admin_subjects` to admin page guards and router in `Code.gs`.
+- Added `getTeachersList()`, `getClassesList()`, `getSubjectsList()`, `serverAddClass()`, `serverDeleteClass()`, `serverAddSubject()`, `serverDeleteSubject()`, `serverSaveSchoolInfo()`, `getSchoolInfo()` to `admin_school.gs`.
+- Updated `dashboard.html` to link to new admin pages.
+- Added US-004 test block in `tests/admin.spec.ts` with beforeAll/afterAll cleanup.
+- Files changed: `src/admin_school.gs` (new), `src/admin_school.html` (new), `src/admin_classes.html` (new), `src/admin_subjects.html` (new), `src/Code.gs`, `src/dashboard.html`, `tests/admin.spec.ts`
+- **Learnings:**
+  - SchoolInfo is single-row — use direct range write (`sheet.getRange(2,1,...).setValues(...)`) rather than `dbUpdate` keyed on a field that may itself change.
+  - `DEFAULT_WEIGHTS` numeric keys in a GAS object literal are stored as strings; always access with `String(n)` or define keys as strings upfront.
+  - `adminPages` array must be kept in sync between `doGet` and `getPageHtml` — both must list every admin-only page.
 ---
 
 ## 2026-05-19 - US-001

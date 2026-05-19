@@ -13,6 +13,77 @@ import {
   queryTestRows,
 } from './helpers/seed';
 
+// ---- US-004: School info, classes, and subjects setup ----
+
+test.describe('US-004: School info, classes, and subjects', () => {
+  test.beforeAll(async () => {
+    await cleanupTestData();
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-004: edit school name and assert it saves', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_school`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    await page.fill('#schoolName', 'test_school_name');
+    await page.click('#saveSchoolBtn');
+
+    await expect(page.locator('#toast')).toContainText('บันทึกข้อมูลโรงเรียนสำเร็จ', { timeout: 15_000 });
+
+    // Reload page and assert value persisted
+    await page.goto(`${url}?page=admin_school`);
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    // Give it a moment for loadSchoolInfo() to fill the field
+    await expect(page.locator('#schoolName')).toHaveValue('test_school_name', { timeout: 15_000 });
+  });
+
+  test('US-004: create class test_class_p1_1 and assert it appears in list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_classes`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    // Wait for table to load (may already have rows)
+    await expect(page.locator('#classesTable')).toBeVisible({ timeout: 20_000 });
+
+    await page.fill('#newClassId', 'test_class_p1_1');
+    await page.selectOption('#newLevel', 'ป.1');
+    await page.fill('#newSection', '1');
+    await page.click('#addClassBtn');
+
+    await expect(page.locator('#toast')).toContainText('เพิ่มชั้นเรียนสำเร็จ', { timeout: 15_000 });
+
+    // Assert row appears with data-class-id attribute
+    await expect(page.locator('tr[data-class-id="test_class_p1_1"]')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('US-004: create subject test_subject_eng and assert it appears in list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_subjects`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    await expect(page.locator('#subjectsTable')).toBeVisible({ timeout: 20_000 });
+
+    await page.fill('#newSubjectId', 'test_subject_eng');
+    await page.fill('#newSubjectName', 'ภาษาอังกฤษทดสอบ');
+    await page.fill('#newSubjectCode', 'test_001');
+    await page.fill('#newHours', '80');
+    await page.selectOption('#newWeightGroup', '1');
+    await page.click('#addSubjectBtn');
+
+    await expect(page.locator('#toast')).toContainText('เพิ่มวิชาสำเร็จ', { timeout: 15_000 });
+
+    // Assert row appears with data-subject-id attribute
+    await expect(page.locator('tr[data-subject-id="test_subject_eng"]')).toBeVisible({ timeout: 15_000 });
+  });
+});
+
 // ---- US-001: Bootstrap master Sheet schema ----
 
 const EXPECTED_TABS = [
