@@ -140,6 +140,29 @@ export async function seedTestIndicator(opts: SeedIndicatorOpts): Promise<string
   return indicatorId;
 }
 
+interface SeedSubjectWeightsOpts {
+  subject_id: string;
+  coursework_max?: number;
+  final_max?: number;
+  pre_mid_max?: number;
+  mid_max?: number;
+  post_mid_max?: number;
+  final_exam_max?: number;
+}
+
+export async function seedTestSubjectWeights(opts: SeedSubjectWeightsOpts): Promise<void> {
+  await apiCall({
+    api: 'seed_subject_weights',
+    subject_id: opts.subject_id,
+    coursework_max: opts.coursework_max ?? 70,
+    final_max: opts.final_max ?? 30,
+    pre_mid_max: opts.pre_mid_max ?? 25,
+    mid_max: opts.mid_max ?? 20,
+    post_mid_max: opts.post_mid_max ?? 25,
+    final_exam_max: opts.final_exam_max ?? 30,
+  });
+}
+
 export async function cleanupTestData(): Promise<void> {
   await apiCall({ api: 'cleanup' });
 }

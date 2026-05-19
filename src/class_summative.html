@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คะแนนผลการเรียน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+    .readonly-notice {
+      font-size: 13px; color: #888; margin-bottom: 12px; padding: 10px;
+      background: #fff8e1; border-radius: 4px; border-left: 3px solid #f0a500;
+    }
+    table { border-collapse: collapse; font-size: 13px; width: 100%; }
+    th {
+      background: #f0f4fa; padding: 8px 6px; text-align: center;
+      border: 1px solid #ddd; font-size: 12px; white-space: nowrap; min-width: 60px;
+    }
+    th.name-col { text-align: left; min-width: 140px; }
+    th.computed-col { background: #e8f0fe; }
+    th.grade-col { background: #e8f4ec; }
+    th.makeup-col { background: #fff3e0; }
+    td {
+      padding: 4px 3px; border: 1px solid #eee; text-align: center;
+      vertical-align: middle;
+    }
+    td.name-col { text-align: left; padding-left: 8px; white-space: nowrap; }
+    td.seq-col { text-align: center; color: #888; width: 36px; }
+    td.total-col { font-weight: bold; color: #1a56a0; background: #f4f8ff; }
+    td.grade-col { font-weight: bold; color: #27ae60; background: #f0faf4; }
+    td.makeup-col { background: #fffaf0; }
+    td.final-grade-col { font-weight: bold; color: #1a56a0; }
+    input.score-input {
+      width: 52px; text-align: center; border: 1px solid #ccc; border-radius: 3px;
+      padding: 3px 2px; font-size: 13px; font-family: inherit;
+    }
+    input.score-input:focus { border-color: #1a56a0; outline: none; }
+    input.makeup-input {
+      width: 52px; text-align: center; border: 1px solid #f0a500; border-radius: 3px;
+      padding: 3px 2px; font-size: 13px; font-family: inherit; background: #fffaf0;
+    }
+    input.makeup-input:focus { border-color: #e67e22; outline: none; }
+    .save-bar { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+    .btn-save {
+      padding: 9px 24px; background: #27ae60; color: white; border: none;
+      border-radius: 4px; font-size: 14px; font-family: inherit; cursor: pointer;
+    }
+    .btn-save:hover { background: #219150; }
+    .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+    .toast {
+      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 6px; font-size: 14px; z-index: 1000;
+      display: none; max-width: 320px;
+    }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .legend { font-size: 12px; color: #888; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">คะแนนผลการเรียน (คะแนน2)</h2>
+
+  <div id="readonlyNotice" class="readonly-notice" style="display:none">
+    คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้
+  </div>
+
+  <div class="card">
+    <p class="loading-msg" id="loadingMsg">กำลังโหลด...</p>
+    <div class="legend" id="gridLegend" style="display:none">
+      เกณฑ์การให้คะแนน: ≥80=4, ≥75=3.5, ≥70=3, ≥65=2.5, ≥60=2, ≥55=1.5, ≥50=1, &lt;50=0
+      &nbsp;|&nbsp; <span style="color:#e67e22">สอบแก้ตัว</span>: กรอกเพื่อเปลี่ยนผลการประเมินสุดท้าย
+    </div>
+    <table id="summativeTable" style="display:none">
+      <thead id="summativeHead"></thead>
+      <tbody id="summativeBody"></tbody>
+    </table>
+  </div>
+
+  <div class="save-bar" id="saveBar" style="display:none">
+    <button class="btn-save" id="saveBtn" onclick="saveSummative()">บันทึกคะแนน</button>
+    <span id="saveStatus" style="font-size:13px;color:#888"></span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?= data.class_id || '' ?>';
+var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+
+var currentData = null;
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Grade ladder (mirrors server-side computeGrade)
+function computeGrade(total) {
+  if (total === '' || total === null || total === undefined) return '';
+  var t = Number(total);
+  if (isNaN(t)) return '';
+  if (t >= 80) return 4;
+  if (t >= 75) return 3.5;
+  if (t >= 70) return 3;
+  if (t >= 65) return 2.5;
+  if (t >= 60) return 2;
+  if (t >= 55) return 1.5;
+  if (t >= 50) return 1;
+  return 0;
+}
+
+function loadSummative() {
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('summativeTable').style.display = 'none';
+  document.getElementById('saveBar').style.display = 'none';
+  document.getElementById('gridLegend').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      currentData = result;
+      renderGrid(result);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingMsg').style.display = 'none';
+      showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getSummativeData(TOKEN, CLASS_ID, SUBJECT_ID);
+}
+
+function renderGrid(data) {
+  document.getElementById('loadingMsg').style.display = 'none';
+
+  var cls = data.class_info || {};
+  var subj = data.subject_info || {};
+  document.getElementById('pageHeading').textContent =
+    'คะแนนผลการเรียน — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+
+  var readonlyNotice = document.getElementById('readonlyNotice');
+  var saveBar = document.getElementById('saveBar');
+  if (data.can_edit) {
+    readonlyNotice.style.display = 'none';
+    saveBar.style.display = 'flex';
+  } else {
+    readonlyNotice.style.display = 'block';
+    saveBar.style.display = 'none';
+  }
+
+  var students = data.students || [];
+  var weights = data.weights || {};
+  var scores = data.scores || {};
+
+  var cwMax = weights.coursework_max !== undefined ? Number(weights.coursework_max) : 70;
+  var midMax = weights.mid_max !== undefined ? Number(weights.mid_max) : 20;
+  var finMax = weights.final_exam_max !== undefined ? Number(weights.final_exam_max) : 30;
+
+  // Build header
+  var thead = document.getElementById('summativeHead');
+  thead.innerHTML = '<tr>' +
+    '<th class="seq-col">ที่</th>' +
+    '<th class="name-col">ชื่อ-สกุล</th>' +
+    '<th class="computed-col">ระหว่างเรียน<br><span style="font-weight:normal;font-size:11px">/' + cwMax + '</span></th>' +
+    '<th class="computed-col">สอบกลางภาค<br><span style="font-weight:normal;font-size:11px">/' + midMax + '</span></th>' +
+    '<th class="computed-col">สอบปลายภาค<br><span style="font-weight:normal;font-size:11px">/' + finMax + '</span></th>' +
+    '<th class="computed-col">รวมทั้งหมด<br><span style="font-weight:normal;font-size:11px">/100</span></th>' +
+    '<th class="grade-col">ผลการประเมิน</th>' +
+    '<th class="makeup-col">สอบแก้ตัว</th>' +
+    '<th class="grade-col">ผลสุดท้าย</th>' +
+    '</tr>';
+
+  // Build body
+  var tbody = document.getElementById('summativeBody');
+  tbody.innerHTML = '';
+
+  students.forEach(function(student) {
+    var sid = student.student_id;
+    var s = scores[sid] || {};
+    var cw = s.coursework !== undefined && s.coursework !== '' ? s.coursework : '';
+    var mid = s.midterm !== undefined && s.midterm !== '' ? s.midterm : '';
+    var fin = s.final !== undefined && s.final !== '' ? s.final : '';
+    var makeup = s.makeup_grade !== undefined && s.makeup_grade !== '' ? s.makeup_grade : '';
+
+    var total = computeTotal(cw, mid, fin);
+    var grade = computeGrade(total);
+    var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
+
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-student-id', sid);
+
+    var editable = data.can_edit;
+    var cwCell = editable
+      ? '<input class="score-input" type="number" min="0" max="' + cwMax + '" step="0.5" value="' + escHtml(cw) + '" data-student="' + escHtml(sid) + '" data-col="coursework" data-max="' + cwMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
+      : escHtml(cw);
+    var midCell = editable
+      ? '<input class="score-input" type="number" min="0" max="' + midMax + '" step="0.5" value="' + escHtml(mid) + '" data-student="' + escHtml(sid) + '" data-col="midterm" data-max="' + midMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
+      : escHtml(mid);
+    var finCell = editable
+      ? '<input class="score-input" type="number" min="0" max="' + finMax + '" step="0.5" value="' + escHtml(fin) + '" data-student="' + escHtml(sid) + '" data-col="final" data-max="' + finMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
+      : escHtml(fin);
+    var makeupCell = editable
+      ? '<input class="makeup-input" type="number" min="0" max="4" step="0.5" value="' + escHtml(makeup) + '" data-student="' + escHtml(sid) + '" data-col="makeup_grade" oninput="updateFinalGrade(this)">'
+      : escHtml(makeup);
+
+    tr.innerHTML =
+      '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
+      '<td class="name-col">' + escHtml(student.full_name) + '</td>' +
+      '<td>' + cwCell + '</td>' +
+      '<td>' + midCell + '</td>' +
+      '<td>' + finCell + '</td>' +
+      '<td class="total-col" id="total-' + escHtml(sid) + '">' + (total !== '' ? total : '') + '</td>' +
+      '<td class="grade-col" id="grade-' + escHtml(sid) + '">' + (grade !== '' ? grade : '') + '</td>' +
+      '<td class="makeup-col">' + makeupCell + '</td>' +
+      '<td class="final-grade-col" id="final-grade-' + escHtml(sid) + '">' + (finalGrade !== '' ? finalGrade : '') + '</td>';
+
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('summativeTable').style.display = 'table';
+  document.getElementById('gridLegend').style.display = 'block';
+}
+
+function computeTotal(cw, mid, fin) {
+  var cwN = cw !== '' ? Number(cw) : null;
+  var midN = mid !== '' ? Number(mid) : null;
+  var finN = fin !== '' ? Number(fin) : null;
+  if (cwN === null && midN === null && finN === null) return '';
+  var sum = 0;
+  if (cwN !== null && !isNaN(cwN)) sum += cwN;
+  if (midN !== null && !isNaN(midN)) sum += midN;
+  if (finN !== null && !isNaN(finN)) sum += finN;
+  return sum;
+}
+
+function updateRow(input) {
+  var sid = input.getAttribute('data-student');
+  var tr = input.closest('tr');
+  if (!tr) return;
+
+  var cwInput = tr.querySelector('input[data-col="coursework"]');
+  var midInput = tr.querySelector('input[data-col="midterm"]');
+  var finInput = tr.querySelector('input[data-col="final"]');
+  var makeupInput = tr.querySelector('input[data-col="makeup_grade"]');
+
+  var cw = cwInput && cwInput.value !== '' ? cwInput.value : '';
+  var mid = midInput && midInput.value !== '' ? midInput.value : '';
+  var fin = finInput && finInput.value !== '' ? finInput.value : '';
+  var makeup = makeupInput && makeupInput.value !== '' ? makeupInput.value : '';
+
+  var total = computeTotal(cw, mid, fin);
+  var grade = computeGrade(total);
+  var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
+
+  var totalCell = document.getElementById('total-' + sid);
+  var gradeCell = document.getElementById('grade-' + sid);
+  var finalGradeCell = document.getElementById('final-grade-' + sid);
+
+  if (totalCell) totalCell.textContent = total !== '' ? total : '';
+  if (gradeCell) gradeCell.textContent = grade !== '' ? grade : '';
+  if (finalGradeCell) finalGradeCell.textContent = finalGrade !== '' ? finalGrade : '';
+}
+
+function clampScore(input) {
+  var max = parseFloat(input.getAttribute('data-max'));
+  var v = parseFloat(input.value);
+  if (!isNaN(v)) {
+    if (v < 0) input.value = 0;
+    if (!isNaN(max) && v > max) input.value = max;
+  }
+  updateRow(input);
+}
+
+function updateFinalGrade(input) {
+  var sid = input.getAttribute('data-student');
+  var tr = input.closest('tr');
+  if (!tr) return;
+
+  var makeup = input.value !== '' ? input.value : '';
+  var gradeCell = document.getElementById('grade-' + sid);
+  var currentGrade = gradeCell ? gradeCell.textContent : '';
+
+  var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : currentGrade;
+  var finalGradeCell = document.getElementById('final-grade-' + sid);
+  if (finalGradeCell) finalGradeCell.textContent = finalGrade !== '' ? finalGrade : '';
+}
+
+function saveSummative() {
+  if (!currentData) return;
+
+  var rows = [];
+  var students = currentData.students || [];
+
+  students.forEach(function(student) {
+    var sid = student.student_id;
+    var tr = document.querySelector('tr[data-student-id="' + sid + '"]');
+    if (!tr) return;
+
+    var cwInput = tr.querySelector('input[data-col="coursework"]');
+    var midInput = tr.querySelector('input[data-col="midterm"]');
+    var finInput = tr.querySelector('input[data-col="final"]');
+    var makeupInput = tr.querySelector('input[data-col="makeup_grade"]');
+
+    rows.push({
+      student_id: sid,
+      coursework: cwInput ? cwInput.value : '',
+      midterm: midInput ? midInput.value : '',
+      final: finInput ? finInput.value : '',
+      makeup_grade: makeupInput ? makeupInput.value : ''
+    });
+  });
+
+  if (rows.length === 0) {
+    showToast('ไม่มีข้อมูลที่จะบันทึก', 'success');
+    return;
+  }
+
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  document.getElementById('saveStatus').textContent = 'กำลังบันทึก...';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกคะแนนสำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveSummative(TOKEN, CLASS_ID, SUBJECT_ID, rows);
+}
+
+// Init
+loadSummative();
+</script>
+</body>
+</html>

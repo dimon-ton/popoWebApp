@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-19T16:45:42.138Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-05-19T16:50:36.884Z",
+  "currentIteration": 3,
   "maxIterations": 0,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -59,8 +59,8 @@
       {
         "id": "US-008",
         "title": "Formative indicator scoring (คะแนน1)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-009",
@@ -388,6 +388,16 @@
       "durationMs": 317058,
       "startedAt": "2026-05-19T16:37:37.593Z",
       "endedAt": "2026-05-19T16:42:54.651Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Formative indicator scoring (คะแนน1)",
+      "taskCompleted": true,
+      "durationMs": 166184,
+      "startedAt": "2026-05-19T16:42:55.952Z",
+      "endedAt": "2026-05-19T16:45:42.136Z"
     }
   ],
   "skippedTaskIds": [],

@@ -26,6 +26,29 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-19 - US-009
+- Implemented summative scoring page `/class/:class_id/subject/:subject_id/summative` (page key `class_summative`).
+- Server functions in `src/summative.gs`: `computeGrade(total)`, `getSummativeData(token, class_id, subject_id)`, `serverSaveSummative(token, class_id, subject_id, rows)`.
+- `computeGrade()` implements FR-4 ladder: ≥80→4, ≥75→3.5, ≥70→3, ≥65→2.5, ≥60→2, ≥55→1.5, ≥50→1, else→0. Defined once server-side and mirrored in client JS.
+- `getSummativeData()` reads students, subject weights (from `SubjectWeights` tab with default fallback), and existing scores map (student_id → score object).
+- `serverSaveSummative()` uses same upsert pattern as formative/attendance: one lock acquisition, one sheet read into local array, update-or-append per row, local array kept in sync.
+- `สอบแก้ตัว` (makeup_grade) is stored separately from `computed_grade`; `final_grade` = makeup if set, else computed_grade.
+- Created `src/class_summative.html` with: coursework/midterm/final inputs (max from weights), live total and grade via `computeGrade()` in client JS, makeup input in orange styling, final_grade cell updated live on makeup change; save bar with disable-while-inflight.
+- Added `case 'class_summative'` to `doGet` router in `Code.gs`.
+- Added `getSummativePageHtml(token, class_id, subject_id)` to `Code.gs`.
+- Added `seed_subject_weights` case to `src/testapi.gs` (upserts a SubjectWeights row for a test_ subject).
+- Added `SubjectWeights` to cleanup `tabIdFields` map (by `subject_id` prefix).
+- Added student_id-based secondary cleanup for score tables (IndicatorScores, SummativeScores, Characteristics, ReadThinkWrite, Attendance) since their `id` column uses auto-generated non-test_ prefixes.
+- Added `seedTestSubjectWeights()` helper to `tests/helpers/seed.ts`.
+- Added US-009 describe block to `tests/scoring.spec.ts`: 4 tests — page load assertions, 42+18+22=82 grade=4 (live), 37+15+23=75 grade=3.5 (live), makeup override + save + reload persists.
+- Files changed: `src/summative.gs` (new), `src/class_summative.html` (new), `src/Code.gs`, `src/testapi.gs`, `tests/helpers/seed.ts`, `tests/scoring.spec.ts`
+- **Learnings:**
+  - Grade ladders should be defined once as a server-side function and mirrored exactly as a client-side function — keeping them in sync is critical for live grade display to match saved grades.
+  - `สอบแก้ตัว` (makeup) overrides `final_grade` display without changing `computed_grade` — store both separately in the DB; the client `updateFinalGrade()` function reads the current `grade-{sid}` cell to determine the base when makeup is cleared.
+  - Auto-generated IDs (from `generateId()`) don't carry the `test_` prefix, so score table cleanup must use `student_id` (which does carry `test_`) as the cleanup key, not `id`.
+  - `SubjectWeights` must be cleaned up with `subject_id` prefix, not added to the auto-generated-id map.
+---
+
 ## 2026-05-19 - US-008
 - Implemented formative indicator scoring page `/class/:class_id/subject/:subject_id/formative`.
 - Server functions in `src/formative.gs`: `getFormativeData()`, `serverSaveFormative()`.

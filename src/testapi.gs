@@ -93,6 +93,21 @@ function handleTestApi(e) {
         });
         return jsonOk({ enrollment_id: params.enrollment_id });
 
+      case 'seed_subject_weights':
+        ensureTestPrefix(params.subject_id);
+        // Upsert: delete existing then insert
+        dbDeleteWhere('SubjectWeights', 'subject_id', params.subject_id);
+        dbInsert('SubjectWeights', {
+          subject_id: params.subject_id,
+          coursework_max: parseInt(params.coursework_max) || 70,
+          final_max: parseInt(params.final_max) || 30,
+          pre_mid_max: parseInt(params.pre_mid_max) || 25,
+          mid_max: parseInt(params.mid_max) || 20,
+          post_mid_max: parseInt(params.post_mid_max) || 25,
+          final_exam_max: parseInt(params.final_exam_max) || 30
+        });
+        return jsonOk({ subject_id: params.subject_id });
+
       case 'seed_indicator':
         ensureTestPrefix(params.indicator_id);
         dbInsert('Indicators', {
@@ -110,6 +125,7 @@ function handleTestApi(e) {
         var tabIdFields = {
           'Classes': 'class_id',
           'Subjects': 'subject_id',
+          'SubjectWeights': 'subject_id',
           'Students': 'student_id',
           'Users': 'user_id',
           'Enrollments': 'enrollment_id',
@@ -130,6 +146,11 @@ function handleTestApi(e) {
         });
         // Also clean Users by username prefix (catches UI-created test accounts)
         try { count += dbDeleteWhere('Users', 'username', 'test_'); } catch (err) {}
+        // Also clean score tables by student_id prefix (IDs are auto-generated, not test_-prefixed)
+        var scoreTabs = ['IndicatorScores', 'SummativeScores', 'Characteristics', 'ReadThinkWrite', 'Attendance'];
+        scoreTabs.forEach(function(tab) {
+          try { count += dbDeleteWhere(tab, 'student_id', 'test_'); } catch (err) {}
+        });
         return jsonOk({ deleted: count });
 
       case 'query_rows':
