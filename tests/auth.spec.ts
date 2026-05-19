@@ -1,9 +1,10 @@
 /**
- * Auth tests — US-002
- * Tests login form, session handling, and logout.
- * Uses a fresh browser context (no storageState) so the login page appears.
+ * Auth tests — US-002, US-003
+ * US-002: Login form, session handling, and logout.
+ * US-003: Admin user management and password reset.
  */
 import { test, expect } from '@playwright/test';
+import { seedTestUser, cleanupTestData } from './helpers/seed';
 
 // US-002 tests run in a fresh context without auth.json — we test the login flow itself
 
@@ -81,5 +82,118 @@ test.describe('US-002: Login form and session', () => {
     // localStorage token should be cleared
     const token = await page.evaluate(() => localStorage.getItem('popo_token'));
     expect(token).toBeNull();
+  });
+});
+
+// ---- US-003: User management and password reset ----
+
+test.describe('US-003: User management and password reset', () => {
+  let seededTeacherId: string;
+  const newTeacherUsername = 'test_teacher_003new';
+  const resetPassword = 'newpass_003';
+
+  test.beforeAll(async () => {
+    // Pre-seed a teacher to use for the reset-password test
+    seededTeacherId = await seedTestUser({
+      suffix: 'us003_seed',
+      role: 'teacher',
+      password: 'oldpass_003',
+      full_name: 'ครูทดสอบ US003',
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-003: admin can visit /admin/users and see user list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_users`);
+
+    // Page heading must be visible
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#pageHeading')).toContainText('จัดการผู้ใช้');
+
+    // User table should load (at least admin row)
+    await expect(page.locator('#usersTable')).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('US-003: create new user via UI — row appears in list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_users`);
+
+    await expect(page.locator('#usersTable')).toBeVisible({ timeout: 20_000 });
+
+    // Fill in the add user form
+    await page.fill('#newUsername', newTeacherUsername);
+    await page.fill('#newFullName', 'ครูทดสอบสร้างใหม่');
+    await page.selectOption('#newRole', 'teacher');
+    await page.fill('#newPassword', 'initpass_003');
+    await page.click('#addUserBtn');
+
+    // Success toast
+    await expect(page.locator('#toast')).toContainText('เพิ่มผู้ใช้', { timeout: 20_000 });
+
+    // New user row should appear in the table
+    await expect(page.locator('#usersTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#usersBody')).toContainText(newTeacherUsername, { timeout: 20_000 });
+  });
+
+  test('US-003: reset password for seeded teacher — new password works', async ({ page, browser }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_users`);
+
+    await expect(page.locator('#usersTable')).toBeVisible({ timeout: 20_000 });
+
+    // Find the reset password button for the seeded teacher row and click it
+    const teacherRow = page.locator(`tr[data-user-id="${seededTeacherId}"]`);
+    await expect(teacherRow).toBeVisible({ timeout: 15_000 });
+    await teacherRow.locator('button').click();
+
+    // Modal should open
+    await expect(page.locator('#resetModal')).toHaveClass(/open/, { timeout: 10_000 });
+    await expect(page.locator('#resetTargetName')).toContainText('ครูทดสอบ US003');
+
+    // Enter new password and save
+    await page.fill('#resetNewPwd', resetPassword);
+    await page.click('#confirmResetBtn');
+
+    // Success toast
+    await expect(page.locator('#toast')).toContainText('รีเซตรหัสผ่านสำเร็จ', { timeout: 20_000 });
+    // Modal closes
+    await expect(page.locator('#resetModal')).not.toHaveClass(/open/, { timeout: 10_000 });
+
+    // Now verify the new password works — log in as the seeded teacher in a fresh context
+    const freshCtx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const freshPage = await freshCtx.newPage();
+    await freshPage.goto(url);
+
+    await expect(freshPage.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
+    await freshPage.fill('#username', seededTeacherId); // username = user_id for seeded users
+    await freshPage.fill('#password', resetPassword);
+    await freshPage.click('#loginBtn');
+
+    // Should land on dashboard (teacher sees ยินดีต้อนรับ)
+    await expect(freshPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+
+    await freshCtx.close();
+  });
+
+  test('US-003: non-admin hitting /admin/users receives 403 block screen', async ({ browser }) => {
+    const nonAdminCtx = await browser.newContext();
+    const page = await nonAdminCtx.newPage();
+    const url = process.env.WEB_APP_URL!;
+
+    // Visit admin/users without session — should show login page or 403
+    await page.goto(`${url}?page=admin_users`);
+
+    const bodyText = await page.locator('body').textContent();
+    const isBlocked =
+      bodyText?.includes('ไม่มีสิทธิ์') ||
+      bodyText?.includes('กรุณาเข้าสู่ระบบ') ||
+      bodyText?.includes('login');
+    expect(isBlocked).toBeTruthy();
+
+    await nonAdminCtx.close();
   });
 });

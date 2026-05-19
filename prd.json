@@ -51,9 +51,10 @@
         "Playwright (`tests/auth.spec.ts -g US-003`): log in as admin; visit `/admin/users`;"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-004",
@@ -374,6 +375,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-19T12:03:04.852Z"
+    "updatedAt": "2026-05-19T12:07:33.641Z"
   }
 }

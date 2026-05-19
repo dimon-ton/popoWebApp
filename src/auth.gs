@@ -104,6 +104,71 @@ function getLoginHtml() {
   return tmpl.evaluate().getContent();
 }
 
+// US-003: User management — list, add, reset password
+
+function getUsersList() {
+  var users = dbGetAll('Users');
+  return users.map(function(u) {
+    return { user_id: u.user_id, username: u.username, full_name: u.full_name, role: u.role };
+  });
+}
+
+function serverAddUser(username, full_name, role, password) {
+  username = (username || '').trim();
+  full_name = (full_name || '').trim();
+  role = (role || 'teacher').trim();
+  password = password || '';
+
+  if (!username || !full_name || !password) {
+    return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
+  }
+  if (role !== 'teacher' && role !== 'admin') {
+    return { error: 'บทบาทไม่ถูกต้อง' };
+  }
+
+  var existing = dbFindOne('Users', 'username', username);
+  if (existing) return { error: 'ชื่อผู้ใช้นี้มีอยู่แล้ว' };
+
+  var salt = Utilities.getUuid();
+  var hash = computeHash(password, salt);
+  var userId = generateId('user');
+  dbInsert('Users', {
+    user_id: userId,
+    username: username,
+    password_hash: hash,
+    salt: salt,
+    full_name: full_name,
+    role: role,
+    created_at: new Date().toISOString()
+  });
+  appendAuditLog(userId, 'Users', userId, null, { username: username, role: role });
+  return { ok: true, user_id: userId };
+}
+
+function serverResetPassword(user_id, new_password) {
+  new_password = new_password || '';
+  if (!user_id || !new_password) {
+    return { error: 'กรุณากรอกรหัสผ่านใหม่' };
+  }
+
+  var user = dbFindOne('Users', 'user_id', user_id);
+  if (!user) return { error: 'ไม่พบผู้ใช้' };
+
+  var salt = Utilities.getUuid();
+  var hash = computeHash(new_password, salt);
+  var updated = dbUpdate('Users', 'user_id', user_id, { password_hash: hash, salt: salt });
+  if (!updated) return { error: 'ไม่สามารถอัพเดตรหัสผ่านได้' };
+
+  appendAuditLog(user_id, 'Users', user_id, { action: 'password_reset' }, { action: 'password_reset', username: user.username });
+  return { ok: true };
+}
+
+function getUsersListForPage(token) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') return { error: 'Forbidden' };
+  return { users: getUsersList() };
+}
+
 function serverLogin(username, password) {
   try {
     username = (username || '').trim();

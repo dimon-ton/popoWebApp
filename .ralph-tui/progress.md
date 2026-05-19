@@ -28,6 +28,22 @@ after each iteration and it's included in prompts for context.
   - `TAB_ORDER` is defined in `setup.gs` but usable in `Code.gs` because GAS merges all `.gs` files into one global scope.
 ---
 
+## 2026-05-19 - US-003
+- Implemented `/admin/users` page: lists all users, add-user form, reset-password modal.
+- Added server functions to `auth.gs`: `getUsersList()`, `getUsersListForPage(token)` (session-checked), `serverAddUser()`, `serverResetPassword()`.
+- `getUsersListForPage(token)` is called via `google.script.run` from `admin_users.html` — validates the token and role before returning user data.
+- `serverAddUser` and `serverResetPassword` are called directly via `google.script.run`; admin-only enforcement is at the page-router level (both `doGet` and `getPageHtml` already block non-admins for `admin_users`).
+- Added `add_user` and `reset_password` POST action handlers in `Code.gs` (for doPost path, with `requireAdmin(session)` guard).
+- Added `get_users_list` to `handleReadAction` in `Code.gs`.
+- Extended testapi.gs cleanup to also delete Users by `username` prefix `test_` (catches UI-created test accounts whose `user_id` is auto-generated and wouldn't match the `test_` prefix).
+- Added US-003 test block in `tests/auth.spec.ts`: seeds a teacher via API, tests page heading, creates user via UI, resets password via modal, logs in with new password in fresh context.
+- Files changed: `src/auth.gs`, `src/Code.gs`, `src/testapi.gs`, `src/admin_users.html` (new), `tests/auth.spec.ts`
+- **Learnings:**
+  - `google.script.run` calls from GAS HTML pages cannot pass bearer tokens — they call server functions directly. Admin enforcement must be at the page-routing level (in `doGet` / `getPageHtml`). For functions that need an extra check (like `getUsersListForPage`), pass the token as a parameter and call `getSession()`.
+  - `fetch()` from inside a GAS HTML page won't work with relative URLs — the page runs inside a googleusercontent.com iframe, not the `/exec` domain. Use `google.script.run` for all server calls.
+  - To clean up UI-created test users (whose `user_id` is auto-generated), add a secondary `dbDeleteWhere('Users', 'username', 'test_')` cleanup pass.
+---
+
 ## 2026-05-19 - US-002
 - Implemented localStorage-based session persistence: after `serverLogin()` returns a token, `login.html` stores it as `popo_token` in `localStorage`; on re-visit, login page checks localStorage and auto-navigates to dashboard if token is valid.
 - Added logout button to `dashboard.html`: calls `serverLogout(token)` (removes cache entry) then `getLoginHtml()` to replace page with login form; also clears `localStorage.popo_token`.

@@ -85,6 +85,17 @@ function doPost(e) {
       // Bulk assign (US-019)
       case 'bulk_assign':
         return handleBulkAssign(e, session);
+      // User management (US-003)
+      case 'add_user':
+        requireAdmin(session);
+        return ContentService.createTextOutput(JSON.stringify(
+          serverAddUser(params.username, params.full_name, params.role, params.password)
+        )).setMimeType(ContentService.MimeType.JSON);
+      case 'reset_password':
+        requireAdmin(session);
+        return ContentService.createTextOutput(JSON.stringify(
+          serverResetPassword(params.user_id, params.new_password)
+        )).setMimeType(ContentService.MimeType.JSON);
       default:
         return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
           .setMimeType(ContentService.MimeType.JSON);
@@ -153,6 +164,10 @@ function handleReadAction(action, params, session) {
   try {
     var result;
     switch (action) {
+      case 'get_users_list':
+        requireAdmin(session);
+        result = { users: getUsersList() };
+        break;
       case 'get_enrollments_data':
         requireAdmin(session);
         result = getEnrollmentsData();

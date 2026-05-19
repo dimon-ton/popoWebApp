@@ -116,6 +116,8 @@ function handleTestApi(e) {
             // Ignore missing tabs during cleanup
           }
         });
+        // Also clean Users by username prefix (catches UI-created test accounts)
+        try { count += dbDeleteWhere('Users', 'username', 'test_'); } catch (err) {}
         return jsonOk({ deleted: count });
 
       case 'query_rows':

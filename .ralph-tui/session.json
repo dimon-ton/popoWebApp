@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-19T12:03:04.853Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-05-19T12:07:33.641Z",
+  "currentIteration": 2,
   "maxIterations": 0,
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -23,8 +23,8 @@
       {
         "id": "US-002",
         "title": "Auth — login form and session",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-003",
@@ -158,6 +158,16 @@
       "durationMs": 216104,
       "startedAt": "2026-05-19T11:55:27.489Z",
       "endedAt": "2026-05-19T11:59:03.593Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-002",
+      "taskTitle": "Auth — login form and session",
+      "taskCompleted": true,
+      "durationMs": 239887,
+      "startedAt": "2026-05-19T11:59:04.961Z",
+      "endedAt": "2026-05-19T12:03:04.848Z"
     }
   ],
   "skippedTaskIds": [],
