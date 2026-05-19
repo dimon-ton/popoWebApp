@@ -26,6 +26,24 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-19 - US-008
+- Implemented formative indicator scoring page `/class/:class_id/subject/:subject_id/formative`.
+- Server functions in `src/formative.gs`: `getFormativeData()`, `serverSaveFormative()`.
+- `getFormativeData()` returns students (sorted by seq_no), indicators (sorted by display_order), score map (student_id → indicator_id → score), subject/class info, and `can_edit` flag.
+- `serverSaveFormative()` uses the same upsert pattern as attendance: acquires lock once, reads sheet once into local array, updates in-place or appends, with local array kept in sync to avoid re-reads.
+- Created `src/class_formative.html` with numeric score inputs, live row total updates via `oninput`, column averages in footer updated live, clamp-on-change validation, save with disable-while-inflight.
+- Added `case 'class_formative'` to `doGet` router in `Code.gs`.
+- Added `getFormativePageHtml(token, class_id, subject_id)` to `Code.gs` for programmatic navigation.
+- Added `seed_indicator` case to `src/testapi.gs` (seeds an Indicators row, prefixed `test_`).
+- Added `seedTestIndicator()` helper to `tests/helpers/seed.ts`.
+- Created `tests/scoring.spec.ts` with US-008 tests: page load with student + indicator visible, enter score 3 → live row total = 3 → save → reload → value persists.
+- Files changed: `src/formative.gs` (new), `src/class_formative.html` (new), `src/Code.gs`, `src/testapi.gs`, `tests/helpers/seed.ts`, `tests/scoring.spec.ts` (new)
+- **Learnings:**
+  - `oninput` (not `onchange`) fires on every keystroke — use it for live row total updates. `onchange` fires on blur/enter — use it for clamping to max value.
+  - Score inputs need both `oninput` (for live total) and `onchange` (for max clamp) handlers since the two behaviors are complementary.
+  - `input.closest('tr')` is reliable for finding the parent row from an input inside a table cell — but note GAS's inline HTML-built rows use `innerHTML` assignment, so event handlers set via attribute (onclick/oninput) are the correct approach vs. addEventListener which would require re-querying after each render.
+---
+
 ## 2026-05-19 - US-007
 - Implemented attendance grid page `/class/:class_id/subject/:subject_id/attendance?week=N` (N=1–40).
 - Server functions in `src/attendance.gs`: `getAttendanceData()`, `serverSaveAttendance()`, `getAcademicYearStart()`, `formatDateISO()`.

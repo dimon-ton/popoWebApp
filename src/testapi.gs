@@ -93,6 +93,18 @@ function handleTestApi(e) {
         });
         return jsonOk({ enrollment_id: params.enrollment_id });
 
+      case 'seed_indicator':
+        ensureTestPrefix(params.indicator_id);
+        dbInsert('Indicators', {
+          indicator_id: params.indicator_id,
+          subject_id: params.subject_id,
+          code: params.code || params.indicator_id,
+          description: params.description || '',
+          max_score: parseInt(params.max_score) || 3,
+          display_order: parseInt(params.display_order) || 1
+        });
+        return jsonOk({ indicator_id: params.indicator_id });
+
       case 'cleanup':
         var count = 0;
         var tabIdFields = {

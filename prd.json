@@ -138,9 +138,10 @@
         "Playwright (`tests/scoring.spec.ts -g US-008`): log in as teacher; open formative page for"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-009",
@@ -379,6 +380,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-19T16:42:54.653Z"
+    "updatedAt": "2026-05-19T16:45:42.137Z"
   }
 }

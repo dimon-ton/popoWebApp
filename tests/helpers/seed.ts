@@ -119,6 +119,27 @@ export async function seedTestEnrollment(opts: SeedEnrollmentOpts): Promise<stri
   return enrollmentId;
 }
 
+interface SeedIndicatorOpts {
+  suffix: string;
+  subject_id: string;
+  code?: string;
+  max_score?: number;
+  display_order?: number;
+}
+
+export async function seedTestIndicator(opts: SeedIndicatorOpts): Promise<string> {
+  const indicatorId = `test_ind_${opts.suffix}`;
+  await apiCall({
+    api: 'seed_indicator',
+    indicator_id: indicatorId,
+    subject_id: opts.subject_id,
+    code: opts.code ?? indicatorId,
+    max_score: opts.max_score ?? 3,
+    display_order: opts.display_order ?? 1,
+  });
+  return indicatorId;
+}
+
 export async function cleanupTestData(): Promise<void> {
   await apiCall({ api: 'cleanup' });
 }
