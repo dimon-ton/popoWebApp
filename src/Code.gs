@@ -99,6 +99,20 @@ function doGet(e) {
           class_id: params.class_id || '',
           subject_id: params.subject_id || ''
         });
+      case 'help':
+        return buildPage('help', { session: session, token: token });
+      case 'weights_ref':
+        return buildPage('weights_ref', { session: session, token: token });
+      case 'subject_description':
+        return buildPage('subject_description', {
+          session: session, token: token,
+          subject_id: params.subject_id || ''
+        });
+      case 'subject_indicators_ref':
+        return buildPage('subject_indicators_ref', {
+          session: session, token: token,
+          subject_id: params.subject_id || ''
+        });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -320,6 +334,36 @@ function getIndicatorsPageHtml(token, subject_id) {
     var subject_name = subj ? subj.subject_name : subject_id;
     var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
     tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-015: navigate to subject description reference page (any logged-in user)
+function getSubjectDescriptionPageHtml(token, subject_id) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var tmpl = HtmlService.createTemplateFromFile('subject_description');
+    tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-015: navigate to subject indicators reference page (any logged-in user)
+function getSubjectIndicatorsRefPageHtml(token, subject_id) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var tmpl = HtmlService.createTemplateFromFile('subject_indicators_ref');
+    tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';

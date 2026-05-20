@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-21 - US-015
+- What was implemented: Static reference pages — `/help` (คู่มือการใช้งาน with วิธีทำ1/วิธีทำ2 content), `/weights_ref` (read-only weights table), `/subject_description` (per-subject description), `/subject_indicators_ref` (per-subject indicators list).
+- Files changed: `src/help.html` (new), `src/weights_ref.html` (new), `src/subject_description.html` (new), `src/subject_indicators_ref.html` (new), `src/admin_school.gs` (added `getWeightsForRef`, `getSubjectDescription`, `getSubjectIndicatorsRef`), `src/Code.gs` (added 4 router cases + 2 navigation helper functions), `src/dashboard.html` (added คู่มือ and น้ำหนักคะแนน menu links), `tests/admin.spec.ts` (US-015 describe block with 4 tests).
+- **Learnings:**
+  - Read-only reference pages (accessible to any logged-in user, not just admin) must NOT be added to the `adminPages` whitelist in either `doGet` or `getPageHtml`. The existing session-check gate is sufficient.
+  - `getPageHtml(token, 'help')` and `getPageHtml(token, 'weights_ref')` work correctly because those pages only use `data.token` and `data.session` from template data — no extra params needed.
+  - Pages needing extra URL params (subject_id) at navigate-time need dedicated `getXxxPageHtml(token, subject_id)` functions; the generic `getPageHtml` can't carry extra params. Direct URL access works via the `doGet` switch case which reads from `e.parameter`.
+  - For the `/weights_ref` page, a new server function `getWeightsForRef` was created (open to all logged-in users) rather than reusing `getWeightsList` which requires admin role.
+---
+
 ## 2026-05-21 - US-014
 - What was implemented: PDF export of cover report (ปก). Added `serverExportReportPdf(token, class_id, subject_id)` to `src/report.gs`: reuses `getReportData()`, creates a temp Google Spreadsheet with all cover-report sections (header info, grade distribution, dev activity, characteristics, RTW), exports it as A4 PDF via `DriveApp.getFileById(id).getAs('application/pdf')`, encodes as base64, trashes the temp file, returns `{ ok, base64, filename }`. Client (`class_report.html`) decodes base64, creates a Blob URL, and triggers download via a hidden anchor — shows "ดาวน์โหลด PDF สำเร็จ" toast on success.
 - Files changed: `src/report.gs` (new `serverExportReportPdf` function), `src/class_report.html` (Export PDF button + `exportPdf()` JS function + button CSS), `tests/scoring.spec.ts` (US-014 describe block with 2 tests).

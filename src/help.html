@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คู่มือการใช้งาน — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 22px; color: #1a56a0; margin-bottom: 24px; }
+    h3 { font-size: 17px; color: #1a56a0; margin-bottom: 12px; margin-top: 24px; }
+    .card { background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    p { font-size: 14px; line-height: 1.8; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    li { font-size: 14px; line-height: 1.8; margin-bottom: 4px; }
+    .section-title { font-size: 16px; font-weight: bold; color: #1a56a0; border-bottom: 2px solid #e0e8f5; padding-bottom: 8px; margin-bottom: 16px; }
+    .scale-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    .scale-table th { background: #f0f4fa; padding: 8px 12px; text-align: left; border-bottom: 2px solid #ddd; }
+    .scale-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .scale-table tr:hover td { background: #fafcff; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+    .badge-4 { background: #27ae60; color: white; }
+    .badge-35 { background: #2ecc71; color: white; }
+    .badge-3 { background: #3498db; color: white; }
+    .badge-2 { background: #f39c12; color: white; }
+    .badge-1 { background: #e67e22; color: white; }
+    .badge-0 { background: #c0392b; color: white; }
+    .badge-diyiam { background: #27ae60; color: white; }
+    .badge-di { background: #3498db; color: white; }
+    .badge-pass { background: #f39c12; color: white; }
+    .badge-fail { background: #c0392b; color: white; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('weights_ref')">ตารางน้ำหนักคะแนน</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">คู่มือการใช้งานระบบบันทึกคะแนน</h2>
+
+  <!-- วิธีทำ1: วิธีการบันทึกคะแนนตามตัวชี้วัด -->
+  <div class="card">
+    <div class="section-title">วิธีทำ 1 — การบันทึกคะแนนตามตัวชี้วัด (คะแนน1)</div>
+
+    <h3>ขั้นตอนการบันทึกคะแนนตามตัวชี้วัด</h3>
+    <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+      <li>เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแลระบบ</li>
+      <li>เลือกชั้นเรียนและวิชาที่ต้องการบันทึกคะแนน</li>
+      <li>คลิกที่เมนู "คะแนนตามตัวชี้วัด" (คะแนน1)</li>
+      <li>กรอกคะแนนของนักเรียนแต่ละคนในช่องตัวชี้วัดแต่ละตัว (0–3 คะแนน)</li>
+      <li>ระบบจะคำนวณคะแนนรวมแถวอัตโนมัติ</li>
+      <li>คลิก "บันทึกคะแนน" เพื่อบันทึกข้อมูล</li>
+    </ol>
+
+    <h3>เกณฑ์การให้คะแนนตัวชี้วัด</h3>
+    <ul>
+      <li><strong>3 คะแนน</strong> — ผ่านตัวชี้วัดในระดับดีเยี่ยม</li>
+      <li><strong>2 คะแนน</strong> — ผ่านตัวชี้วัดในระดับดี</li>
+      <li><strong>1 คะแนน</strong> — ผ่านตัวชี้วัดในระดับพอใช้</li>
+      <li><strong>0 คะแนน</strong> — ไม่ผ่านตัวชี้วัด</li>
+    </ul>
+
+    <h3>การบันทึกการเข้าแถว (การเข้าเรียน)</h3>
+    <ul>
+      <li><strong>/</strong> — เข้าเรียน (มา)</li>
+      <li><strong>ล</strong> — ลา (ลาป่วย/กิจ)</li>
+      <li><strong>ข</strong> — ขาด (ขาดเรียนโดยไม่มีเหตุผล)</li>
+      <li><strong>ว่าง</strong> — ไม่ใช่วันเรียน</li>
+    </ul>
+    <p>คลิกที่ช่องการเข้าเรียนเพื่อวนระหว่างสถานะ ระบบจะบันทึกข้อมูลสะสมตลอดปีการศึกษา</p>
+  </div>
+
+  <!-- วิธีทำ2: วิธีการบันทึกคะแนนสรุป -->
+  <div class="card">
+    <div class="section-title">วิธีทำ 2 — การบันทึกคะแนนสรุปและการคำนวณผล (คะแนน2)</div>
+
+    <h3>ขั้นตอนการบันทึกคะแนนสรุป</h3>
+    <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+      <li>เลือกชั้นเรียนและวิชา คลิกเมนู "คะแนนสรุป" (คะแนน2)</li>
+      <li>กรอกคะแนน <strong>ระหว่างเรียน</strong> (coursework), <strong>สอบกลางภาค</strong>, <strong>สอบปลายภาค</strong></li>
+      <li>ระบบคำนวณ <strong>รวมทั้งหมด</strong> และ <strong>ผลการประเมิน</strong> อัตโนมัติ</li>
+      <li>หากนักเรียนสอบแก้ตัว ให้กรอกในช่อง <strong>สอบแก้ตัว</strong> เพื่อแทนที่ผลเดิม</li>
+      <li>คลิก "บันทึกคะแนน" เพื่อบันทึกข้อมูล</li>
+    </ol>
+
+    <h3>บันไดระดับผลการเรียน (เกรด)</h3>
+    <table class="scale-table">
+      <thead>
+        <tr>
+          <th>คะแนนรวม</th>
+          <th>ผลการเรียน</th>
+          <th>ความหมาย</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>80–100</td><td><span class="badge badge-4">4</span></td><td>ดีเยี่ยม</td></tr>
+        <tr><td>75–79</td><td><span class="badge badge-35">3.5</span></td><td>ดีมาก</td></tr>
+        <tr><td>70–74</td><td><span class="badge badge-3">3</span></td><td>ดี</td></tr>
+        <tr><td>65–69</td><td><span class="badge badge-3">2.5</span></td><td>ค่อนข้างดี</td></tr>
+        <tr><td>60–64</td><td><span class="badge badge-2">2</span></td><td>น่าพอใจ</td></tr>
+        <tr><td>55–59</td><td><span class="badge badge-2">1.5</span></td><td>พอใช้</td></tr>
+        <tr><td>50–54</td><td><span class="badge badge-1">1</span></td><td>ผ่านเกณฑ์ขั้นต่ำ</td></tr>
+        <tr><td>0–49</td><td><span class="badge badge-0">0</span></td><td>ต่ำกว่าเกณฑ์</td></tr>
+      </tbody>
+    </table>
+
+    <h3>คุณลักษณะอันพึงประสงค์ (8 ด้าน) — สูงสุด 80 คะแนน</h3>
+    <p>ประเมินแต่ละด้าน 0–10 คะแนน รวม 8 ด้าน = สูงสุด 80 คะแนน</p>
+    <table class="scale-table">
+      <thead><tr><th>คะแนนรวม</th><th>ระดับคุณภาพ</th></tr></thead>
+      <tbody>
+        <tr><td>70–80</td><td><span class="badge badge-diyiam">ดีเยี่ยม</span></td></tr>
+        <tr><td>60–69</td><td><span class="badge badge-di">ดี</span></td></tr>
+        <tr><td>50–59</td><td><span class="badge badge-pass">ผ่านเกณฑ์</span></td></tr>
+        <tr><td>0–49</td><td><span class="badge badge-fail">ไม่ผ่าน</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>การอ่าน คิดวิเคราะห์ และเขียน — สูงสุด 100 คะแนน</h3>
+    <p>ประเมิน 10 รายการ (อ่าน 3 รายการ, คิดวิเคราะห์ 4 รายการ, เขียน 3 รายการ) รายการละ 0–10 คะแนน</p>
+    <table class="scale-table">
+      <thead><tr><th>คะแนนรวม</th><th>ระดับคุณภาพ</th></tr></thead>
+      <tbody>
+        <tr><td>90–100</td><td><span class="badge badge-diyiam">ดีเยี่ยม</span></td></tr>
+        <tr><td>80–89</td><td><span class="badge badge-di">ดี</span></td></tr>
+        <tr><td>70–79</td><td><span class="badge badge-pass">ผ่านเกณฑ์</span></td></tr>
+        <tr><td>0–69</td><td><span class="badge badge-fail">ไม่ผ่าน</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
+    <ul>
+      <li><strong>กลุ่มที่ 1</strong> (ภาษาไทย, คณิตศาสตร์, วิทยาศาสตร์, สังคมศึกษา, ประวัติศาสตร์, ภาษาอังกฤษ): ระหว่างเรียน 70 คะแนน / ปลายภาค 30 คะแนน</li>
+      <li><strong>กลุ่มที่ 2</strong> (ศิลปะ, สุขศึกษาพลศึกษา, การงานอาชีพ, วิทยาการคำนวณ, การป้องกัน): ระหว่างเรียน 80 คะแนน / ปลายภาค 20 คะแนน</li>
+    </ul>
+    <p><a href="#" onclick="navigate('weights_ref'); return false;" style="color:#1a56a0">ดูตารางน้ำหนักคะแนนฉบับเต็ม →</a></p>
+  </div>
+</div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+</script>
+</body>
+</html>

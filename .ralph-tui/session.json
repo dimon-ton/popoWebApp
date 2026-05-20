@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-20T22:19:16.981Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-05-20T22:27:42.131Z",
+  "currentIteration": 2,
   "maxIterations": 0,
-  "tasksCompleted": 13,
+  "tasksCompleted": 14,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -95,8 +95,8 @@
       {
         "id": "US-014",
         "title": "PDF export of cover report",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-015",
@@ -678,12 +678,21 @@
       "durationMs": 98500,
       "startedAt": "2026-05-20T22:15:09.275Z",
       "endedAt": "2026-05-20T22:16:47.775Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-014",
+      "taskTitle": "PDF export of cover report",
+      "taskCompleted": true,
+      "durationMs": 147888,
+      "startedAt": "2026-05-20T22:16:49.088Z",
+      "endedAt": "2026-05-20T22:19:16.976Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [
-    "US-015",
     "US-016",
     "US-017",
     "US-018",

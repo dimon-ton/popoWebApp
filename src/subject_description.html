@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดวิชา — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .field-row { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; }
+    .field-label { color: #888; min-width: 120px; }
+    .field-value { color: #333; flex: 1; }
+    .description-box { background: #f9f9f9; border-radius: 4px; padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; min-height: 80px; border: 1px solid #eee; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('help')">คู่มือ</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">รายละเอียดวิชา</h2>
+
+  <div class="card" id="subjectCard">
+    <p class="loading-msg" id="loadingMsg">กำลังโหลด...</p>
+    <div id="subjectContent" style="display:none">
+      <div class="field-row">
+        <span class="field-label">ชื่อวิชา</span>
+        <span class="field-value" id="subjectName">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">รหัสวิชา</span>
+        <span class="field-value" id="subjectCode">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">เวลาเรียน</span>
+        <span class="field-value" id="subjectHours">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">กลุ่มวิชา</span>
+        <span class="field-value" id="subjectGroup">—</span>
+      </div>
+      <div class="field-row" style="flex-direction:column;gap:6px">
+        <span class="field-label">คำอธิบายรายวิชา</span>
+        <div class="description-box" id="subjectDescription">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadSubject() {
+  if (!SUBJECT_ID) {
+    document.getElementById('loadingMsg').textContent = 'ไม่พบรหัสวิชา';
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || result.error) {
+        document.getElementById('loadingMsg').textContent = result ? result.error : 'เกิดข้อผิดพลาด';
+        return;
+      }
+      var s = result.subject;
+      if (!s) { document.getElementById('loadingMsg').textContent = 'ไม่พบวิชานี้'; return; }
+      document.getElementById('subjectName').textContent = s.subject_name || '—';
+      document.getElementById('subjectCode').textContent = s.subject_code || '—';
+      document.getElementById('subjectHours').textContent = s.hours_per_year ? (s.hours_per_year + ' ชั่วโมง/ปี') : '—';
+      document.getElementById('subjectGroup').textContent = s.weight_group ? ('กลุ่ม ' + s.weight_group) : '—';
+      document.getElementById('subjectDescription').textContent = s.description || '(ยังไม่มีคำอธิบายรายวิชา)';
+      document.getElementById('pageHeading').textContent = 'รายละเอียดวิชา — ' + (s.subject_name || '');
+      document.getElementById('loadingMsg').style.display = 'none';
+      document.getElementById('subjectContent').style.display = 'block';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingMsg').textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message;
+    })
+    .getSubjectDescription(TOKEN, SUBJECT_ID);
+}
+
+loadSubject();
+</script>
+</body>
+</html>

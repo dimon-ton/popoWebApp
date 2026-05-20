@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตัวชี้วัด — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f0f4fa; padding: 10px 8px; text-align: left; border-bottom: 2px solid #ddd; font-size: 12px; }
+    th.center { text-align: center; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    td.center { text-align: center; }
+    tr:hover td { background: #fafcff; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .empty-msg { color: #aaa; font-size: 14px; padding: 20px 0; text-align: center; }
+    .notice { background: #e8f0fa; border-left: 4px solid #1a56a0; padding: 10px 14px; font-size: 13px; border-radius: 0 4px 4px 0; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('help')">คู่มือ</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">ตัวชี้วัดวิชา</h2>
+
+  <div class="card">
+    <p class="notice">รายการตัวชี้วัดวิชานี้ — ดูอ่านอย่างเดียว ผู้ดูแลระบบสามารถจัดการตัวชี้วัดได้ที่เมนู "ตัวชี้วัด" ในหน้าจัดการวิชา</p>
+    <p class="loading-msg" id="loadingMsg">กำลังโหลด...</p>
+    <div id="indicatorsWrap" style="display:none">
+      <table id="indicatorsTable">
+        <thead>
+          <tr>
+            <th class="center" style="width:50px">ลำดับ</th>
+            <th>รหัสตัวชี้วัด</th>
+            <th>รายละเอียด</th>
+            <th class="center" style="width:80px">คะแนนสูงสุด</th>
+          </tr>
+        </thead>
+        <tbody id="indicatorsBody"></tbody>
+      </table>
+      <p class="empty-msg" id="emptyMsg" style="display:none">ยังไม่มีตัวชี้วัดสำหรับวิชานี้</p>
+    </div>
+  </div>
+</div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadIndicators() {
+  if (!SUBJECT_ID) {
+    document.getElementById('loadingMsg').textContent = 'ไม่พบรหัสวิชา';
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || result.error) {
+        document.getElementById('loadingMsg').textContent = result ? result.error : 'เกิดข้อผิดพลาด';
+        return;
+      }
+      var indicators = result.indicators || [];
+      var subjectName = result.subject_name || SUBJECT_ID;
+      document.getElementById('pageHeading').textContent = 'ตัวชี้วัดวิชา — ' + subjectName;
+      renderIndicators(indicators);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingMsg').textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message;
+    })
+    .getSubjectIndicatorsRef(TOKEN, SUBJECT_ID);
+}
+
+function renderIndicators(indicators) {
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('indicatorsWrap').style.display = 'block';
+  var tbody = document.getElementById('indicatorsBody');
+  tbody.innerHTML = '';
+  if (!indicators.length) {
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+  indicators.forEach(function(ind, idx) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="center">' + (idx + 1) + '</td>' +
+      '<td>' + escHtml(ind.code) + '</td>' +
+      '<td>' + escHtml(ind.description || '') + '</td>' +
+      '<td class="center">' + escHtml(ind.max_score) + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+loadIndicators();
+</script>
+</body>
+</html>

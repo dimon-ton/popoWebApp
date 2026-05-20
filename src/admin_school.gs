@@ -295,3 +295,50 @@ function serverSaveWeights(token, rows) {
   appendAuditLog(session.user_id, 'SubjectWeights', 'all', null, { rows_saved: rows.length });
   return { ok: true };
 }
+
+// ── US-015: Read-only reference functions (any logged-in user) ────────────────
+
+// Returns weights + subject info for the read-only /weights_ref page.
+function getWeightsForRef(token) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var subjects = dbGetAll('Subjects');
+  var weights = dbGetAll('SubjectWeights');
+  var weightMap = {};
+  weights.forEach(function(w) { weightMap[w.subject_id] = w; });
+  var result = subjects.map(function(s) {
+    var w = weightMap[s.subject_id] || {};
+    return {
+      subject_id: s.subject_id,
+      subject_name: s.subject_name,
+      weight_group: s.weight_group,
+      coursework_max: w.coursework_max !== undefined ? w.coursework_max : '',
+      final_max: w.final_max !== undefined ? w.final_max : '',
+      pre_mid_max: w.pre_mid_max !== undefined ? w.pre_mid_max : '',
+      mid_max: w.mid_max !== undefined ? w.mid_max : '',
+      post_mid_max: w.post_mid_max !== undefined ? w.post_mid_max : '',
+      final_exam_max: w.final_exam_max !== undefined ? w.final_exam_max : ''
+    };
+  });
+  return { weights: result };
+}
+
+// Returns a single subject's data for the read-only /subject_description page.
+function getSubjectDescription(token, subject_id) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  if (!subject) return { error: 'ไม่พบวิชานี้' };
+  return { subject: subject };
+}
+
+// Returns indicators for a subject for the read-only /subject_indicators_ref page.
+function getSubjectIndicatorsRef(token, subject_id) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var indicators = dbFind('Indicators', 'subject_id', subject_id);
+  indicators.sort(function(a, b) { return Number(a.display_order) - Number(b.display_order); });
+  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  var subject_name = subject ? subject.subject_name : subject_id;
+  return { indicators: indicators, subject_name: subject_name };
+}

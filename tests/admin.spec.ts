@@ -14,6 +14,72 @@ import {
   queryTestRows,
 } from './helpers/seed';
 
+// ---- US-015: Static reference pages ----
+
+test.describe('US-015: Static reference pages', () => {
+  test('US-015: /help page has at least one Thai heading', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=help`);
+
+    // Wait for the page heading to be visible
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    // Assert the main heading contains Thai text
+    await expect(page.locator('#pageHeading')).toContainText('คู่มือ');
+
+    // Assert at least one Thai section heading is visible (วิธีทำ1 / วิธีทำ2 content)
+    const sectionTitles = page.locator('.section-title');
+    const count = await sectionTitles.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+
+    // Check first section title contains "วิธีทำ"
+    await expect(sectionTitles.first()).toContainText('วิธีทำ');
+  });
+
+  test('US-015: /weights_ref page shows ภาษาอังกฤษ row', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=weights_ref`);
+
+    // Wait for the page heading
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    // Wait for the weights table to load
+    await expect(page.locator('#weightsTable')).toBeVisible({ timeout: 20_000 });
+
+    // Assert ภาษาอังกฤษ row is present
+    await expect(page.locator('#weightsBody')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
+  });
+
+  test('US-015: /subject_description page renders description field', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    // Use the pre-seeded English subject
+    await page.goto(`${url}?page=subject_description&subject_id=subj_eng`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
+    await expect(page.locator('#subjectName')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
+    await expect(page.locator('#subjectCode')).toBeVisible();
+  });
+
+  test('US-015: /subject_indicators_ref page lists indicators for subj_eng', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=subject_indicators_ref&subject_id=subj_eng`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    // Wait for indicators table to load
+    await expect(page.locator('#indicatorsWrap')).toBeVisible({ timeout: 20_000 });
+
+    // The page heading should mention ภาษาอังกฤษ
+    await expect(page.locator('#pageHeading')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
+
+    // Indicators should be listed (pre-seeded English indicators)
+    const rows = page.locator('#indicatorsBody tr');
+    const rowCount = await rows.count();
+    expect(rowCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
 // ---- US-004: School info, classes, and subjects setup ----
 
 test.describe('US-004: School info, classes, and subjects', () => {
