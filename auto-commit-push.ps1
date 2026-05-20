@@ -76,11 +76,12 @@ $allChanges
 "@
 
 try {
-    # Write prompt to a temp file and pipe into claude --print
+    # Write prompt to temp file; use cmd.exe to feed it into claude.exe via stdin redirect
+    $claudeExe = "C:\Users\saich\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe"
     $promptFile = Join-Path $projectDir ".commit-prompt.tmp"
     $prompt | Out-File -FilePath $promptFile -Encoding utf8
 
-    $aiOutput = Get-Content $promptFile -Raw | & "C:\Users\saich\AppData\Roaming\npm\claude" --print --dangerously-skip-permissions 2>$null
+    $aiOutput = cmd /c "`"$claudeExe`" --print --dangerously-skip-permissions < `"$promptFile`"" 2>$null
     Remove-Item $promptFile -Force -ErrorAction SilentlyContinue
 
     $commitMsg = ($aiOutput -join "`n").Trim()
