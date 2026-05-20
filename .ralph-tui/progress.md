@@ -26,6 +26,24 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-20 - US-011
+- What was implemented: Characteristics scoring page (`/class/:class_id/subject/:subject_id/characteristics`) — 8 affective trait columns (0–10 each), live total (max 80), live label via ladder (≥70→ดีเยี่ยม, ≥60→ดี, ≥50→ผ่านเกณฑ์, else→ไม่ผ่าน), save with LockService upsert pattern.
+- Server functions in `src/characteristics.gs`: `computeCharacteristicsLabel(total)`, `getCharacteristicsData(token, class_id, subject_id)`, `serverSaveCharacteristics(token, class_id, subject_id, rows)`.
+- `getCharacteristicsData()` returns students (sorted by seq_no), score map (student_id → {t1..t8, total, label}), subject/class info, and `can_edit` flag.
+- `serverSaveCharacteristics()` uses the same upsert pattern as formative/summative: one lock acquisition, one sheet read, update-or-append per row.
+- Clamps each trait to [0, 10] server-side; `allEmpty` check ensures total stays blank when no values are entered.
+- Created `src/class_characteristics.html` with: 8 trait inputs (0–10), live `updateRowTotal()` via `oninput`, label CSS classes (diyiam/di/pass/fail) for color-coded display, save bar with disable-while-inflight.
+- Added `case 'class_characteristics'` to `doGet` router in `Code.gs`.
+- Added `getCharacteristicsPageHtml(token, class_id, subject_id)` to `Code.gs` for programmatic navigation.
+- Added US-011 describe block to `tests/scoring.spec.ts`: 3 tests — page load assertions (heading, 8 trait headers, student visible), live total=78 label=ดีเยี่ยม for [10,10,10,9,9,10,10,10], live total=67 label=ดี for [8,8,8,9,9,8,9,8] + save + reload persists.
+- Files changed: `src/characteristics.gs` (new), `src/class_characteristics.html` (new), `src/Code.gs`, `tests/scoring.spec.ts`
+- **Learnings:**
+  - Characteristics uses the same upsert pattern as formative/summative — no new patterns needed.
+  - Label CSS classes on the `td.label-col` element give instant visual feedback; updating `className` directly from `updateRowTotal()` keeps them in sync with the input state.
+  - `allEmpty` sentinel (set to `false` when any trait has a value) prevents computing a total of 0 when all inputs are blank — matches the summative "leave empty if not entered" convention.
+  - Server-side clamp `Math.min(10, Math.max(0, Number(v)))` is essential because `max` attribute enforcement is only client-side.
+---
+
 ## 2026-05-20 - US-010
 - What was implemented: Subject weights admin page (`/admin/weights`) — server functions `getWeightsList()` and `serverSaveWeights()` were already implemented in `admin_school.gs`, and `admin_weights.html` was already created. Only the Playwright tests were missing.
 - Added US-010 `test.describe` block to `tests/admin.spec.ts` with 4 tests: (1) page loads and shows subject row, (2) saving with total ≠ 100 shows "รวมต้องเท่ากับ 100" error toast (client-side check), (3) fixing weights to sum=100 and saving shows success toast, (4) summative page shows updated column max (`/25` for mid_max after changing from 20 → 25).

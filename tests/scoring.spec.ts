@@ -1,5 +1,5 @@
 /**
- * Scoring tests — US-008 (Formative indicator scoring), US-009 (Summative scoring)
+ * Scoring tests — US-008 (Formative indicator scoring), US-009 (Summative scoring), US-011 (Characteristics)
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
@@ -229,5 +229,106 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     await expect(reloadedTotal).toHaveText('82', { timeout: 10_000 });
     await expect(reloadedGrade).toHaveText('4', { timeout: 10_000 });
     await expect(reloadedFinalGrade).toHaveText('3', { timeout: 10_000 });
+  });
+});
+
+// ---- US-011: Characteristics scoring (คุณลักษณะ) ----
+
+test.describe('US-011: Characteristics scoring', () => {
+  let classId: string;
+  let subjectId: string;
+  let studentId: string;
+  let teacherId: string;
+  const url = process.env.WEB_APP_URL!;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us011_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us011_eng', name: 'ภาษาอังกฤษทดสอบ011', code: 'TST011', group: 1 });
+    studentId = await seedTestStudent({ class_suffix: 'us011_c1', seq: 1, full_name: 'test_นักเรียนUS011' });
+    teacherId = await seedTestUser({ suffix: 'us011_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS011' });
+    await seedTestEnrollment({
+      suffix: 'us011_enr1',
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherId,
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-011: characteristics page loads with student row and trait columns', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText('คุณลักษณะอันพึงประสงค์', { timeout: 15_000 });
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#charBody')).toContainText('test_นักเรียนUS011', { timeout: 15_000 });
+    // 8 trait columns visible in header
+    await expect(page.locator('#charHead')).toContainText('ที่ 1', { timeout: 10_000 });
+    await expect(page.locator('#charHead')).toContainText('ที่ 8', { timeout: 10_000 });
+    await expect(page.locator('#charHead')).toContainText('รวม', { timeout: 10_000 });
+    await expect(page.locator('#charHead')).toContainText('ผล', { timeout: 10_000 });
+    // Save bar visible (admin session)
+    await expect(page.locator('#saveBar')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('US-011: enter 10,10,10,9,9,10,10,10 → total=78, label=ดีเยี่ยม', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+
+    const traitValues = [10, 10, 10, 9, 9, 10, 10, 10];
+    const inputs = page.locator('input.score-input');
+
+    for (let i = 0; i < traitValues.length; i++) {
+      await inputs.nth(i).fill(String(traitValues[i]));
+      await inputs.nth(i).dispatchEvent('input');
+    }
+
+    // Total = 78, label = ดีเยี่ยม
+    const totalCell = page.locator('[id^="char-total-"]').first();
+    const labelCell = page.locator('[id^="char-label-"]').first();
+    await expect(totalCell).toHaveText('78', { timeout: 5_000 });
+    await expect(labelCell).toHaveText('ดีเยี่ยม', { timeout: 5_000 });
+  });
+
+  test('US-011: enter 8,8,8,9,9,8,9,8 → total=67, label=ดี; save and reload persists', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+
+    const traitValues = [8, 8, 8, 9, 9, 8, 9, 8];
+    const inputs = page.locator('input.score-input');
+
+    for (let i = 0; i < traitValues.length; i++) {
+      await inputs.nth(i).fill(String(traitValues[i]));
+      await inputs.nth(i).dispatchEvent('input');
+    }
+
+    // Total = 67, label = ดี
+    const totalCell = page.locator('[id^="char-total-"]').first();
+    const labelCell = page.locator('[id^="char-label-"]').first();
+    await expect(totalCell).toHaveText('67', { timeout: 5_000 });
+    await expect(labelCell).toHaveText('ดี', { timeout: 5_000 });
+
+    // Save
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกคะแนนสำเร็จ', { timeout: 20_000 });
+
+    // Reload and assert values persist
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+
+    const reloadedInputs = page.locator('input.score-input');
+    await expect(reloadedInputs.nth(0)).toHaveValue('8', { timeout: 15_000 });
+    await expect(reloadedInputs.nth(3)).toHaveValue('9', { timeout: 15_000 });
+
+    const reloadedTotal = page.locator('[id^="char-total-"]').first();
+    const reloadedLabel = page.locator('[id^="char-label-"]').first();
+    await expect(reloadedTotal).toHaveText('67', { timeout: 10_000 });
+    await expect(reloadedLabel).toHaveText('ดี', { timeout: 10_000 });
   });
 });
