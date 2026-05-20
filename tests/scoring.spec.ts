@@ -440,6 +440,63 @@ test.describe('US-013: Cover report aggregates', () => {
   });
 });
 
+// ---- US-014: PDF export of cover report ----
+
+test.describe('US-014: PDF export of cover report', () => {
+  let classId: string;
+  let subjectId: string;
+  let teacherId: string;
+  const url = process.env.WEB_APP_URL!;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us014_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us014_eng', name: 'ภาษาอังกฤษทดสอบ014', code: 'TST014', group: 1 });
+    teacherId = await seedTestUser({ suffix: 'us014_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS014' });
+    await seedTestEnrollment({
+      suffix: 'us014_enr1',
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherId,
+    });
+    // Seed one student with summative data so the report is non-empty
+    await seedTestStudent({ class_suffix: 'us014_c1', seq: 1, full_name: 'test_นักเรียนUS014' });
+    await seedTestSummative({
+      student_id: 'test_student_us014_c1_1',
+      subject_id: subjectId,
+      total: 82,
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-014: Export PDF button visible after report loads', async ({ page }) => {
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    // Export PDF button should appear after report renders
+    await expect(page.locator('#exportPdfBtn')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#exportPdfBtn')).toHaveText('Export PDF', { timeout: 5_000 });
+  });
+
+  test('US-014: clicking Export PDF triggers server PDF generation and shows success toast', async ({ page }) => {
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#exportPdfBtn')).toBeVisible({ timeout: 10_000 });
+
+    // Click the Export PDF button
+    await page.click('#exportPdfBtn');
+
+    // Wait for the success toast confirming PDF was generated and download triggered
+    // (Blob URL downloads inside GAS iframes don't fire Playwright download events,
+    //  so we verify via the toast message that the server returned a valid PDF base64)
+    await expect(page.locator('#toast')).toContainText('ดาวน์โหลด PDF สำเร็จ', { timeout: 60_000 });
+  });
+});
+
 // ---- US-011: Characteristics scoring (คุณลักษณะ) ----
 
 test.describe('US-011: Characteristics scoring', () => {

@@ -39,6 +39,9 @@
     .toast.error { background: #c0392b; color: white; }
     .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .btn-pdf { padding: 9px 24px; background: #8e44ad; color: white; border: none; border-radius: 4px; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .btn-pdf:hover { background: #7d3c98; }
+    .btn-pdf:disabled { background: #aaa; cursor: not-allowed; }
     @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .info-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -50,7 +53,11 @@
 </div>
 
 <div class="container">
-  <h2 id="pageHeading">รายงานผลการเรียน (ปก)</h2>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+    <h2 id="pageHeading" style="margin-bottom:0">รายงานผลการเรียน (ปก)</h2>
+    <button class="btn-pdf" id="exportPdfBtn" onclick="exportPdf()" style="display:none">Export PDF</button>
+    <span id="pdfStatus" style="font-size:13px;color:#888"></span>
+  </div>
   <p class="loading-msg" id="loadingMsg">กำลังโหลด...</p>
 
   <div id="reportContent" style="display:none">
@@ -308,6 +315,43 @@ function renderReport(d) {
   saveBar.style.display = can_edit ? 'flex' : 'none';
 
   document.getElementById('reportContent').style.display = 'block';
+  document.getElementById('exportPdfBtn').style.display = 'inline-block';
+}
+
+function exportPdf() {
+  var btn = document.getElementById('exportPdfBtn');
+  btn.disabled = true;
+  document.getElementById('pdfStatus').textContent = 'กำลังสร้าง PDF...';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      document.getElementById('pdfStatus').textContent = '';
+      if (!result || result.error) {
+        showToast('ไม่สามารถสร้าง PDF ได้: ' + (result ? result.error : 'unknown'), 'error');
+        return;
+      }
+      // Decode base64 and trigger download
+      var byteStr = atob(result.base64);
+      var bytes = new Uint8Array(byteStr.length);
+      for (var i = 0; i < byteStr.length; i++) { bytes[i] = byteStr.charCodeAt(i); }
+      var blob = new Blob([bytes], { type: 'application/pdf' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename || 'cover_report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      document.getElementById('pdfStatus').textContent = '';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverExportReportPdf(TOKEN, CLASS_ID, SUBJECT_ID);
 }
 
 function saveDevActivity() {

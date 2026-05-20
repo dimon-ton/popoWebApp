@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-20T22:16:47.778Z",
-  "currentIteration": 13,
+  "updatedAt": "2026-05-20T22:19:16.981Z",
+  "currentIteration": 1,
   "maxIterations": 0,
-  "tasksCompleted": 12,
+  "tasksCompleted": 13,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -89,8 +89,8 @@
       {
         "id": "US-013",
         "title": "Cover report aggregates (ปก)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-014",
@@ -668,12 +668,21 @@
       "durationMs": 4663,
       "startedAt": "2026-05-20T16:03:27.282Z",
       "endedAt": "2026-05-20T16:03:31.945Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-013",
+      "taskTitle": "Cover report aggregates (ปก)",
+      "taskCompleted": true,
+      "durationMs": 98500,
+      "startedAt": "2026-05-20T22:15:09.275Z",
+      "endedAt": "2026-05-20T22:16:47.775Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [
-    "US-014",
     "US-015",
     "US-016",
     "US-017",

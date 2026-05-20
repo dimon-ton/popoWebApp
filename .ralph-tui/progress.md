@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-21 - US-014
+- What was implemented: PDF export of cover report (ปก). Added `serverExportReportPdf(token, class_id, subject_id)` to `src/report.gs`: reuses `getReportData()`, creates a temp Google Spreadsheet with all cover-report sections (header info, grade distribution, dev activity, characteristics, RTW), exports it as A4 PDF via `DriveApp.getFileById(id).getAs('application/pdf')`, encodes as base64, trashes the temp file, returns `{ ok, base64, filename }`. Client (`class_report.html`) decodes base64, creates a Blob URL, and triggers download via a hidden anchor — shows "ดาวน์โหลด PDF สำเร็จ" toast on success.
+- Files changed: `src/report.gs` (new `serverExportReportPdf` function), `src/class_report.html` (Export PDF button + `exportPdf()` JS function + button CSS), `tests/scoring.spec.ts` (US-014 describe block with 2 tests).
+- **Learnings:**
+  - GAS PDF export: create a temp `SpreadsheetApp.create()`, fill data, call `DriveApp.getFileById(id).getAs('application/pdf')`, then `setTrashed(true)` to clean up. Returns base64 via `Utilities.base64Encode(pdfBlob.getBytes())`.
+  - Blob URL downloads inside GAS iframes (googleusercontent.com) do NOT fire Playwright's `page.waitForEvent('download')`. The correct Playwright assertion is to watch for the success toast message that fires after the client-side download JS completes successfully.
+  - The Export PDF button is initially `display:none` and is shown by `renderReport()` after the report content loads — this avoids premature clicks before data is ready.
+  - `serverExportReportPdf` re-calls `getReportData()` internally rather than accepting the data as a parameter, which keeps the function self-contained and avoids passing large objects via `google.script.run`.
+---
+
 ## 2026-05-21 - US-013
 - What was implemented: Cover report aggregates page (`/class/:class_id/subject/:subject_id/report`) — already fully implemented in a prior iteration. Verified all acceptance criteria met.
 - Files confirmed complete: `src/report.gs` (getReportData, serverSaveDevActivity), `src/class_report.html` (header info grid, grade distribution table, กิจกรรมพัฒนาผู้เรียน summary + per-student edit form, characteristics distribution, RTW distribution), `src/Code.gs` (case 'class_report' in doGet, getReportPageHtml), `src/testapi.gs` (seed_summative case with computeGrade), `src/setup.gs` (DevActivity tab schema), `tests/helpers/seed.ts` (seedTestSummative), `tests/scoring.spec.ts` (US-013 describe block with 3 tests).

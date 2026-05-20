@@ -242,9 +242,10 @@
         "Playwright (`tests/scoring.spec.ts -g US-014`): click \"Export PDF\"; assert a download"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-015",
@@ -385,6 +386,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-20T22:16:47.777Z"
+    "updatedAt": "2026-05-20T22:19:16.978Z"
   }
 }

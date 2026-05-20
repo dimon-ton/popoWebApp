@@ -141,6 +141,98 @@ function getReportData(token, class_id, subject_id) {
   };
 }
 
+// US-014: Export cover report as PDF.
+// Builds a temporary Google Spreadsheet that mirrors the ปก layout,
+// exports it as PDF (A4 portrait), returns base64 so the client can
+// trigger a browser download.  The temp sheet is deleted after export.
+function serverExportReportPdf(token, class_id, subject_id) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+
+  // Reuse getReportData to gather everything
+  var d = getReportData(token, class_id, subject_id);
+
+  var cls    = d.class_info    || {};
+  var subj   = d.subject_info  || {};
+  var school = d.school_info   || {};
+
+  // Create a temporary spreadsheet
+  var tmpSs = SpreadsheetApp.create('_popo_pdf_tmp_' + class_id + '_' + subject_id);
+  var sheet  = tmpSs.getActiveSheet();
+  sheet.setName('ปก');
+
+  // --- Build the cover sheet ---
+  var rows = [];
+  rows.push(['รายงานผลการเรียน', '', '', '']);
+  rows.push(['โรงเรียน', school.school_name || '-', 'ปีการศึกษา', school.academic_year || '-']);
+  rows.push(['อำเภอ', school.district   || '-', 'จังหวัด',   school.province    || '-']);
+  rows.push(['ชั้น',  (cls.level || '') + '/' + (cls.section || ''), 'รหัสวิชา', subj.subject_code || '-']);
+  rows.push(['เวลาเรียน (ชม./ปี)', subj.hours_per_year || '-', '', '']);
+  rows.push(['ครูผู้สอน', d.teacher_name || '-', 'ครูประจำชั้น', d.homeroom_teacher_name || '-']);
+  rows.push(['จำนวนนักเรียน', d.total_students, '', '']);
+  rows.push(['', '', '', '']);
+
+  // Grade distribution table header
+  rows.push(['ผลการเรียน (คะแนน)', '', '', '']);
+  rows.push(['ผลการเรียน', 'จำนวนนักเรียน', 'ร้อยละ', '']);
+  (d.grade_dist || []).forEach(function(row) {
+    rows.push([String(row.grade), row.count, row.pct + '%', '']);
+  });
+  rows.push(['', '', '', '']);
+
+  // กิจกรรมพัฒนาผู้เรียน
+  rows.push(['กิจกรรมพัฒนาผู้เรียน', '', '', '']);
+  rows.push(['ผล', 'จำนวน', '', '']);
+  var devCounts = d.dev_counts || {};
+  ['ผ่าน', 'ไม่ผ่าน', 'ร', 'มส'].forEach(function(k) {
+    rows.push([k, devCounts[k] || 0, '', '']);
+  });
+  rows.push(['', '', '', '']);
+
+  // Characteristics distribution
+  rows.push(['คุณลักษณะอันพึงประสงค์', '', '', '']);
+  rows.push(['ระดับคุณภาพ', 'จำนวนนักเรียน', 'ร้อยละ', '']);
+  (d.char_dist || []).forEach(function(row) {
+    rows.push([row.label, row.count, row.pct + '%', '']);
+  });
+  rows.push(['', '', '', '']);
+
+  // Read-Think-Write distribution
+  rows.push(['การอ่าน คิดวิเคราะห์ และเขียน', '', '', '']);
+  rows.push(['ระดับคุณภาพ', 'จำนวนนักเรียน', 'ร้อยละ', '']);
+  (d.rtw_dist || []).forEach(function(row) {
+    rows.push([row.label, row.count, row.pct + '%', '']);
+  });
+
+  // Write all rows at once
+  if (rows.length > 0) {
+    sheet.getRange(1, 1, rows.length, 4).setValues(rows);
+  }
+
+  // Basic formatting: bold title and section headers
+  sheet.getRange('A1').setFontWeight('bold').setFontSize(14);
+  sheet.setColumnWidth(1, 180);
+  sheet.setColumnWidth(2, 140);
+  sheet.setColumnWidth(3, 140);
+  sheet.setColumnWidth(4, 140);
+
+  // Export as PDF
+  var fileId  = tmpSs.getId();
+  var pdfBlob = DriveApp.getFileById(fileId).getAs('application/pdf');
+  pdfBlob.setName('cover_report_' + (cls.level || '') + '_' + (subj.subject_code || '') + '.pdf');
+
+  var base64 = Utilities.base64Encode(pdfBlob.getBytes());
+
+  // Clean up the temporary spreadsheet
+  DriveApp.getFileById(fileId).setTrashed(true);
+
+  return {
+    ok: true,
+    base64: base64,
+    filename: 'cover_report_' + (cls.level || cls.class_id || class_id) + '_' + (subj.subject_code || subject_id) + '.pdf'
+  };
+}
+
 // Save กิจกรรมพัฒนาผู้เรียน results for the report page.
 // rows: array of { student_id, result }
 function serverSaveDevActivity(token, class_id, subject_id, rows) {
