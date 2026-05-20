@@ -26,6 +26,15 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-21 - US-013
+- What was implemented: Cover report aggregates page (`/class/:class_id/subject/:subject_id/report`) — already fully implemented in a prior iteration. Verified all acceptance criteria met.
+- Files confirmed complete: `src/report.gs` (getReportData, serverSaveDevActivity), `src/class_report.html` (header info grid, grade distribution table, กิจกรรมพัฒนาผู้เรียน summary + per-student edit form, characteristics distribution, RTW distribution), `src/Code.gs` (case 'class_report' in doGet, getReportPageHtml), `src/testapi.gs` (seed_summative case with computeGrade), `src/setup.gs` (DevActivity tab schema), `tests/helpers/seed.ts` (seedTestSummative), `tests/scoring.spec.ts` (US-013 describe block with 3 tests).
+- **Learnings:**
+  - `grade-count-{grade}` IDs use `.replace('.', '-')` so grade 3.5 → `grade-count-3-5`. Playwright locators must match exactly.
+  - DevActivity reads are wrapped in try/catch because the tab may not exist on first deploy — counts fall back to 0 gracefully.
+  - `seedTestSummative` seeds a full SummativeScores row including `computed_grade` (via `computeGrade()`) and `final_grade`. The student_id must be the exact ID format returned by `seedTestStudent` (`test_student_{class_suffix}_{seq}`).
+---
+
 ## 2026-05-20 - US-012
 - What was implemented: Read-Think-Write scoring page (`/class/:class_id/subject/:subject_id/readthinkwrite`) — 10 sub-item columns (0–10 each) grouped visually into อ่าน (r1–r3), คิดวิเคราะห์ (t1–t4), เขียน (w1–w3), live total (max 100), live label via ladder (≥90→ดีเยี่ยม, ≥80→ดี, ≥70→ผ่านเกณฑ์, else→ไม่ผ่าน), save with LockService upsert pattern.
 - Server functions in `src/readthinkwrite.gs`: `computeReadThinkWriteLabel(total)`, `getReadThinkWriteData(token, class_id, subject_id)`, `serverSaveReadThinkWrite(token, class_id, subject_id, rows)`.
