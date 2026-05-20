@@ -76,13 +76,24 @@ $allChanges
 "@
 
 try {
-    $aiOutput = opencode run $prompt --dir $projectDir --dangerously-skip-permissions 2>&1
+    # Write prompt to a temp file to avoid shell quoting/length issues
+    $promptFile = Join-Path $projectDir ".commit-prompt.tmp"
+    $prompt | Out-File -FilePath $promptFile -Encoding utf8
+
+    $aiOutput = opencode run --file $promptFile --dir $projectDir --dangerously-skip-permissions 2>&1
+    Remove-Item $promptFile -Force -ErrorAction SilentlyContinue
+
     $aiOutput | Out-File -FilePath $commitMsgFile -Encoding utf8
     $commitMsg = (Get-Content $commitMsgFile -Raw).Trim()
     Remove-Item $commitMsgFile -Force -ErrorAction SilentlyContinue
 
     if (-not $commitMsg -or $commitMsg.Length -lt 10) {
         throw "AI commit message too short or empty"
+    }
+
+    # Reject if it looks like a help/error message
+    if ($commitMsg -match "opencode run \[message" -or $commitMsg -match "show help") {
+        throw "AI returned help text instead of commit message"
     }
 
     Log "AI commit message:`n$commitMsg"
