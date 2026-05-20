@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-20T15:54:47.934Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-05-20T15:58:07.856Z",
+  "currentIteration": 2,
   "maxIterations": 0,
-  "tasksCompleted": 10,
+  "tasksCompleted": 11,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -77,8 +77,8 @@
       {
         "id": "US-011",
         "title": "Characteristics scoring (คุณลักษณะ)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-012",
@@ -548,12 +548,21 @@
       "durationMs": 130894,
       "startedAt": "2026-05-20T15:49:09.767Z",
       "endedAt": "2026-05-20T15:51:20.661Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-011",
+      "taskTitle": "Characteristics scoring (คุณลักษณะ)",
+      "taskCompleted": true,
+      "durationMs": 205974,
+      "startedAt": "2026-05-20T15:51:21.958Z",
+      "endedAt": "2026-05-20T15:54:47.932Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [
-    "US-012",
     "US-013",
     "US-014",
     "US-015",

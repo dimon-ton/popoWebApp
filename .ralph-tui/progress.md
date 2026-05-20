@@ -26,6 +26,23 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-20 - US-012
+- What was implemented: Read-Think-Write scoring page (`/class/:class_id/subject/:subject_id/readthinkwrite`) — 10 sub-item columns (0–10 each) grouped visually into อ่าน (r1–r3), คิดวิเคราะห์ (t1–t4), เขียน (w1–w3), live total (max 100), live label via ladder (≥90→ดีเยี่ยม, ≥80→ดี, ≥70→ผ่านเกณฑ์, else→ไม่ผ่าน), save with LockService upsert pattern.
+- Server functions in `src/readthinkwrite.gs`: `computeReadThinkWriteLabel(total)`, `getReadThinkWriteData(token, class_id, subject_id)`, `serverSaveReadThinkWrite(token, class_id, subject_id, rows)`.
+- Used a `rtFields` array `['r1','r2','r3','t1','t2','t3','t4','w1','w2','w3']` to loop over field names instead of hard-coding each one — cleaner than the characteristics approach that mapped n→'t'+n.
+- `fieldCols` map (field→column index) pre-computed before the row loop; avoids repeated `headers.indexOf` calls per row.
+- Created `src/class_readthinkwrite.html` with: two-row header (group headers + column headers using `rowspan`/`colspan`), 10 score inputs, live `updateRowTotal()` via `oninput`, label CSS classes, save bar.
+- Used `COLUMNS` array `[{key, label, group}]` in client JS to drive both header rendering and input data collection — single source of truth for all 10 columns.
+- Added `case 'class_readthinkwrite'` to `doGet` router in `Code.gs`.
+- Added `getReadThinkWritePageHtml(token, class_id, subject_id)` to `Code.gs`.
+- Added US-012 describe block to `tests/scoring.spec.ts`: 3 tests — page load with group headers visible, live total=90 label=ดีเยี่ยม for [10,9,9,9,9,8,9,9,9,9], save + reload persists.
+- Files changed: `src/readthinkwrite.gs` (new), `src/class_readthinkwrite.html` (new), `src/Code.gs`, `tests/scoring.spec.ts`
+- **Learnings:**
+  - Using an array of field-name strings (`rtFields`) to loop over columns avoids the n→'t'+n mapping pattern used in characteristics — more readable and less error-prone when field names don't follow a simple numeric sequence.
+  - Two-row table headers (group row + column row) with `rowspan`/`colspan` require HTML string building in a single `thead.innerHTML` assignment; building them as separate `<tr>` strings concatenated before assigning works cleanly.
+  - The `COLUMNS` array in client JS serves as a single source of truth for both rendering the header and collecting input values for save — no need to maintain two separate lists.
+---
+
 ## 2026-05-20 - US-011
 - What was implemented: Characteristics scoring page (`/class/:class_id/subject/:subject_id/characteristics`) — 8 affective trait columns (0–10 each), live total (max 80), live label via ladder (≥70→ดีเยี่ยม, ≥60→ดี, ≥50→ผ่านเกณฑ์, else→ไม่ผ่าน), save with LockService upsert pattern.
 - Server functions in `src/characteristics.gs`: `computeCharacteristicsLabel(total)`, `getCharacteristicsData(token, class_id, subject_id)`, `serverSaveCharacteristics(token, class_id, subject_id, rows)`.

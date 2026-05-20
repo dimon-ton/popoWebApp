@@ -1,0 +1,86 @@
+# Iteration 2 Log
+
+## Metadata
+
+- **Task ID**: US-011
+- **Task Title**: Characteristics scoring (คุณลักษณะ)
+- **Description**: As a teacher, I want to score each student on 8 affective traits and see the auto-computed label.
+- **Status**: completed
+- **Task Completed**: Yes
+- **Promise Detected**: Yes
+- **Started At**: 2026-05-20T15:51:21.958Z
+- **Ended At**: 2026-05-20T15:54:47.932Z
+- **Duration**: 3m 25s
+- **Input Tokens**: 58
+- **Output Tokens**: 12416
+- **Total Tokens**: 12474
+- **Agent**: claude
+- **Model**: claude-sonnet-4-6
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I'll start by studying the progress file and codebase to understand the current state before implementing US-011.
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m
+[94m[Glob][0m [95mC:\Users\saich\Documents\popoWebApp[0m pattern: [96m**/*.gs[0m
+Now let me look at the existing scoring files to understand the pattern before implementing characteristics:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\formative.gs[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\summative.gs[0m
+Now let me look at the HTML templates and Code.gs for the routing pattern:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\testapi.gs[0m
+Now let me look at the existing scoring HTML for reference and the current scoring spec:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\class_formative.html[0m
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\scoring.spec.ts[0m
+Now I have a clear picture of the patterns. Let me look at the seed helper for the full context:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\helpers\seed.ts[0m
+I now have everything I need to implement US-011. Let me create all the necessary files:
+
+1. `src/characteristics.gs` - server functions
+2. `src/class_characteristics.html` - the grid UI
+3. Update `src/Code.gs` - add routing and navigation function
+4. Update `tests/scoring.spec.ts` - add US-011 tests
+[94m[Write][0m [95mC:\Users\saich\Documents\popoWebApp\src\characteristics.gs[0m "// US-011: Characteristics scoring (คุณลักษณะ)
+
+// Ladder per FR-5: max 80
+function computeCharacteristicsLabel(total) {
+  if (total === '' || total === null || total === undefined) return '';
+  var t... (6739 chars)"
+Now create the HTML page:
+[94m[Write][0m [95mC:\Users\saich\Documents\popoWebApp\src\class_characteristics.html[0m "<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คุณลักษณะอันพึงประสงค์ — PopoWebApp</title>
+  <style>... (11458 chars)"
+Now update `Code.gs` to add the routing case and navigation function:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m edit: "      case 'class_summative':
+        return build..." → "      case 'class_summative':
+        return build..."
+Now add the navigation helper function to Code.gs:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m edit: "// US-008: navigate to formative scoring page for ..." → "// US-011: navigate to characteristics scoring pag..."
+Now add the US-011 tests to `tests/scoring.spec.ts`:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\tests\scoring.spec.ts[0m edit: "/**
+ * Scoring tests — US-008 (Formative indicator..." → "/**
+ * Scoring tests — US-008 (Formative indicator..."
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\tests\scoring.spec.ts[0m edit: "    await expect(reloadedFinalGrade).toHaveText('3..." → "    await expect(reloadedFinalGrade).toHaveText('3..."
+Now let me verify the Code.gs changes look correct:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m
+Good. Now let me verify the navigation function was added correctly:
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\src\Code.gs[0m
+Everything looks correct. Now let me verify the scoring spec has all the right imports (it already uses `seedTestEnrollment` from the previous work):
+[94m[Read][0m [95mC:\Users\saich\Documents\popoWebApp\tests\scoring.spec.ts[0m
+All looks correct. Now update the progress.md:
+[94m[Edit][0m [95mC:\Users\saich\Documents\popoWebApp\.ralph-tui\progress.md[0m edit: "## 2026-05-20 - US-010" → "## 2026-05-20 - US-011
+- What was implemented: Cha..."
+All implementation is complete. Here's a summary of what was done:
+
+**Files created:**
+- `src/characteristics.gs` — `computeCharacteristicsLabel()`, `getCharacteristicsData()`, `serverSaveCharacteristics()` with LockService upsert pattern
+- `src/class_characteristics.html` — grid with 8 trait inputs (0–10), live total/label update, color-coded label cells, save bar
+
+**Files modified:**
+- `src/Code.gs` — added `case 'class_characteristics'` in `doGet` router + `getCharacteristicsPageHtml()` navigation function
+- `tests/scoring.spec.ts` — added US-011 describe block with 3 tests covering page load, live total/label computation (78=ดีเยี่ยม, 67=ดี), and save+reload persistence
+
+<promise>COMPLETE</promise>

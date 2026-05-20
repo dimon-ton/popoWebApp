@@ -232,6 +232,103 @@ test.describe('US-009: Summative scoring and grade computation', () => {
   });
 });
 
+// ---- US-012: Read-Think-Write scoring (อ่านคิด) ----
+
+test.describe('US-012: Read-Think-Write scoring', () => {
+  let classId: string;
+  let subjectId: string;
+  let studentId: string;
+  let teacherId: string;
+  const url = process.env.WEB_APP_URL!;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us012_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us012_eng', name: 'ภาษาอังกฤษทดสอบ012', code: 'TST012', group: 1 });
+    studentId = await seedTestStudent({ class_suffix: 'us012_c1', seq: 1, full_name: 'test_นักเรียนUS012' });
+    teacherId = await seedTestUser({ suffix: 'us012_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS012' });
+    await seedTestEnrollment({
+      suffix: 'us012_enr1',
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherId,
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-012: readthinkwrite page loads with student row and column groups', async ({ page }) => {
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText('อ่าน คิดวิเคราะห์ และเขียน', { timeout: 15_000 });
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#rtwBody')).toContainText('test_นักเรียนUS012', { timeout: 15_000 });
+    // Group headers visible
+    await expect(page.locator('#rtwHead')).toContainText('อ่าน', { timeout: 10_000 });
+    await expect(page.locator('#rtwHead')).toContainText('คิดวิเคราะห์', { timeout: 10_000 });
+    await expect(page.locator('#rtwHead')).toContainText('เขียน', { timeout: 10_000 });
+    await expect(page.locator('#rtwHead')).toContainText('รวม', { timeout: 10_000 });
+    await expect(page.locator('#rtwHead')).toContainText('ผล', { timeout: 10_000 });
+    // Save bar visible (admin session)
+    await expect(page.locator('#saveBar')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('US-012: enter 10,9,9,9,9,8,9,9,9,9 → total=90, label=ดีเยี่ยม', async ({ page }) => {
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+
+    // 10 columns: r1,r2,r3, t1,t2,t3,t4, w1,w2,w3
+    const scoreValues = [10, 9, 9, 9, 9, 8, 9, 9, 9, 9];
+    const inputs = page.locator('input.score-input');
+
+    for (let i = 0; i < scoreValues.length; i++) {
+      await inputs.nth(i).fill(String(scoreValues[i]));
+      await inputs.nth(i).dispatchEvent('input');
+    }
+
+    // Total = 90, label = ดีเยี่ยม
+    const totalCell = page.locator('[id^="rtw-total-"]').first();
+    const labelCell = page.locator('[id^="rtw-label-"]').first();
+    await expect(totalCell).toHaveText('90', { timeout: 5_000 });
+    await expect(labelCell).toHaveText('ดีเยี่ยม', { timeout: 5_000 });
+  });
+
+  test('US-012: save and reload persists', async ({ page }) => {
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+
+    const scoreValues = [10, 9, 9, 9, 9, 8, 9, 9, 9, 9];
+    const inputs = page.locator('input.score-input');
+
+    for (let i = 0; i < scoreValues.length; i++) {
+      await inputs.nth(i).fill(String(scoreValues[i]));
+      await inputs.nth(i).dispatchEvent('input');
+    }
+
+    // Save
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกคะแนนสำเร็จ', { timeout: 20_000 });
+
+    // Reload and assert values persist
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+
+    const reloadedInputs = page.locator('input.score-input');
+    await expect(reloadedInputs.nth(0)).toHaveValue('10', { timeout: 15_000 });
+    await expect(reloadedInputs.nth(5)).toHaveValue('8', { timeout: 15_000 });
+
+    const reloadedTotal = page.locator('[id^="rtw-total-"]').first();
+    const reloadedLabel = page.locator('[id^="rtw-label-"]').first();
+    await expect(reloadedTotal).toHaveText('90', { timeout: 10_000 });
+    await expect(reloadedLabel).toHaveText('ดีเยี่ยม', { timeout: 10_000 });
+  });
+});
+
 // ---- US-011: Characteristics scoring (คุณลักษณะ) ----
 
 test.describe('US-011: Characteristics scoring', () => {

@@ -87,6 +87,12 @@ function doGet(e) {
           class_id: params.class_id || '',
           subject_id: params.subject_id || ''
         });
+      case 'class_readthinkwrite':
+        return buildPage('class_readthinkwrite', {
+          session: session, token: token,
+          class_id: params.class_id || '',
+          subject_id: params.subject_id || ''
+        });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token });
       default:
@@ -242,6 +248,21 @@ function getCharacteristicsPageHtml(token, class_id, subject_id) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
     var tmpl = HtmlService.createTemplateFromFile('class_characteristics');
+    tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+// US-012: navigate to read-think-write scoring page for a specific (class, subject)
+function getReadThinkWritePageHtml(token, class_id, subject_id) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var tmpl = HtmlService.createTemplateFromFile('class_readthinkwrite');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
