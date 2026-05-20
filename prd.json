@@ -173,9 +173,10 @@
         "Playwright (`tests/admin.spec.ts -g US-010`): log in as admin; change `test_subject_eng`"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-011",
@@ -381,6 +382,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-19T16:55:11.966Z"
+    "updatedAt": "2026-05-20T15:51:20.663Z"
   }
 }

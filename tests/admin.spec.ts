@@ -254,6 +254,90 @@ test.describe('US-001: Bootstrap master Sheet schema', () => {
   });
 });
 
+// ---- US-010: Subject weights configuration (คะแนนวิชา) ----
+
+test.describe('US-010: Subject weights configuration', () => {
+  let subjectId: string;
+  let classId: string;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    subjectId = await seedTestSubject({ suffix: 'us010_eng', name: 'ภาษาอังกฤษทดสอบ US010', code: 'US010', group: 1 });
+    await seedTestSubjectWeights({ subject_id: subjectId, pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30, coursework_max: 70, final_max: 30 });
+    classId = await seedTestClass({ suffix: 'us010_c1', level: 'ป.1', section: '1' });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-010: weights page loads and shows test subject row', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_weights`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#weightsTableWrap')).toBeVisible({ timeout: 20_000 });
+
+    // Test subject row should appear
+    await expect(page.locator(`tr[data-subject-id="${subjectId}"]`)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('US-010: save with total ≠ 100 shows error toast', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_weights`);
+
+    await expect(page.locator('#weightsTableWrap')).toBeVisible({ timeout: 20_000 });
+    await page.waitForSelector(`tr[data-subject-id="${subjectId}"]`);
+
+    // Change pre_mid to 30 — total becomes 30+20+25+30=105
+    const row = page.locator(`tr[data-subject-id="${subjectId}"]`);
+    await row.locator('.pre-mid').fill('30');
+
+    // Try to save
+    await page.click('#saveWeightsBtn');
+
+    // Error toast should appear
+    await expect(page.locator('#toast')).toContainText('รวมต้องเท่ากับ 100', { timeout: 15_000 });
+  });
+
+  test('US-010: fix weights to sum=100, save, and assert success toast', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_weights`);
+
+    await expect(page.locator('#weightsTableWrap')).toBeVisible({ timeout: 20_000 });
+    await page.waitForSelector(`tr[data-subject-id="${subjectId}"]`);
+
+    // Set weights to pre_mid=25, mid=25, post_mid=20, final_exam=30 → total=100
+    // This changes mid_max from 20 to 25 — visible in summative column header
+    const row = page.locator(`tr[data-subject-id="${subjectId}"]`);
+    await row.locator('.pre-mid').fill('25');
+    await row.locator('.mid').fill('25');
+    await row.locator('.post-mid').fill('20');
+    await row.locator('.final-exam').fill('30');
+
+    // Sum cell should show 100
+    await expect(page.locator(`#sum-${subjectId}`)).toContainText('100', { timeout: 5_000 });
+
+    // Save
+    await page.click('#saveWeightsBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกน้ำหนักคะแนนสำเร็จ', { timeout: 15_000 });
+  });
+
+  test('US-010: summative page shows updated column max after weight change', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    // Navigate to summative page — mid_max is now 25 (changed from default 20)
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
+
+    // สอบกลางภาค column header should now show /25 (was /20 before the weight change)
+    await expect(page.locator('#summativeHead')).toContainText('/25', { timeout: 15_000 });
+    // สอบปลายภาค = final_exam_max = 30 (unchanged)
+    await expect(page.locator('#summativeHead')).toContainText('/30', { timeout: 15_000 });
+  });
+});
+
 // ---- US-018: Admin assigns subjects to a teacher (teacher-first flow) ----
 
 test.describe('US-018: Teacher enrollment management', () => {

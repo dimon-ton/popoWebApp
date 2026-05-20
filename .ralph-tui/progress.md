@@ -26,6 +26,17 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-20 - US-010
+- What was implemented: Subject weights admin page (`/admin/weights`) — server functions `getWeightsList()` and `serverSaveWeights()` were already implemented in `admin_school.gs`, and `admin_weights.html` was already created. Only the Playwright tests were missing.
+- Added US-010 `test.describe` block to `tests/admin.spec.ts` with 4 tests: (1) page loads and shows subject row, (2) saving with total ≠ 100 shows "รวมต้องเท่ากับ 100" error toast (client-side check), (3) fixing weights to sum=100 and saving shows success toast, (4) summative page shows updated column max (`/25` for mid_max after changing from 20 → 25).
+- Seed: uses `seedTestSubject` (group=1) + `seedTestSubjectWeights` + `seedTestClass` in `beforeAll`.
+- Files changed: `tests/admin.spec.ts`
+- **Learnings:**
+  - When verifying "weights change visible in summative headers", choose a weight that maps to one of the three displayed columns (coursework_max, mid_max, final_exam_max). Changing only pre_mid/post_mid split without changing the sum of each component won't produce a visible header difference.
+  - Client-side validation in `saveWeights()` runs before the server call — the error toast fires without a network round-trip when the row total ≠ 100.
+  - `coursework_max` in the DB is always pre_mid+mid+post_mid (computed by the client before sending). The summative header reads `coursework_max` for "ระหว่างเรียน" and `mid_max` for "สอบกลางภาค".
+---
+
 ## 2026-05-19 - US-009
 - Implemented summative scoring page `/class/:class_id/subject/:subject_id/summative` (page key `class_summative`).
 - Server functions in `src/summative.gs`: `computeGrade(total)`, `getSummativeData(token, class_id, subject_id)`, `serverSaveSummative(token, class_id, subject_id, rows)`.
