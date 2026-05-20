@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกการเปลี่ยนแปลง — PopoWebApp</title>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; cursor: pointer; }
+    .container { max-width: 1100px; margin: 32px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { font-size: 20px; color: #1a56a0; margin: 0 0 16px 0; }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 13px; color: #555; }
+    .filter-group input, .filter-group select {
+      padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px;
+      font-size: 14px; font-family: inherit;
+    }
+    .btn { padding: 8px 18px; border: none; border-radius: 5px; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-secondary { background: #e5e7eb; color: #333; }
+    .btn:hover { opacity: 0.88; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #1a56a0; color: white; padding: 10px 12px; text-align: left; white-space: nowrap; }
+    td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f5f8ff; }
+    .entity-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: #dbeafe; color: #1e40af; }
+    .json-val { font-family: monospace; font-size: 11px; color: #555; max-width: 260px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    #auditStatus { color: #888; font-size: 14px; margin: 8px 0; }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #1a56a0; color: white;
+      padding: 12px 20px; border-radius: 6px; font-size: 14px; display: none; z-index: 9999; }
+    .empty-msg { text-align: center; color: #888; padding: 32px; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <span class="navbar-title" onclick="goHome()">PopoWebApp</span>
+    <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2 id="pageHeading">บันทึกการเปลี่ยนแปลง (Audit Log)</h2>
+
+      <!-- Filters -->
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="filterUserId">ผู้ใช้ (user_id / ชื่อ)</label>
+          <input type="text" id="filterUserId" placeholder="เช่น admin หรือ test_" style="width:180px">
+        </div>
+        <div class="filter-group">
+          <label for="filterEntity">ตาราง (Entity)</label>
+          <select id="filterEntity" style="width:200px">
+            <option value="">-- ทั้งหมด --</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterDateFrom">วันที่เริ่มต้น</label>
+          <input type="date" id="filterDateFrom">
+        </div>
+        <div class="filter-group">
+          <label for="filterDateTo">วันที่สิ้นสุด</label>
+          <input type="date" id="filterDateTo">
+        </div>
+        <div class="filter-group" style="padding-bottom:1px">
+          <label>&nbsp;</label>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">ค้นหา</button>
+            <button class="btn btn-secondary" onclick="clearFilters()">ล้างตัวกรอง</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="auditStatus">กำลังโหลด...</div>
+
+      <!-- Results table -->
+      <div id="auditTableWrap" style="overflow-x:auto;display:none">
+        <table id="auditTable">
+          <thead>
+            <tr>
+              <th>เวลา</th>
+              <th>ผู้ใช้</th>
+              <th>ตาราง</th>
+              <th>Entity ID</th>
+              <th>ค่าเดิม (old)</th>
+              <th>ค่าใหม่ (new)</th>
+            </tr>
+          </thead>
+          <tbody id="auditBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function goHome() {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .getDashboardHtml(TOKEN);
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 3000);
+}
+
+// Load entity list into dropdown
+function loadEntities() {
+  google.script.run
+    .withSuccessHandler(function(entities) {
+      var sel = document.getElementById('filterEntity');
+      entities.forEach(function(e) {
+        var opt = document.createElement('option');
+        opt.value = e;
+        opt.textContent = e;
+        sel.appendChild(opt);
+      });
+    })
+    .withFailureHandler(function(err) {
+      console.error('entities error', err.message);
+    })
+    .getAuditEntities(TOKEN);
+}
+
+function doSearch() {
+  var filters = {
+    user_id: document.getElementById('filterUserId').value.trim(),
+    entity: document.getElementById('filterEntity').value,
+    date_from: document.getElementById('filterDateFrom').value,
+    date_to: document.getElementById('filterDateTo').value
+  };
+
+  document.getElementById('auditStatus').textContent = 'กำลังค้นหา...';
+  document.getElementById('auditTableWrap').style.display = 'none';
+  document.getElementById('searchBtn').disabled = true;
+
+  google.script.run
+    .withSuccessHandler(renderRows)
+    .withFailureHandler(function(err) {
+      document.getElementById('auditStatus').textContent = 'เกิดข้อผิดพลาด: ' + err.message;
+      document.getElementById('searchBtn').disabled = false;
+    })
+    .getAuditLog(TOKEN, filters);
+}
+
+function renderRows(rows) {
+  document.getElementById('searchBtn').disabled = false;
+  var tbody = document.getElementById('auditBody');
+  tbody.innerHTML = '';
+
+  if (!rows || rows.length === 0) {
+    document.getElementById('auditStatus').textContent = 'ไม่พบข้อมูล';
+    document.getElementById('auditTableWrap').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('auditStatus').textContent = 'พบ ' + rows.length + ' รายการ';
+  document.getElementById('auditTableWrap').style.display = 'block';
+
+  rows.forEach(function(r) {
+    var ts = r.timestamp ? new Date(r.timestamp).toLocaleString('th-TH') : '';
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-entity', r.entity || '');
+    tr.setAttribute('data-user-id', r.user_id || '');
+    tr.innerHTML =
+      '<td>' + escHtml(ts) + '</td>' +
+      '<td>' + escHtml(r.user_name || r.user_id || '') + '</td>' +
+      '<td><span class="entity-badge">' + escHtml(r.entity || '') + '</span></td>' +
+      '<td>' + escHtml(String(r.entity_id || '')) + '</td>' +
+      '<td><div class="json-val">' + escHtml(formatJson(r.old_value)) + '</div></td>' +
+      '<td><div class="json-val">' + escHtml(formatJson(r.new_value)) + '</div></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatJson(val) {
+  if (!val || val === 'null') return '';
+  try {
+    return JSON.stringify(JSON.parse(val), null, 2);
+  } catch (e) {
+    return val;
+  }
+}
+
+function clearFilters() {
+  document.getElementById('filterUserId').value = '';
+  document.getElementById('filterEntity').value = '';
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value = '';
+  document.getElementById('auditStatus').textContent = 'ล้างตัวกรองแล้ว — กดค้นหาเพื่อโหลดข้อมูล';
+  document.getElementById('auditTableWrap').style.display = 'none';
+  document.getElementById('auditBody').innerHTML = '';
+}
+
+// On load: populate entity dropdown then run initial search (no filters)
+loadEntities();
+doSearch();
+</script>
+</body>
+</html>

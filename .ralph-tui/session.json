@@ -1,12 +1,12 @@
 {
   "version": 1,
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
-  "status": "running",
+  "status": "interrupted",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-20T22:27:42.131Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-05-20T22:30:28.559Z",
+  "currentIteration": 1,
   "maxIterations": 0,
-  "tasksCompleted": 14,
+  "tasksCompleted": 15,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -101,8 +101,8 @@
       {
         "id": "US-015",
         "title": "Static reference pages",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-016",
@@ -688,6 +688,16 @@
       "durationMs": 147888,
       "startedAt": "2026-05-20T22:16:49.088Z",
       "endedAt": "2026-05-20T22:19:16.976Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-015",
+      "taskTitle": "Static reference pages",
+      "taskCompleted": true,
+      "durationMs": 40351,
+      "startedAt": "2026-05-20T22:27:01.777Z",
+      "endedAt": "2026-05-20T22:27:42.128Z"
     }
   ],
   "skippedTaskIds": [],

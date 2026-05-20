@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-21 - US-016
+- What was implemented: Audit log — admin-only `/admin/audit` page with filters (user_id, entity, date range). Server functions `getAuditLog(token, filters)` and `getAuditEntities(token)` in `src/audit.gs`. Page auto-loads on open, supports filter-then-search, shows newest-first up to 500 rows with entity badge and JSON value columns. `appendAuditLog` was already called in all required write paths (summative, attendance, formative, characteristics, readthinkwrite, students, enrollments). Added `admin_audit` to both `adminPages` arrays in `doGet` and `getPageHtml`. Added audit log link to `dashboard.html` admin menu.
+- Files changed: `src/audit.gs` (new), `src/admin_audit.html` (new), `src/Code.gs` (router case + adminPages), `src/dashboard.html` (menu link), `tests/admin.spec.ts` (US-016 describe block with 4 tests + seedTestStudent import)
+- **Learnings:**
+  - `appendAuditLog` was already in `db.gs` and called from all write paths — US-016 only needed the read/display side (server query function + admin page).
+  - AuditLog `user_id` entries come from the session's `user_id`, which may not have the `test_` prefix (admin's user_id is set at setup). The cleanup `dbDeleteWhere('AuditLog', 'user_id', 'test_')` only removes audit rows written by test users — audit rows from admin edits during tests are left in place (acceptable).
+  - The admin role bypasses enrollment checks in `serverSaveSummative`, so no enrollment seeding is needed for admin-driven test saves.
+  - Playwright test for audit page: filter by entity then click search; wait for `#auditStatus` to not contain "กำลังค้นหา" before asserting table rows.
+---
+
 ## 2026-05-21 - US-015
 - What was implemented: Static reference pages — `/help` (คู่มือการใช้งาน with วิธีทำ1/วิธีทำ2 content), `/weights_ref` (read-only weights table), `/subject_description` (per-subject description), `/subject_indicators_ref` (per-subject indicators list).
 - Files changed: `src/help.html` (new), `src/weights_ref.html` (new), `src/subject_description.html` (new), `src/subject_indicators_ref.html` (new), `src/admin_school.gs` (added `getWeightsForRef`, `getSubjectDescription`, `getSubjectIndicatorsRef`), `src/Code.gs` (added 4 router cases + 2 navigation helper functions), `src/dashboard.html` (added คู่มือ and น้ำหนักคะแนน menu links), `tests/admin.spec.ts` (US-015 describe block with 4 tests).

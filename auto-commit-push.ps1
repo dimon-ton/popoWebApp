@@ -1,19 +1,28 @@
-$ErrorActionPreference = "Stop"
 $projectDir = "C:\Users\saich\Documents\popoWebApp"
 $logFile = "C:\Users\saich\Documents\popoWebApp\auto-commit-push.log"
+$git = "C:\Program Files\Git\cmd\git.exe"
+
+# Ensure git is on PATH for subprocesses
+$env:PATH = "C:\Program Files\Git\cmd;C:\Program Files\Git\usr\bin;$env:PATH"
 
 function Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$ts - $msg" | Out-File -Append -FilePath $logFile
+    "$ts - $msg" | Out-File -Append -FilePath $logFile -Encoding utf8
+}
+
+function Git {
+    # Run git, capture stdout only; rely on $LASTEXITCODE for error detection
+    $result = & $git @args 2>$null
+    return $result
 }
 
 Log "=== Auto Commit & Push Started ==="
 
 Set-Location -LiteralPath $projectDir
 
-$status = git status --porcelain 2>&1
+$status = Git status --porcelain
 if ($LASTEXITCODE -ne 0) {
-    Log "ERROR: git status failed - $status"
+    Log "ERROR: git status failed (exit $LASTEXITCODE)"
     exit 1
 }
 
@@ -22,17 +31,17 @@ if (-not $status) {
     exit 0
 }
 
-$diffStat = git diff --stat 2>&1
-$diffCachedStat = git diff --cached --stat 2>&1
-$untracked = git ls-files --others --exclude-standard 2>&1
+$diffStat      = Git diff --stat
+$diffCachedStat = Git diff --cached --stat
+$untracked     = Git ls-files --others --exclude-standard
 
 Log "Changes detected:"
 Log "Modified:`n$diffStat"
 if ($diffCachedStat) { Log "Staged:`n$diffCachedStat" }
-if ($untracked) { Log "Untracked:`n$untracked" }
+if ($untracked)      { Log "Untracked:`n$untracked" }
 
-$diffForAI = git diff 2>&1
-$diffCachedForAI = git diff --cached 2>&1
+$diffForAI       = Git diff
+$diffCachedForAI = Git diff --cached
 
 $allChanges = @"
 Modified files:
@@ -83,23 +92,23 @@ try {
     $commitMsg = "auto: ralph-tui session progress $timestamp`n`n$diffStat"
 }
 
-git add -A 2>&1 | ForEach-Object { Log "git add: $_" }
+Git add -A | ForEach-Object { Log "git add: $_" }
 if ($LASTEXITCODE -ne 0) {
-    Log "ERROR: git add failed"
+    Log "ERROR: git add failed (exit $LASTEXITCODE)"
     exit 1
 }
 
-git commit -m $commitMsg 2>&1 | ForEach-Object { Log "git commit: $_" }
+Git commit -m $commitMsg | ForEach-Object { Log "git commit: $_" }
 if ($LASTEXITCODE -ne 0) {
-    Log "ERROR: git commit failed"
+    Log "ERROR: git commit failed (exit $LASTEXITCODE)"
     exit 1
 }
 
 Log "Commit successful. Pushing to origin..."
 
-git push origin HEAD 2>&1 | ForEach-Object { Log "git push: $_" }
+Git push origin HEAD | ForEach-Object { Log "git push: $_" }
 if ($LASTEXITCODE -ne 0) {
-    Log "ERROR: git push failed"
+    Log "ERROR: git push failed (exit $LASTEXITCODE)"
     exit 1
 }
 

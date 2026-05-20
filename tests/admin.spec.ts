@@ -7,6 +7,7 @@ import { test, expect } from '@playwright/test';
 import {
   seedTestClass,
   seedTestSubject,
+  seedTestStudent,
   seedTestUser,
   seedTestEnrollment,
   seedTestSubjectWeights,
@@ -808,6 +809,102 @@ test.describe('US-020: Teacher workload dashboard', () => {
     const url = process.env.WEB_APP_URL!;
 
     await page.goto(`${url}?page=admin_workload`);
+
+    const bodyText = await page.locator('body').textContent();
+    const isBlocked = bodyText?.includes('ไม่มีสิทธิ์') ||
+      bodyText?.includes('กรุณาเข้าสู่ระบบ') ||
+      bodyText?.includes('login');
+    expect(isBlocked).toBeTruthy();
+
+    await nonAdminContext.close();
+  });
+});
+
+// ---- US-016: Audit log ----
+
+test.describe('US-016: Audit log', () => {
+  let classId: string;
+  let subjectId: string;
+  let studentId: string;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us016_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us016_s1', name: 'วิชาทดสอบ US016', code: 'US016' });
+    await seedTestSubjectWeights({ subject_id: subjectId });
+    studentId = await seedTestStudent({ class_suffix: 'us016_c1', seq: 1, full_name: 'test_นักเรียน016' });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-016: admin edits summative score — audit log records the change', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+
+    // Step 1: Admin navigates to summative scoring page and saves a score
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
+
+    // Find the score inputs for our student and enter scores
+    const cwInput = page.locator(`input[data-student="${studentId}"][data-col="coursework"]`);
+    await cwInput.fill('50');
+    const midInput = page.locator(`input[data-student="${studentId}"][data-col="midterm"]`);
+    await midInput.fill('15');
+    const finInput = page.locator(`input[data-student="${studentId}"][data-col="final"]`);
+    await finInput.fill('15');
+
+    // Save
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกคะแนนสำเร็จ', { timeout: 15_000 });
+  });
+
+  test('US-016: admin_audit page loads and shows heading', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_audit`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText('Audit Log');
+  });
+
+  test('US-016: filter by entity=SummativeScores shows our change row with non-empty new_value', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_audit`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    // Wait for initial search to finish (page auto-runs doSearch() on load)
+    await expect(page.locator('#auditStatus')).not.toContainText('กำลังโหลด', { timeout: 20_000 });
+
+    // Select entity = SummativeScores in filter dropdown
+    await page.selectOption('#filterEntity', 'SummativeScores');
+
+    // Run search
+    await page.click('#searchBtn');
+
+    // Wait for results
+    await expect(page.locator('#auditStatus')).not.toContainText('กำลังค้นหา', { timeout: 20_000 });
+
+    // The table should be visible with at least one row
+    await expect(page.locator('#auditTableWrap')).toBeVisible({ timeout: 15_000 });
+
+    // At least one row should have entity=SummativeScores
+    const rows = page.locator('#auditBody tr[data-entity="SummativeScores"]');
+    await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+
+    // The new_value column should be non-empty JSON (last td)
+    const newValCell = rows.first().locator('td').last();
+    const newValText = await newValCell.textContent();
+    expect(newValText?.trim()).not.toBe('');
+  });
+
+  test('US-016: non-admin cannot access audit page', async ({ browser }) => {
+    const nonAdminContext = await browser.newContext();
+    const page = await nonAdminContext.newPage();
+    const url = process.env.WEB_APP_URL!;
+
+    await page.goto(`${url}?page=admin_audit`);
 
     const bodyText = await page.locator('body').textContent();
     const isBlocked = bodyText?.includes('ไม่มีสิทธิ์') ||
