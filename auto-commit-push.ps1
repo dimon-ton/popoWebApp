@@ -22,10 +22,66 @@ if (-not $status) {
     exit 0
 }
 
-Log "Changes detected:`n$status"
+$diffStat = git diff --stat 2>&1
+$diffCachedStat = git diff --cached --stat 2>&1
+$untracked = git ls-files --others --exclude-standard 2>&1
 
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-$descriptiveMsg = "auto: ralph-tui session progress $timestamp`n`nChanges include updated session metadata and PRD task state."
+Log "Changes detected:"
+Log "Modified:`n$diffStat"
+if ($diffCachedStat) { Log "Staged:`n$diffCachedStat" }
+if ($untracked) { Log "Untracked:`n$untracked" }
+
+$diffForAI = git diff 2>&1
+$diffCachedForAI = git diff --cached 2>&1
+
+$allChanges = @"
+Modified files:
+$diffStat
+
+Staged files:
+$diffCachedStat
+
+New files:
+$untracked
+
+Diff summary:
+$diffForAI
+$diffCachedForAI
+"@
+
+Log "Generating descriptive commit message via opencode..."
+
+$commitMsgFile = Join-Path $projectDir ".commit-msg.tmp"
+
+$prompt = @"
+Analyze the following git diff and generate a concise, descriptive commit message in conventional commit format.
+
+Rules:
+- Start with type: feat, fix, refactor, docs, chore, or auto
+- First line: short summary (max 72 chars)
+- If multiple changes, list them as bullet points in the body
+- Do NOT wrap in code blocks or quotes
+- Output ONLY the commit message text, nothing else
+
+$allChanges
+"@
+
+try {
+    $aiOutput = opencode run $prompt --dir $projectDir --dangerously-skip-permissions 2>&1
+    $aiOutput | Out-File -FilePath $commitMsgFile -Encoding utf8
+    $commitMsg = (Get-Content $commitMsgFile -Raw).Trim()
+    Remove-Item $commitMsgFile -Force -ErrorAction SilentlyContinue
+
+    if (-not $commitMsg -or $commitMsg.Length -lt 10) {
+        throw "AI commit message too short or empty"
+    }
+
+    Log "AI commit message:`n$commitMsg"
+} catch {
+    Log "WARN: AI message generation failed ($_), using fallback"
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+    $commitMsg = "auto: ralph-tui session progress $timestamp`n`n$diffStat"
+}
 
 git add -A 2>&1 | ForEach-Object { Log "git add: $_" }
 if ($LASTEXITCODE -ne 0) {
@@ -33,7 +89,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-git commit -m $descriptiveMsg 2>&1 | ForEach-Object { Log "git commit: $_" }
+git commit -m $commitMsg 2>&1 | ForEach-Object { Log "git commit: $_" }
 if ($LASTEXITCODE -ne 0) {
     Log "ERROR: git commit failed"
     exit 1

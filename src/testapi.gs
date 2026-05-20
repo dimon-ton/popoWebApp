@@ -120,6 +120,30 @@ function handleTestApi(e) {
         });
         return jsonOk({ indicator_id: params.indicator_id });
 
+      case 'seed_summative':
+        // Seed a SummativeScores row directly (for report aggregate tests)
+        // student_id must start with test_; id is auto-generated
+        ensureTestPrefix(params.student_id);
+        var sTotal = parseFloat(params.total) || 0;
+        var sGrade = computeGrade(sTotal);
+        var sMakeup = params.makeup_grade !== '' && params.makeup_grade !== undefined ? parseFloat(params.makeup_grade) : '';
+        var sFinalGrade = (sMakeup !== '' && !isNaN(sMakeup)) ? sMakeup : sGrade;
+        dbInsert('SummativeScores', {
+          id: generateId('ssum'),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          coursework: params.coursework || '',
+          midterm: params.midterm || '',
+          final: params.final || '',
+          total: sTotal,
+          computed_grade: sGrade,
+          makeup_grade: sMakeup,
+          final_grade: sFinalGrade,
+          updated_by: 'test_api',
+          updated_at: new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, final_grade: sFinalGrade });
+
       case 'cleanup':
         var count = 0;
         var tabIdFields = {
@@ -135,7 +159,8 @@ function handleTestApi(e) {
           'SummativeScores': 'id',
           'Characteristics': 'id',
           'ReadThinkWrite': 'id',
-          'AuditLog': 'user_id'
+          'AuditLog': 'user_id',
+          'DevActivity': 'id'
         };
         Object.keys(tabIdFields).forEach(function(tab) {
           try {
@@ -147,7 +172,7 @@ function handleTestApi(e) {
         // Also clean Users by username prefix (catches UI-created test accounts)
         try { count += dbDeleteWhere('Users', 'username', 'test_'); } catch (err) {}
         // Also clean score tables by student_id prefix (IDs are auto-generated, not test_-prefixed)
-        var scoreTabs = ['IndicatorScores', 'SummativeScores', 'Characteristics', 'ReadThinkWrite', 'Attendance'];
+        var scoreTabs = ['IndicatorScores', 'SummativeScores', 'Characteristics', 'ReadThinkWrite', 'Attendance', 'DevActivity'];
         scoreTabs.forEach(function(tab) {
           try { count += dbDeleteWhere(tab, 'student_id', 'test_'); } catch (err) {}
         });

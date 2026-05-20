@@ -12,6 +12,7 @@ import {
   seedTestEnrollment,
   seedTestIndicator,
   seedTestSubjectWeights,
+  seedTestSummative,
   cleanupTestData,
 } from './helpers/seed';
 
@@ -326,6 +327,116 @@ test.describe('US-012: Read-Think-Write scoring', () => {
     const reloadedLabel = page.locator('[id^="rtw-label-"]').first();
     await expect(reloadedTotal).toHaveText('90', { timeout: 10_000 });
     await expect(reloadedLabel).toHaveText('ดีเยี่ยม', { timeout: 10_000 });
+  });
+});
+
+// ---- US-013: Cover report aggregates (ปก) ----
+
+test.describe('US-013: Cover report aggregates', () => {
+  let classId: string;
+  let subjectId: string;
+  let teacherId: string;
+  const url = process.env.WEB_APP_URL!;
+
+  // We seed 5 students with specific summative totals:
+  //   student 1: total=82 → grade 4
+  //   student 2: total=84 → grade 4
+  //   student 3: total=76 → grade 3.5
+  //   student 4: total=71 → grade 3
+  //   student 5: total=72 → grade 3
+  // Expected grade_dist: 4→2, 3.5→1, 3→2, others→0
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'us013_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us013_eng', name: 'ภาษาอังกฤษทดสอบ013', code: 'TST013', group: 1 });
+    teacherId = await seedTestUser({ suffix: 'us013_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS013' });
+    await seedTestEnrollment({
+      suffix: 'us013_enr1',
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherId,
+    });
+    // Seed 5 students
+    for (let i = 1; i <= 5; i++) {
+      await seedTestStudent({ class_suffix: 'us013_c1', seq: i, full_name: `test_นักเรียนUS013_${i}` });
+    }
+    // Seed summative scores: grades 4,4,3.5,3,3
+    const totals = [82, 84, 76, 71, 72];
+    for (let i = 1; i <= 5; i++) {
+      await seedTestSummative({
+        student_id: `test_student_us013_c1_${i}`,
+        subject_id: subjectId,
+        total: totals[i - 1],
+      });
+    }
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('US-013: report page loads with school info header and section titles', async ({ page }) => {
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#pageHeading')).toContainText('รายงานผลการเรียน (ปก)', { timeout: 15_000 });
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    // Info section should render
+    await expect(page.locator('#infoGrid')).toBeVisible({ timeout: 15_000 });
+    // Grade table
+    await expect(page.locator('#gradeTable')).toBeVisible({ timeout: 10_000 });
+    // Characteristics distribution table
+    await expect(page.locator('#charDistTable')).toBeVisible({ timeout: 10_000 });
+    // RTW distribution table
+    await expect(page.locator('#rtwDistTable')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('US-013: grade distribution counts match seeded summative scores', async ({ page }) => {
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#gradeBody')).toBeVisible({ timeout: 15_000 });
+
+    // Grade 4: count 2
+    const grade4Row = page.locator('#gradeBody tr[data-grade="4"]');
+    await expect(grade4Row).toBeVisible({ timeout: 10_000 });
+    await expect(grade4Row.locator('#grade-count-4')).toHaveText('2', { timeout: 10_000 });
+
+    // Grade 3.5: count 1
+    const grade35Row = page.locator('#gradeBody tr[data-grade="3.5"]');
+    await expect(grade35Row).toBeVisible({ timeout: 10_000 });
+    await expect(grade35Row.locator('#grade-count-3-5')).toHaveText('1', { timeout: 10_000 });
+
+    // Grade 3: count 2
+    const grade3Row = page.locator('#gradeBody tr[data-grade="3"]');
+    await expect(grade3Row).toBeVisible({ timeout: 10_000 });
+    await expect(grade3Row.locator('#grade-count-3')).toHaveText('2', { timeout: 10_000 });
+
+    // Total students note
+    await expect(page.locator('#totalStudentsNote')).toContainText('5', { timeout: 10_000 });
+  });
+
+  test('US-013: dev activity save and reflect in summary', async ({ page }) => {
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#devBody')).toBeVisible({ timeout: 15_000 });
+
+    // Set the first student's result to 'ผ่าน'
+    const firstSelect = page.locator('select.dev-result-select').first();
+    await expect(firstSelect).toBeVisible({ timeout: 10_000 });
+    await firstSelect.selectOption('ผ่าน');
+
+    // Save
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกสำเร็จ', { timeout: 20_000 });
+
+    // After reload, the dev summary should show at least 1 ผ่าน
+    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#devSummaryBody')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#devSummaryBody')).toContainText('ผ่าน', { timeout: 10_000 });
   });
 });
 

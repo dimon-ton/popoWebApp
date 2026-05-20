@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายงานผลการเรียน (ปก) — PopoWebApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
+    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+    .navbar-title { font-size: 18px; font-weight: bold; }
+    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
+    h3 { font-size: 15px; color: #1a56a0; margin-bottom: 10px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; font-size: 14px; }
+    .info-row { display: flex; gap: 8px; }
+    .info-label { color: #666; min-width: 120px; flex-shrink: 0; }
+    .info-value { font-weight: 500; }
+    table { border-collapse: collapse; font-size: 13px; width: 100%; }
+    th { background: #f0f4fa; padding: 8px 10px; text-align: center; border: 1px solid #ddd; white-space: nowrap; }
+    th.left { text-align: left; }
+    td { padding: 6px 10px; border: 1px solid #eee; text-align: center; vertical-align: middle; }
+    td.left { text-align: left; }
+    td.bold { font-weight: bold; }
+    .pct { color: #888; font-size: 12px; }
+    .section-title { font-size: 15px; font-weight: bold; color: #1a56a0; margin-bottom: 10px; border-bottom: 2px solid #1a56a0; padding-bottom: 4px; }
+    .dev-result-select {
+      border: 1px solid #ccc; border-radius: 3px; padding: 3px 6px;
+      font-size: 13px; font-family: inherit; background: white;
+    }
+    .save-bar { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+    .btn-save { padding: 9px 24px; background: #27ae60; color: white; border: none; border-radius: 4px; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .btn-save:hover { background: #219150; }
+    .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+    .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 6px; font-size: 14px; z-index: 1000; display: none; max-width: 320px; }
+    .toast.success { background: #27ae60; color: white; }
+    .toast.error { background: #c0392b; color: white; }
+    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .info-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">รายงานผลการเรียน (ปก)</h2>
+  <p class="loading-msg" id="loadingMsg">กำลังโหลด...</p>
+
+  <div id="reportContent" style="display:none">
+
+    <!-- Header info card -->
+    <div class="card" id="headerCard">
+      <div class="section-title">ข้อมูลทั่วไป</div>
+      <div class="info-grid" id="infoGrid"></div>
+    </div>
+
+    <div class="two-col">
+
+      <!-- Grade distribution -->
+      <div class="card">
+        <div class="section-title">ผลการเรียน (คะแนน)</div>
+        <table id="gradeTable">
+          <thead>
+            <tr>
+              <th>ผลการเรียน</th>
+              <th>จำนวนนักเรียน</th>
+              <th>ร้อยละ</th>
+            </tr>
+          </thead>
+          <tbody id="gradeBody"></tbody>
+        </table>
+        <p style="margin-top:8px;font-size:12px;color:#888" id="totalStudentsNote"></p>
+      </div>
+
+      <!-- กิจกรรมพัฒนาผู้เรียน summary -->
+      <div class="card">
+        <div class="section-title">กิจกรรมพัฒนาผู้เรียน</div>
+        <table id="devSummaryTable">
+          <thead>
+            <tr>
+              <th>ผล</th>
+              <th>จำนวน</th>
+            </tr>
+          </thead>
+          <tbody id="devSummaryBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="two-col">
+
+      <!-- Characteristics distribution -->
+      <div class="card">
+        <div class="section-title">คุณลักษณะอันพึงประสงค์</div>
+        <table id="charDistTable">
+          <thead>
+            <tr>
+              <th>ระดับคุณภาพ</th>
+              <th>จำนวนนักเรียน</th>
+              <th>ร้อยละ</th>
+            </tr>
+          </thead>
+          <tbody id="charDistBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Read-Think-Write distribution -->
+      <div class="card">
+        <div class="section-title">การอ่าน คิดวิเคราะห์ และเขียน</div>
+        <table id="rtwDistTable">
+          <thead>
+            <tr>
+              <th>ระดับคุณภาพ</th>
+              <th>จำนวนนักเรียน</th>
+              <th>ร้อยละ</th>
+            </tr>
+          </thead>
+          <tbody id="rtwDistBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- กิจกรรมพัฒนาผู้เรียน per-student form -->
+    <div class="card" id="devActivityCard">
+      <div class="section-title">กิจกรรมพัฒนาผู้เรียน — บันทึกรายคน</div>
+      <table id="devTable">
+        <thead>
+          <tr>
+            <th style="width:40px">ที่</th>
+            <th class="left" style="min-width:160px">ชื่อ-สกุล</th>
+            <th style="min-width:120px">ผลการประเมิน</th>
+          </tr>
+        </thead>
+        <tbody id="devBody"></tbody>
+      </table>
+      <div class="save-bar" id="saveBar" style="display:none">
+        <button class="btn-save" id="saveBtn" onclick="saveDevActivity()">บันทึก</button>
+        <span id="saveStatus" style="font-size:13px;color:#888"></span>
+      </div>
+    </div>
+
+  </div><!-- /reportContent -->
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?= data.class_id || '' ?>';
+var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+
+var currentData = null;
+
+function navigate(page) {
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function loadReport() {
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('reportContent').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); document.getElementById('loadingMsg').style.display = 'none'; return; }
+      currentData = result;
+      renderReport(result);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingMsg').style.display = 'none';
+      showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getReportData(TOKEN, CLASS_ID, SUBJECT_ID);
+}
+
+function renderReport(d) {
+  document.getElementById('loadingMsg').style.display = 'none';
+
+  var cls = d.class_info || {};
+  var subj = d.subject_info || {};
+  var school = d.school_info || {};
+
+  document.getElementById('pageHeading').textContent =
+    'รายงานผลการเรียน (ปก) — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+
+  // Info grid
+  var info = [
+    { label: 'โรงเรียน', value: school.school_name || '-' },
+    { label: 'อำเภอ', value: school.district || '-' },
+    { label: 'จังหวัด', value: school.province || '-' },
+    { label: 'ปีการศึกษา', value: school.academic_year || '-' },
+    { label: 'ชั้น', value: (cls.level || '') + '/' + (cls.section || '') },
+    { label: 'รหัสวิชา', value: subj.subject_code || '-' },
+    { label: 'เวลาเรียน (ชม./ปี)', value: subj.hours_per_year || '-' },
+    { label: 'ครูผู้สอน', value: d.teacher_name || '-' },
+    { label: 'ครูประจำชั้น', value: d.homeroom_teacher_name || '-' },
+    { label: 'จำนวนนักเรียน', value: d.total_students }
+  ];
+  var infoHtml = '';
+  info.forEach(function(item) {
+    infoHtml += '<div class="info-row">' +
+      '<span class="info-label">' + escHtml(item.label) + '</span>' +
+      '<span class="info-value" data-info="' + escHtml(item.label) + '">' + escHtml(item.value) + '</span>' +
+      '</div>';
+  });
+  document.getElementById('infoGrid').innerHTML = infoHtml;
+
+  // Grade distribution
+  var gradeBody = document.getElementById('gradeBody');
+  gradeBody.innerHTML = '';
+  var gradeDist = d.grade_dist || [];
+  gradeDist.forEach(function(row) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-grade', String(row.grade));
+    tr.innerHTML = '<td class="bold">' + escHtml(row.grade) + '</td>' +
+                   '<td id="grade-count-' + escHtml(String(row.grade)).replace('.', '-') + '">' + row.count + '</td>' +
+                   '<td class="pct">' + row.pct + '%</td>';
+    gradeBody.appendChild(tr);
+  });
+  document.getElementById('totalStudentsNote').textContent =
+    'จำนวนนักเรียนทั้งหมด: ' + d.total_students + ' คน';
+
+  // Dev activity summary
+  var devSummaryBody = document.getElementById('devSummaryBody');
+  devSummaryBody.innerHTML = '';
+  var devKeys = ['ผ่าน', 'ไม่ผ่าน', 'ร', 'มส'];
+  var devCounts = d.dev_counts || {};
+  devKeys.forEach(function(k) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="bold">' + escHtml(k) + '</td>' +
+                   '<td>' + (devCounts[k] || 0) + '</td>';
+    devSummaryBody.appendChild(tr);
+  });
+
+  // Characteristics distribution
+  var charDistBody = document.getElementById('charDistBody');
+  charDistBody.innerHTML = '';
+  (d.char_dist || []).forEach(function(row) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="bold">' + escHtml(row.label) + '</td>' +
+                   '<td>' + row.count + '</td>' +
+                   '<td class="pct">' + row.pct + '%</td>';
+    charDistBody.appendChild(tr);
+  });
+
+  // RTW distribution
+  var rtwDistBody = document.getElementById('rtwDistBody');
+  rtwDistBody.innerHTML = '';
+  (d.rtw_dist || []).forEach(function(row) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="bold">' + escHtml(row.label) + '</td>' +
+                   '<td>' + row.count + '</td>' +
+                   '<td class="pct">' + row.pct + '%</td>';
+    rtwDistBody.appendChild(tr);
+  });
+
+  // Dev activity per-student
+  var devBody = document.getElementById('devBody');
+  devBody.innerHTML = '';
+  var devStudents = d.dev_students || [];
+  var can_edit = d.can_edit;
+
+  devStudents.forEach(function(student) {
+    var tr = document.createElement('tr');
+    var resultHtml;
+    if (can_edit) {
+      resultHtml = '<select class="dev-result-select" ' +
+        'data-student="' + escHtml(student.student_id) + '">' +
+        '<option value=""></option>' +
+        ['ผ่าน', 'ไม่ผ่าน', 'ร', 'มส'].map(function(opt) {
+          return '<option value="' + escHtml(opt) + '"' + (student.result === opt ? ' selected' : '') + '>' + escHtml(opt) + '</option>';
+        }).join('') +
+        '</select>';
+    } else {
+      resultHtml = escHtml(student.result || '-');
+    }
+    tr.innerHTML = '<td>' + escHtml(student.seq_no) + '</td>' +
+                   '<td class="left">' + escHtml(student.full_name) + '</td>' +
+                   '<td>' + resultHtml + '</td>';
+    devBody.appendChild(tr);
+  });
+
+  // Show/hide save bar
+  var saveBar = document.getElementById('saveBar');
+  saveBar.style.display = can_edit ? 'flex' : 'none';
+
+  document.getElementById('reportContent').style.display = 'block';
+}
+
+function saveDevActivity() {
+  if (!currentData) return;
+
+  var devStudents = currentData.dev_students || [];
+  var rows = devStudents.map(function(student) {
+    var sel = document.querySelector('select[data-student="' + student.student_id + '"]');
+    return { student_id: student.student_id, result: sel ? sel.value : '' };
+  });
+
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  document.getElementById('saveStatus').textContent = 'กำลังบันทึก...';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกสำเร็จ', 'success');
+      loadReport();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveDevActivity(TOKEN, CLASS_ID, SUBJECT_ID, rows);
+}
+
+// Init
+loadReport();
+</script>
+</body>
+</html>

@@ -25,14 +25,15 @@ var TAB_SCHEMA = {
   'SummativeScores':  ['id', 'student_id', 'subject_id', 'coursework', 'midterm', 'final', 'total', 'computed_grade', 'makeup_grade', 'final_grade', 'updated_by', 'updated_at'],
   'Characteristics':  ['id', 'student_id', 'subject_id', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 'total', 'label', 'updated_by', 'updated_at'],
   'ReadThinkWrite':   ['id', 'student_id', 'subject_id', 'r1', 'r2', 'r3', 't1', 't2', 't3', 't4', 'w1', 'w2', 'w3', 'total', 'label', 'updated_by', 'updated_at'],
-  'AuditLog':         ['timestamp', 'user_id', 'entity', 'entity_id', 'old_value', 'new_value']
+  'AuditLog':         ['timestamp', 'user_id', 'entity', 'entity_id', 'old_value', 'new_value'],
+  'DevActivity':      ['id', 'student_id', 'class_id', 'subject_id', 'result', 'updated_by', 'updated_at']
 };
 
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance',
   'IndicatorScores', 'SummativeScores', 'Characteristics',
-  'ReadThinkWrite', 'AuditLog'
+  'ReadThinkWrite', 'AuditLog', 'DevActivity'
 ];
 
 function setupDatabase() {

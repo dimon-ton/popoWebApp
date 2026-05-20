@@ -163,6 +163,29 @@ export async function seedTestSubjectWeights(opts: SeedSubjectWeightsOpts): Prom
   });
 }
 
+interface SeedSummativeOpts {
+  student_id: string;
+  subject_id: string;
+  total: number;
+  coursework?: number | string;
+  midterm?: number | string;
+  final?: number | string;
+  makeup_grade?: number | string;
+}
+
+export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> {
+  await apiCall({
+    api: 'seed_summative',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    total: opts.total,
+    coursework: opts.coursework ?? '',
+    midterm: opts.midterm ?? '',
+    final: opts.final ?? '',
+    makeup_grade: opts.makeup_grade ?? '',
+  });
+}
+
 export async function cleanupTestData(): Promise<void> {
   await apiCall({ api: 'cleanup' });
 }

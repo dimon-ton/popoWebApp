@@ -1,12 +1,12 @@
 {
   "version": 1,
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
-  "status": "running",
+  "status": "interrupted",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-20T15:58:07.856Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-05-20T16:25:19.254Z",
+  "currentIteration": 13,
   "maxIterations": 0,
-  "tasksCompleted": 11,
+  "tasksCompleted": 12,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -83,8 +83,8 @@
       {
         "id": "US-012",
         "title": "Read-Think-Write scoring (อ่านคิด)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-013",
@@ -558,6 +558,116 @@
       "durationMs": 205974,
       "startedAt": "2026-05-20T15:51:21.958Z",
       "endedAt": "2026-05-20T15:54:47.932Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-012",
+      "taskTitle": "Read-Think-Write scoring (อ่านคิด)",
+      "taskCompleted": true,
+      "durationMs": 198593,
+      "startedAt": "2026-05-20T15:54:49.258Z",
+      "endedAt": "2026-05-20T15:58:07.851Z"
+    },
+    {
+      "iteration": 4,
+      "status": "failed",
+      "taskId": "US-013",
+      "taskTitle": "Cover report aggregates (ปก)",
+      "taskCompleted": false,
+      "durationMs": 270125,
+      "startedAt": "2026-05-20T15:58:09.168Z",
+      "endedAt": "2026-05-20T16:02:39.293Z"
+    },
+    {
+      "iteration": 5,
+      "status": "failed",
+      "taskId": "US-014",
+      "taskTitle": "PDF export of cover report",
+      "taskCompleted": false,
+      "durationMs": 4512,
+      "startedAt": "2026-05-20T16:02:40.376Z",
+      "endedAt": "2026-05-20T16:02:44.888Z"
+    },
+    {
+      "iteration": 6,
+      "status": "failed",
+      "taskId": "US-015",
+      "taskTitle": "Static reference pages",
+      "taskCompleted": false,
+      "durationMs": 4652,
+      "startedAt": "2026-05-20T16:02:45.935Z",
+      "endedAt": "2026-05-20T16:02:50.587Z"
+    },
+    {
+      "iteration": 7,
+      "status": "failed",
+      "taskId": "US-016",
+      "taskTitle": "Audit log",
+      "taskCompleted": false,
+      "durationMs": 4658,
+      "startedAt": "2026-05-20T16:02:51.651Z",
+      "endedAt": "2026-05-20T16:02:56.309Z"
+    },
+    {
+      "iteration": 8,
+      "status": "failed",
+      "taskId": "US-017",
+      "taskTitle": "Deployment and first-run setup wizard",
+      "taskCompleted": false,
+      "durationMs": 4969,
+      "startedAt": "2026-05-20T16:02:57.356Z",
+      "endedAt": "2026-05-20T16:03:02.325Z"
+    },
+    {
+      "iteration": 9,
+      "status": "failed",
+      "taskId": "US-018",
+      "taskTitle": "Admin assigns subjects to a teacher (teacher-first flow)",
+      "taskCompleted": false,
+      "durationMs": 4814,
+      "startedAt": "2026-05-20T16:03:03.400Z",
+      "endedAt": "2026-05-20T16:03:08.214Z"
+    },
+    {
+      "iteration": 10,
+      "status": "failed",
+      "taskId": "US-019",
+      "taskTitle": "Admin bulk-assigns one teacher to many pairs",
+      "taskCompleted": false,
+      "durationMs": 5130,
+      "startedAt": "2026-05-20T16:03:09.273Z",
+      "endedAt": "2026-05-20T16:03:14.403Z"
+    },
+    {
+      "iteration": 11,
+      "status": "failed",
+      "taskId": "US-020",
+      "taskTitle": "Admin views teacher workload dashboard",
+      "taskCompleted": false,
+      "durationMs": 4747,
+      "startedAt": "2026-05-20T16:03:15.478Z",
+      "endedAt": "2026-05-20T16:03:20.225Z"
+    },
+    {
+      "iteration": 12,
+      "status": "failed",
+      "taskId": "US-021",
+      "taskTitle": "Playwright auth bootstrap (storageState)",
+      "taskCompleted": false,
+      "durationMs": 4944,
+      "startedAt": "2026-05-20T16:03:21.300Z",
+      "endedAt": "2026-05-20T16:03:26.244Z"
+    },
+    {
+      "iteration": 13,
+      "status": "failed",
+      "taskId": "US-022",
+      "taskTitle": "Playwright seed/cleanup helper",
+      "taskCompleted": false,
+      "durationMs": 4663,
+      "startedAt": "2026-05-20T16:03:27.282Z",
+      "endedAt": "2026-05-20T16:03:31.945Z"
     }
   ],
   "skippedTaskIds": [],
