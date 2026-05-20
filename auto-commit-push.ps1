@@ -76,24 +76,17 @@ $allChanges
 "@
 
 try {
-    # Write prompt to a temp file to avoid shell quoting/length issues
+    # Write prompt to a temp file and pipe into claude --print
     $promptFile = Join-Path $projectDir ".commit-prompt.tmp"
     $prompt | Out-File -FilePath $promptFile -Encoding utf8
 
-    $aiOutput = opencode run --file $promptFile --dir $projectDir --dangerously-skip-permissions 2>&1
+    $aiOutput = Get-Content $promptFile -Raw | & "C:\Users\saich\AppData\Roaming\npm\claude" --print --dangerously-skip-permissions 2>$null
     Remove-Item $promptFile -Force -ErrorAction SilentlyContinue
 
-    $aiOutput | Out-File -FilePath $commitMsgFile -Encoding utf8
-    $commitMsg = (Get-Content $commitMsgFile -Raw).Trim()
-    Remove-Item $commitMsgFile -Force -ErrorAction SilentlyContinue
+    $commitMsg = ($aiOutput -join "`n").Trim()
 
     if (-not $commitMsg -or $commitMsg.Length -lt 10) {
         throw "AI commit message too short or empty"
-    }
-
-    # Reject if it looks like a help/error message
-    if ($commitMsg -match "opencode run \[message" -or $commitMsg -match "show help") {
-        throw "AI returned help text instead of commit message"
     }
 
     Log "AI commit message:`n$commitMsg"
