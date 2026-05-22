@@ -274,9 +274,10 @@
         "Playwright (`tests/admin.spec.ts -g US-016`): log in as teacher; edit one summative score;"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-017",
@@ -387,6 +388,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-20T22:27:43.471Z"
+    "updatedAt": "2026-05-22T10:14:50.866Z"
   }
 }
