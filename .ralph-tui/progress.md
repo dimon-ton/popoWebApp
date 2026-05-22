@@ -26,6 +26,17 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-018
+- What was implemented: Already fully implemented in a prior iteration. Verified all acceptance criteria met.
+- Files confirmed complete: `src/enrollments.gs` (all server functions: `clientGetEnrollmentsData`, `clientGetTeacherEnrollments`, `clientAddEnrollment`, `clientRemoveEnrollment`, `clientConfirmReassign`, `clientGetAllPairsMatrix`, `clientBulkAssign`), `src/admin_enrollments.html` (left teacher panel, right detail panel with add-pair form and enrollment table, reassign confirmation dialog, all-pairs tab, bulk-assign tab), `src/Code.gs` (router case, admin whitelist, `handleReadAction` cases), `src/testapi.gs` (`seed_enrollment`, `query_rows` API ops), `tests/helpers/seed.ts` (`seedTestEnrollment`, `queryTestRows`), `tests/admin.spec.ts` (US-018 describe block with 8 tests).
+- **Learnings:**
+  - For the enrollments page, `google.script.run` client functions (prefixed `client*`) wrap all server operations — this keeps the `doPost` handler in `Code.gs` from needing to handle these calls. Both patterns coexist: `doPost` handles raw form-encoded calls, `client*` functions handle GAS `google.script.run` calls.
+  - Reassign conflict detection: `clientAddEnrollment` returns `{ status: 'conflict', existing_enrollment_id, other_teacher_name }` — the client stores this in `pendingReassign` and shows a dialog; on confirm calls `clientConfirmReassign` with the stored enrollment ID and new teacher ID.
+  - `invalidateWorkloadCache()` in `admin_workload_api.gs` is called on every enrollment create/remove/reassign — keeping the cache coherent across US-018 and US-020 without tight coupling.
+  - The "All pairs" tab calls `clientGetAllPairsMatrix` on load (not on tab switch) to pre-populate; switching tabs just toggles visibility. This avoids a server round-trip on every tab click.
+  - Pair count badge (`#badge-<userId>`) is updated inline (via `updatePairCount()`) after each add/remove without requiring a full page reload — the full `loadData()` is still called to keep `allData` in sync for dropdowns.
+---
+
 ## 2026-05-22 - US-017
 - What was implemented: First-run setup wizard. `isFirstRun()` in `wizard.gs` checks if `DB_SHEET_ID` Script Property is unset; `doGet` in `Code.gs` redirects any page request to the wizard when it's not set. Wizard UI (`src/setup_wizard.html`) is a 3-step flow: (1) create DB (calls `wizardCreateDatabase()` → `setupDatabase()`), (2) save school info (calls `wizardSaveSchoolInfo()`), (3) confirmation with "go to login" button. `.clasp.json.example` added (safe template with no real scriptId). README updated with full "fresh deploy from scratch" steps. Playwright US-017 tests added to `tests/auth.spec.ts`: assert wizard heading visible, assert step 1 shows create-database button, navigate to step 3 and assert redirect to login page.
 - Files changed: `src/wizard.gs` (new), `src/setup_wizard.html` (new), `.clasp.json.example` (new), `src/Code.gs` (wizard redirect + setup_wizard route case + login exception), `README.md` (deploy steps), `tests/auth.spec.ts` (US-017 describe block)

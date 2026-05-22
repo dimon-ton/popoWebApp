@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-22T10:19:17.945Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-05-22T10:20:32.289Z",
+  "currentIteration": 2,
   "maxIterations": 0,
-  "tasksCompleted": 16,
+  "tasksCompleted": 17,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -113,8 +113,8 @@
       {
         "id": "US-017",
         "title": "Deployment and first-run setup wizard",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-018",
@@ -708,12 +708,21 @@
       "durationMs": 38742,
       "startedAt": "2026-05-22T10:14:12.123Z",
       "endedAt": "2026-05-22T10:14:50.865Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-017",
+      "taskTitle": "Deployment and first-run setup wizard",
+      "taskCompleted": true,
+      "durationMs": 265772,
+      "startedAt": "2026-05-22T10:14:52.171Z",
+      "endedAt": "2026-05-22T10:19:17.943Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [
-    "US-018",
     "US-019",
     "US-020",
     "US-021",
