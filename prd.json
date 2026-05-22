@@ -365,9 +365,10 @@
         "Verify: delete `auth.json`; run `--project=setup` with manual login; then run"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-022",
@@ -392,6 +393,6 @@
     "createdAt": "2026-05-19T11:53:46.441Z",
     "version": "1.0.0",
     "sourcePrd": "tasks\\prd-popo-gradebook-final.md",
-    "updatedAt": "2026-05-22T10:23:41.005Z"
+    "updatedAt": "2026-05-22T10:24:40.325Z"
   }
 }

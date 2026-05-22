@@ -26,6 +26,15 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-021
+- What was implemented: Already fully implemented in a prior iteration. All acceptance criteria verified.
+- Files confirmed complete: `tests/auth.setup.ts` (opens production URL, calls `page.pause()` for human login, saves `context.storageState` to `tests/.auth/auth.json`), `playwright.config.ts` (`setup` project with `testMatch: /auth\.setup\.ts/`, `chromium` project with `storageState: 'tests/.auth/auth.json'` and `dependencies: ['setup']`, `retries: 1`, `timeout: 60_000`), `.gitignore` (contains `tests/.auth/`), `README.md` (documents first-time `pnpm playwright test --project=setup` and subsequent `pnpm playwright test`).
+- **Learnings:**
+  - The `setup` project in `playwright.config.ts` uses `testMatch` (not `testDir`) to match only `auth.setup.ts` — this is how Playwright separates the bootstrap project from spec projects without a different directory.
+  - `page.pause()` puts Playwright in inspector mode, blocking the script until the human clicks Resume (or presses F8) — this is the correct non-headless human-in-the-loop pattern for one-time auth capture.
+  - `tests/.auth/` gitignored via a directory entry (not `*.json`) — the `.gitkeep` file keeps the directory tracked in git so the path exists after a fresh clone, avoiding a `fs.mkdirSync` failure on first run.
+---
+
 ## 2026-05-22 - US-020
 - What was implemented: Already fully implemented in a prior iteration. Fixed one defect: `WEB_APP_URL` was referenced in `admin_workload.html` but never defined, causing drill-down grade-book links to render as `undefined?page=gradebook...`. Fixed by injecting `ScriptApp.getService().getUrl()` via the template tag `<?= data.web_app_url || ScriptApp.getService().getUrl() ?>`, and also passing `web_app_url` in the `doGet` `admin_workload` case.
 - Files confirmed complete: `src/admin_workload_api.gs` (`getWorkloadData` with 60s CacheService cache, `invalidateWorkloadCache`, `clientGetWorkloadData` with admin guard), `src/admin_workload.html` (workload table sorted descending by pair_count, drill-down panel with `#drillPanel.open` class toggle, drill-link per row, `#workloadTable`/`#workloadBody` IDs for Playwright), `src/Code.gs` (`admin_workload` in both `adminPages` arrays + `doGet` switch case with `web_app_url` injected), `tests/admin.spec.ts` (US-020 describe block: 5 tests — page load, sort order, drill-down count ≥ 3, grade-book links, non-admin 403).
