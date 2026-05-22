@@ -26,6 +26,15 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-022
+- What was implemented: Already fully implemented in prior iterations. All acceptance criteria verified.
+- Files confirmed complete: `tests/helpers/seed.ts` (exports `seedTestClass`, `seedTestSubject`, `seedTestStudent`, `seedTestUser`, `seedTestEnrollment`, `seedTestIndicator`, `seedTestSubjectWeights`, `seedTestSummative`, `cleanupTestData`, `queryTestRows`), `tests/helpers/seed.spec.ts` (self-test: seeds one of each entity, asserts via `query_rows`, cleans up, asserts no `test_` rows remain), `src/testapi.gs` (full `cleanup` case covering all 14 tabs by ID field + secondary cleanup by `student_id` prefix for score tables, `query_rows` case for assertions), all spec files (`admin.spec.ts`, `auth.spec.ts`, `attendance.spec.ts`, `scoring.spec.ts`) use `test.beforeAll` for seed and `test.afterAll` for `cleanupTestData()`.
+- **Learnings:**
+  - The `tests/helpers/seed.spec.ts` is automatically discovered by `testDir: './tests'` in `playwright.config.ts` — no special config needed, Playwright finds all `*.spec.ts` files recursively.
+  - `queryTestRows(tab, field)` is the assertion helper that calls `?api=query_rows&tab=...&field=...&prefix=test_` — allows Playwright specs to verify seed success without a browser.
+  - The `cleanup` API op does two passes: (1) primary ID field prefix match per tab, (2) secondary `student_id` prefix match for score tabs whose `id` column is auto-generated — this ensures no orphaned score rows remain after cleanup.
+---
+
 ## 2026-05-22 - US-021
 - What was implemented: Already fully implemented in a prior iteration. All acceptance criteria verified.
 - Files confirmed complete: `tests/auth.setup.ts` (opens production URL, calls `page.pause()` for human login, saves `context.storageState` to `tests/.auth/auth.json`), `playwright.config.ts` (`setup` project with `testMatch: /auth\.setup\.ts/`, `chromium` project with `storageState: 'tests/.auth/auth.json'` and `dependencies: ['setup']`, `retries: 1`, `timeout: 60_000`), `.gitignore` (contains `tests/.auth/`), `README.md` (documents first-time `pnpm playwright test --project=setup` and subsequent `pnpm playwright test`).
