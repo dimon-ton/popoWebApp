@@ -23,7 +23,10 @@ function dbGetAll(tabName) {
   var headers = data[0];
   return data.slice(1).map(function(row) {
     var obj = {};
-    headers.forEach(function(h, i) { obj[h] = row[i]; });
+    headers.forEach(function(h, i) {
+      var v = row[i];
+      obj[h] = (v instanceof Date) ? v.toISOString() : v;
+    });
     return obj;
   });
 }

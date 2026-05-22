@@ -22,7 +22,7 @@
 </div>
 
 <div class="container wide">
-  <h2 class="page-title">อ่าน คิดวิเคราะห์ และเขียน</h2>
+  <h2 class="page-title" id="pageHeading">อ่าน คิดวิเคราะห์ และเขียน</h2>
 
   <div id="readonlyNotice" class="readonly-notice" style="display:none">
     คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้
@@ -46,8 +46,8 @@
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
-var CLASS_ID = '<?= data.class_id || '' ?>';
-var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 
 // Column definitions: field key, display label
 var COLUMNS = [

@@ -83,7 +83,7 @@
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
-var CLASS_ID = '<?= data.class_id || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
 var CAN_EDIT = false;
 
 function navigate(page, extra) {

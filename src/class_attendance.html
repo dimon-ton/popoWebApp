@@ -25,7 +25,7 @@
 </div>
 
 <div class="container wide">
-  <h2 class="page-title">การเข้าเรียน</h2>
+  <h2 class="page-title" id="pageHeading">การเข้าเรียน</h2>
 
   <div class="week-nav">
     <button id="prevWeekBtn" onclick="changeWeek(-1)">&#8592; สัปดาห์ก่อน</button>
@@ -64,8 +64,8 @@
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
-var CLASS_ID = '<?= data.class_id || '' ?>';
-var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 
 var currentWeek = <?= data.week || 1 ?>;
 var currentData = null;

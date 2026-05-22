@@ -25,7 +25,7 @@
 </div>
 
 <div class="container wide">
-  <h2 class="page-title">คะแนนผลการเรียน (คะแนน2)</h2>
+  <h2 class="page-title" id="pageHeading">คะแนนผลการเรียน (คะแนน2)</h2>
 
   <div id="readonlyNotice" class="readonly-notice" style="display:none">
     คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้
@@ -53,8 +53,8 @@
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
-var CLASS_ID = '<?= data.class_id || '' ?>';
-var SUBJECT_ID = '<?= data.subject_id || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 
 var currentData = null;
 
