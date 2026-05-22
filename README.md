@@ -67,6 +67,31 @@ The Playwright MCP browser also uses `tests/.auth/auth.json` for session reuse. 
 
 ## Deployment
 
+### Fresh deploy from scratch
+
+1. Clone the repository.
+2. Copy `.clasp.json.example` to `.clasp.json` and fill in your Apps Script project ID:
+   ```sh
+   cp .clasp.json.example .clasp.json
+   # edit .clasp.json and replace YOUR_APPS_SCRIPT_PROJECT_ID with your actual scriptId
+   ```
+3. Log in to clasp:
+   ```sh
+   clasp login
+   ```
+4. Push the source files to Apps Script:
+   ```sh
+   clasp push
+   ```
+5. Deploy the web app (set execution as "User accessing the app", access "Anyone"):
+   ```sh
+   clasp deploy --deploymentId <PROD_DEPLOY_ID>
+   ```
+6. Visit the `/exec` URL in your browser. If `DB_SHEET_ID` is not yet set, the **first-run setup wizard** appears automatically — follow the three steps to create the database, enter school info, and confirm the default admin account.
+7. Log in as `admin` with the temporary password `admin1234` and **change it immediately** via Admin → จัดการผู้ใช้.
+
+### Redeploying after code changes
+
 ```sh
 clasp push
 clasp deploy --deploymentId <PROD_DEPLOY_ID>

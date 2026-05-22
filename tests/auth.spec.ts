@@ -197,3 +197,53 @@ test.describe('US-003: User management and password reset', () => {
     await nonAdminCtx.close();
   });
 });
+
+// ---- US-017: Deployment and first-run setup wizard ----
+
+test.describe('US-017: First-run setup wizard', () => {
+  // Wizard page is accessible without any auth (no DB_SHEET_ID gating at the HTML level)
+  // We navigate directly to ?page=setup_wizard to test the UI without clearing production Script Properties.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('US-017: setup wizard page is accessible and shows heading', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=setup_wizard`);
+
+    // The wizard heading must be visible
+    await expect(page.locator('#wizardHeading')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#wizardHeading')).toContainText('ตัวช่วยติดตั้งระบบครั้งแรก');
+  });
+
+  test('US-017: wizard step 1 shows create database button', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=setup_wizard`);
+
+    await expect(page.locator('#wizardHeading')).toBeVisible({ timeout: 30_000 });
+
+    // Step 1 content must be visible
+    await expect(page.locator('#step1')).toBeVisible();
+    await expect(page.locator('#createDbBtn')).toBeVisible();
+    await expect(page.locator('#createDbBtn')).toContainText('สร้างฐานข้อมูล');
+  });
+
+  test('US-017: wizard step 3 go-to-login button redirects to login page', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=setup_wizard`);
+
+    await expect(page.locator('#wizardHeading')).toBeVisible({ timeout: 30_000 });
+
+    // Jump directly to step 3 via client-side JS to test the redirect
+    await page.evaluate('goStep(3)');
+
+    // Step 3 should be visible with the go-to-login button
+    await expect(page.locator('#step3')).toBeVisible();
+    await expect(page.locator('#goLoginBtn')).toBeVisible();
+
+    // Click "go to login" — should navigate back to login page
+    await page.click('#goLoginBtn');
+
+    // Login page elements should appear
+    await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#username')).toBeVisible();
+  });
+});

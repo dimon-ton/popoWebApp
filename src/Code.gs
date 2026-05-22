@@ -11,10 +11,15 @@ function doGet(e) {
       return handleTestApi(e);
     }
 
+    // US-017: If DB_SHEET_ID is not set, show the first-run setup wizard
+    if (isFirstRun() && page !== 'setup_wizard') {
+      return buildPage('setup_wizard', {});
+    }
+
     var session = getSession(params.token);
 
-    // Unauthenticated: show login
-    if (!session && page !== 'login') {
+    // Unauthenticated: show login (wizard page is accessible without auth)
+    if (!session && page !== 'login' && page !== 'setup_wizard') {
       return buildPage('login', { error: null });
     }
 
@@ -34,6 +39,8 @@ function doGet(e) {
 
     var token = params.token || '';
     switch (page) {
+      case 'setup_wizard':
+        return buildPage('setup_wizard', {});
       case 'login':
         return buildPage('login', { error: null });
       case 'admin_enrollments':

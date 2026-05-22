@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-017
+- What was implemented: First-run setup wizard. `isFirstRun()` in `wizard.gs` checks if `DB_SHEET_ID` Script Property is unset; `doGet` in `Code.gs` redirects any page request to the wizard when it's not set. Wizard UI (`src/setup_wizard.html`) is a 3-step flow: (1) create DB (calls `wizardCreateDatabase()` → `setupDatabase()`), (2) save school info (calls `wizardSaveSchoolInfo()`), (3) confirmation with "go to login" button. `.clasp.json.example` added (safe template with no real scriptId). README updated with full "fresh deploy from scratch" steps. Playwright US-017 tests added to `tests/auth.spec.ts`: assert wizard heading visible, assert step 1 shows create-database button, navigate to step 3 and assert redirect to login page.
+- Files changed: `src/wizard.gs` (new), `src/setup_wizard.html` (new), `.clasp.json.example` (new), `src/Code.gs` (wizard redirect + setup_wizard route case + login exception), `README.md` (deploy steps), `tests/auth.spec.ts` (US-017 describe block)
+- **Learnings:**
+  - The wizard check (`isFirstRun() && page !== 'setup_wizard'`) must come BEFORE `getSession()` — if `DB_SHEET_ID` is unset, `getSheet()` would throw, so `getSession()` would crash before the wizard redirect fires.
+  - The `setup_wizard` page must be excluded from the `!session && page !== 'login'` redirect guard too, or direct navigation (`?page=setup_wizard`) when DB IS set (production testing) would redirect to login.
+  - `wizardCreateDatabase()` just calls `setupDatabase()` which is idempotent — safe to call even if the DB already exists; it reuses the existing spreadsheet.
+  - Playwright test for wizard can't clear Script Properties without destructive side effects on production. The pragmatic approach: test the wizard UI via direct `?page=setup_wizard` navigation (which is allowed even when DB is set), and test the step 3 redirect by calling `goStep(3)` via `page.evaluate('goStep(3)')` (string form avoids TypeScript `window` type error).
+---
+
 ## 2026-05-21 - US-016
 - What was implemented: Audit log — admin-only `/admin/audit` page with filters (user_id, entity, date range). Server functions `getAuditLog(token, filters)` and `getAuditEntities(token)` in `src/audit.gs`. Page auto-loads on open, supports filter-then-search, shows newest-first up to 500 rows with entity badge and JSON value columns. `appendAuditLog` was already called in all required write paths (summative, attendance, formative, characteristics, readthinkwrite, students, enrollments). Added `admin_audit` to both `adminPages` arrays in `doGet` and `getPageHtml`. Added audit log link to `dashboard.html` admin menu.
 - Files changed: `src/audit.gs` (new), `src/admin_audit.html` (new), `src/Code.gs` (router case + adminPages), `src/dashboard.html` (menu link), `tests/admin.spec.ts` (US-016 describe block with 4 tests + seedTestStudent import)

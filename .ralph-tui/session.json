@@ -3,10 +3,10 @@
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
   "status": "running",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-22T10:14:50.867Z",
+  "updatedAt": "2026-05-22T10:19:17.945Z",
   "currentIteration": 1,
   "maxIterations": 0,
-  "tasksCompleted": 15,
+  "tasksCompleted": 16,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -107,8 +107,8 @@
       {
         "id": "US-016",
         "title": "Audit log",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-017",
@@ -698,12 +698,21 @@
       "durationMs": 40351,
       "startedAt": "2026-05-20T22:27:01.777Z",
       "endedAt": "2026-05-20T22:27:42.128Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-016",
+      "taskTitle": "Audit log",
+      "taskCompleted": true,
+      "durationMs": 38742,
+      "startedAt": "2026-05-22T10:14:12.123Z",
+      "endedAt": "2026-05-22T10:14:50.865Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "C:\\Users\\saich\\Documents\\popoWebApp",
   "activeTaskIds": [
-    "US-017",
     "US-018",
     "US-019",
     "US-020",
