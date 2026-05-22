@@ -4,35 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>คู่มือการใช้งาน — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; }
-    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
-    .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
-    h2 { font-size: 22px; color: #1a56a0; margin-bottom: 24px; }
-    h3 { font-size: 17px; color: #1a56a0; margin-bottom: 12px; margin-top: 24px; }
-    .card { background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     p { font-size: 14px; line-height: 1.8; margin-bottom: 10px; }
-    ul { padding-left: 20px; margin-bottom: 10px; }
+    ul, ol { padding-left: 20px; margin-bottom: 10px; }
     li { font-size: 14px; line-height: 1.8; margin-bottom: 4px; }
-    .section-title { font-size: 16px; font-weight: bold; color: #1a56a0; border-bottom: 2px solid #e0e8f5; padding-bottom: 8px; margin-bottom: 16px; }
     .scale-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    .scale-table th { background: #f0f4fa; padding: 8px 12px; text-align: left; border-bottom: 2px solid #ddd; }
-    .scale-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-    .scale-table tr:hover td { background: #fafcff; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
-    .badge-4 { background: #27ae60; color: white; }
-    .badge-35 { background: #2ecc71; color: white; }
-    .badge-3 { background: #3498db; color: white; }
-    .badge-2 { background: #f39c12; color: white; }
-    .badge-1 { background: #e67e22; color: white; }
-    .badge-0 { background: #c0392b; color: white; }
-    .badge-diyiam { background: #27ae60; color: white; }
-    .badge-di { background: #3498db; color: white; }
-    .badge-pass { background: #f39c12; color: white; }
-    .badge-fail { background: #c0392b; color: white; }
+    .scale-table th { background: var(--bg-table-head); padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+    .scale-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .scale-table tr:hover td { background: var(--brand-hover); }
+    h3 { font-size: 16px; color: var(--brand); margin-bottom: 10px; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -40,7 +21,7 @@
   <span class="navbar-title">PopoWebApp</span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('weights_ref')">ตารางน้ำหนักคะแนน</a>
-  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+  <div class="navbar-user"><?= data.session ? data.session.full_name : '' ?></div>
 </div>
 
 <div class="container">

@@ -4,44 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บันทึกการเปลี่ยนแปลง — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; cursor: pointer; }
-    .container { max-width: 1100px; margin: 32px auto; padding: 0 20px; }
-    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    h2 { font-size: 20px; color: #1a56a0; margin: 0 0 16px 0; }
-    .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 13px; color: #555; }
-    .filter-group input, .filter-group select {
-      padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px;
-      font-size: 14px; font-family: inherit;
-    }
-    .btn { padding: 8px 18px; border: none; border-radius: 5px; font-size: 14px; font-family: inherit; cursor: pointer; }
-    .btn-primary { background: #1a56a0; color: white; }
-    .btn-secondary { background: #e5e7eb; color: #333; }
-    .btn:hover { opacity: 0.88; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #1a56a0; color: white; padding: 10px 12px; text-align: left; white-space: nowrap; }
-    td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f5f8ff; }
-    .entity-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: #dbeafe; color: #1e40af; }
-    .json-val { font-family: monospace; font-size: 11px; color: #555; max-width: 260px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-    #auditStatus { color: #888; font-size: 14px; margin: 8px 0; }
-    #toast { position: fixed; bottom: 24px; right: 24px; background: #1a56a0; color: white;
-      padding: 12px 20px; border-radius: 6px; font-size: 14px; display: none; z-index: 9999; }
-    .empty-msg { text-align: center; color: #888; padding: 32px; }
+    thead th { background: var(--brand); color: white; border-bottom: none; }
+    tbody td { vertical-align: top; }
+    #auditStatus { color: var(--text-muted); font-size: 14px; margin: 8px 0; }
+    .btn-secondary { background: #e5e7eb; color: #333; border: none; }
   </style>
 </head>
 <body>
   <div class="navbar">
     <span class="navbar-title" onclick="goHome()">PopoWebApp</span>
-    <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+    <div class="navbar-user"><?= data.session ? data.session.full_name : '' ?></div>
   </div>
 
-  <div class="container">
+  <div class="container wide">
     <div class="card">
       <h2 id="pageHeading">บันทึกการเปลี่ยนแปลง (Audit Log)</h2>
 

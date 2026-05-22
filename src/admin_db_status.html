@@ -4,25 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DB Status — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; }
-    .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
-    .card { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th { background: #1a56a0; color: white; padding: 10px 14px; text-align: left; }
-    td { padding: 9px 14px; border-bottom: 1px solid #eee; }
-    tr:last-child td { border-bottom: none; }
-    .count { font-weight: bold; color: #1a56a0; }
-    .loading { color: #888; font-size: 14px; margin-top: 12px; }
+    thead th { background: var(--brand); color: white; border-bottom: none; }
+    .count { font-weight: 700; color: var(--brand); }
   </style>
 </head>
 <body>
   <div class="navbar">
     <span class="navbar-title">PopoWebApp — DB Status</span>
-    <span style="margin-left:auto;font-size:13px">dev only</span>
+    <div class="navbar-user">dev only</div>
   </div>
   <div class="container">
     <div class="card">

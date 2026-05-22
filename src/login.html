@@ -4,26 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>เข้าสู่ระบบ — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .card { background: white; border-radius: 8px; padding: 40px; width: 320px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-    h1 { font-size: 22px; color: #1a56a0; margin-bottom: 8px; text-align: center; }
-    .subtitle { font-size: 13px; color: #888; text-align: center; margin-bottom: 28px; }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-card { background: white; border-radius: 10px; padding: 40px 36px; width: 340px; box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
+    .login-logo { font-size: 24px; color: var(--brand); margin-bottom: 6px; text-align: center; font-weight: 700; }
+    .login-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
     .form-group { margin-bottom: 16px; }
-    label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; }
-    input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
-    input:focus { outline: none; border-color: #1a56a0; }
-    button { width: 100%; padding: 11px; background: #1a56a0; color: white; border: none; border-radius: 4px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; }
-    button:hover { background: #154a8e; }
-    button:disabled { background: #7fa8d0; cursor: not-allowed; }
-    .error { background: #fdecea; color: #c0392b; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+    .form-group input { width: 100%; padding: 10px 12px; }
+    .login-btn { width: 100%; padding: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; font-weight: 600; transition: background 0.15s; }
+    .login-btn:hover { background: var(--brand-dark); }
+    .login-btn:disabled { background: #93b8d8; cursor: not-allowed; }
+    .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 16px; display: none; border-left: 3px solid var(--red); }
     .error.show { display: block; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>PopoWebApp</h1>
-    <p class="subtitle">ระบบสมุดเกรดโรงเรียน</p>
+  <div class="login-card">
+    <h1 class="login-logo">PopoWebApp</h1>
+    <p class="login-subtitle">ระบบสมุดเกรดโรงเรียน</p>
     <div class="error" id="errBox">
       <? if (data.error) { ?><?= data.error ?><? } ?>
     </div>
@@ -35,7 +35,7 @@
       <label>รหัสผ่าน (Password)</label>
       <input type="password" id="password" autocomplete="current-password">
     </div>
-    <button id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
   </div>
   <script>
     var errBox = document.getElementById('errBox');

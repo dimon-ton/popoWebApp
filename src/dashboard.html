@@ -4,18 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>หน้าหลัก — PopoWebApp</title>
-  <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; margin: 0; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; }
-    .navbar a { color: white; text-decoration: none; font-size: 14px; }
-    .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    h2 { font-size: 20px; color: #1a56a0; margin-bottom: 16px; }
-    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-    .menu-item { background: #f0f4fa; border-radius: 6px; padding: 16px; text-align: center; text-decoration: none; color: #1a56a0; font-size: 14px; transition: background 0.15s; }
-    .menu-item:hover { background: #e3ecf8; }
-  </style>
+  <?!= include('_styles') ?>
 </head>
 <body>
   <div class="navbar">
@@ -25,12 +14,14 @@
     <a href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
     <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
     <? } ?>
-    <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
-    <button id="logoutBtn" onclick="doLogout()" style="margin-left:12px;padding:6px 14px;background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer;">ออกจากระบบ</button>
+    <div class="navbar-user">
+      <span><?= data.session ? data.session.full_name : '' ?></span>
+      <button id="logoutBtn" class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
   </div>
-  <div class="container">
+  <div class="container" style="max-width:820px">
     <div class="card">
-      <h2>ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
+      <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
       <? if (data.session && data.session.role === 'admin') { ?>
       <div class="menu-grid">
         <a class="menu-item" href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>

@@ -4,101 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>การเข้าเรียน — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; }
-    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
-    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
-    .week-nav {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
-    }
-    .week-nav button {
-      padding: 6px 16px; border: none; border-radius: 4px; font-size: 13px;
-      font-family: inherit; cursor: pointer; background: #1a56a0; color: white;
-    }
-    .week-nav button:hover { background: #154880; }
-    .week-nav select {
-      padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;
-      font-size: 13px; font-family: inherit;
-    }
-    .week-label {
-      font-size: 14px; font-weight: bold; color: #1a56a0;
-    }
-    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
-    .readonly-notice {
-      font-size: 13px; color: #888; margin-bottom: 12px; padding: 10px;
-      background: #fff8e1; border-radius: 4px; border-left: 3px solid #f0a500;
-    }
-    table { border-collapse: collapse; font-size: 13px; width: 100%; }
-    th {
-      background: #f0f4fa; padding: 8px 6px; text-align: center;
-      border: 1px solid #ddd; font-size: 12px; white-space: nowrap;
-    }
+    table { border-collapse: collapse; }
+    thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; }
     th.name-col { text-align: left; min-width: 140px; }
-    td {
-      padding: 4px 3px; border: 1px solid #eee; text-align: center;
-      vertical-align: middle;
-    }
-    td.name-col { text-align: left; padding-left: 8px; white-space: nowrap; }
-    td.seq-col { text-align: center; color: #888; width: 36px; }
-    td.total-col { font-weight: bold; color: #333; background: #f9f9f9; }
-    .att-cell {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 32px; height: 28px; border-radius: 4px;
-      font-size: 14px; font-weight: bold; cursor: pointer;
-      user-select: none; transition: background 0.15s;
-    }
-    .att-cell.status-slash { background: #d4edda; color: #1a7a1a; }
-    .att-cell.status-la { background: #fff3cd; color: #856404; }
-    .att-cell.status-kho { background: #f8d7da; color: #721c24; }
-    .att-cell.status-empty { background: #f0f0f0; color: #ccc; }
-    .att-cell.readonly { cursor: default; }
-    tfoot td { background: #f0f4fa; font-weight: bold; font-size: 12px; }
+    tbody td { padding: 4px 3px; border: 1px solid #eee; }
+    tfoot td { background: var(--bg-table-head); font-weight: 700; font-size: 12px; border: 1px solid var(--border); padding: 4px 6px; }
     tfoot td.present-count { color: #1a7a1a; }
     tfoot td.leave-count { color: #856404; }
     tfoot td.absent-count { color: #721c24; }
-    .save-bar {
-      display: flex; gap: 10px; align-items: center; margin-top: 12px;
-    }
-    .btn-save {
-      padding: 9px 24px; background: #27ae60; color: white; border: none;
-      border-radius: 4px; font-size: 14px; font-family: inherit; cursor: pointer;
-    }
-    .btn-save:hover { background: #219150; }
-    .btn-save:disabled { background: #aaa; cursor: not-allowed; }
-    .toast {
-      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
-      border-radius: 6px; font-size: 14px; z-index: 1000;
-      display: none; max-width: 320px;
-    }
-    .toast.success { background: #27ae60; color: white; }
-    .toast.error { background: #c0392b; color: white; }
-    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
-    .legend {
-      display: flex; gap: 14px; font-size: 12px; color: #666; align-items: center; margin-bottom: 10px;
-    }
-    .legend-item { display: flex; align-items: center; gap: 4px; }
-    .legend-box {
-      width: 20px; height: 20px; border-radius: 3px; display: inline-block;
-    }
-    .legend-box.slash { background: #d4edda; }
-    .legend-box.la { background: #fff3cd; }
-    .legend-box.kho { background: #f8d7da; }
-    .legend-box.empty { background: #f0f0f0; border: 1px solid #ddd; }
+    td.total-col { background: #f9f9f9; font-weight: 700; color: var(--text); }
   </style>
 </head>
 <body>
 <div class="navbar">
   <span class="navbar-title">PopoWebApp</span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
-  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+  <div class="navbar-user"><?= data.session ? data.session.full_name : '' ?></div>
 </div>
 
-<div class="container">
-  <h2 id="pageHeading">การเข้าเรียน</h2>
+<div class="container wide">
+  <h2 class="page-title">การเข้าเรียน</h2>
 
   <div class="week-nav">
     <button id="prevWeekBtn" onclick="changeWeek(-1)">&#8592; สัปดาห์ก่อน</button>

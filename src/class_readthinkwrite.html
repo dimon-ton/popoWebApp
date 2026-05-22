@@ -4,73 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>อ่าน คิดวิเคราะห์ และเขียน — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: #333; }
-    .navbar { background: #1a56a0; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
-    .navbar-title { font-size: 18px; font-weight: bold; }
-    .navbar a { color: white; text-decoration: none; font-size: 14px; cursor: pointer; }
-    .container { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
-    h2 { font-size: 18px; color: #1a56a0; margin-bottom: 16px; }
-    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
-    .readonly-notice {
-      font-size: 13px; color: #888; margin-bottom: 12px; padding: 10px;
-      background: #fff8e1; border-radius: 4px; border-left: 3px solid #f0a500;
-    }
-    table { border-collapse: collapse; font-size: 13px; width: 100%; }
-    th {
-      background: #f0f4fa; padding: 8px 6px; text-align: center;
-      border: 1px solid #ddd; font-size: 12px; white-space: nowrap; min-width: 48px;
-    }
+    table { border-collapse: collapse; }
+    thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; min-width: 48px; }
     th.name-col { text-align: left; min-width: 140px; }
-    th.total-col { background: #e8f0fe; min-width: 48px; }
     th.label-col { background: #e8f5e9; min-width: 80px; }
-    th.group-header { background: #dce8fa; font-weight: bold; font-size: 11px; }
-    td {
-      padding: 4px 3px; border: 1px solid #eee; text-align: center;
-      vertical-align: middle;
-    }
-    td.name-col { text-align: left; padding-left: 8px; white-space: nowrap; }
-    td.seq-col { text-align: center; color: #888; width: 36px; }
-    td.total-col { font-weight: bold; color: #1a56a0; background: #f4f8ff; }
-    td.label-col { font-weight: bold; background: #f1f8f1; }
-    td.label-col.diyiam { color: #1a7a40; }
-    td.label-col.di { color: #2980b9; }
-    td.label-col.pass { color: #e67e22; }
-    td.label-col.fail { color: #c0392b; }
-    input.score-input {
-      width: 38px; text-align: center; border: 1px solid #ccc; border-radius: 3px;
-      padding: 3px 2px; font-size: 13px; font-family: inherit;
-    }
-    input.score-input:focus { border-color: #1a56a0; outline: none; }
-    .save-bar {
-      display: flex; gap: 10px; align-items: center; margin-top: 12px;
-    }
-    .btn-save {
-      padding: 9px 24px; background: #27ae60; color: white; border: none;
-      border-radius: 4px; font-size: 14px; font-family: inherit; cursor: pointer;
-    }
-    .btn-save:hover { background: #219150; }
-    .btn-save:disabled { background: #aaa; cursor: not-allowed; }
-    .toast {
-      position: fixed; top: 20px; right: 20px; padding: 12px 20px;
-      border-radius: 6px; font-size: 14px; z-index: 1000;
-      display: none; max-width: 320px;
-    }
-    .toast.success { background: #27ae60; color: white; }
-    .toast.error { background: #c0392b; color: white; }
-    .loading-msg { color: #888; font-size: 14px; padding: 12px 0; }
+    th.group-header { background: #dce8fa; font-weight: 700; font-size: 11px; }
+    tbody td { padding: 4px 3px; border: 1px solid #eee; text-align: center; }
   </style>
 </head>
 <body>
 <div class="navbar">
   <span class="navbar-title">PopoWebApp</span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
-  <span style="margin-left:auto;font-size:13px"><?= data.session ? data.session.full_name : '' ?></span>
+  <div class="navbar-user"><?= data.session ? data.session.full_name : '' ?></div>
 </div>
 
-<div class="container">
-  <h2 id="pageHeading">อ่าน คิดวิเคราะห์ และเขียน</h2>
+<div class="container wide">
+  <h2 class="page-title">อ่าน คิดวิเคราะห์ และเขียน</h2>
 
   <div id="readonlyNotice" class="readonly-notice" style="display:none">
     คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้

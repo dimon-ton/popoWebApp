@@ -4,39 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ตั้งค่าระบบครั้งแรก — PopoWebApp</title>
+  <?!= include('_styles') ?>
   <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f4fa; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .card { background: white; border-radius: 8px; padding: 40px; width: 420px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-    h1 { font-size: 22px; color: #1a56a0; margin-bottom: 8px; text-align: center; }
-    .subtitle { font-size: 13px; color: #888; text-align: center; margin-bottom: 28px; }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .wizard-card { background: white; border-radius: var(--radius); padding: 40px; width: 420px; box-shadow: 0 4px 20px rgba(26,86,160,0.14); border: 1px solid rgba(26,86,160,0.08); }
+    .wizard-title { font-size: 22px; color: var(--brand); margin-bottom: 8px; text-align: center; font-weight: 700; }
+    .wizard-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
     .step { display: none; }
     .step.active { display: block; }
-    h2 { font-size: 16px; color: #333; margin-bottom: 16px; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; }
-    .form-group { margin-bottom: 14px; }
-    label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; }
-    input, select { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
-    input:focus, select:focus { outline: none; border-color: #1a56a0; }
-    .btn { width: 100%; padding: 11px; background: #1a56a0; color: white; border: none; border-radius: 4px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 10px; }
-    .btn:hover { background: #154a8e; }
-    .btn:disabled { background: #7fa8d0; cursor: not-allowed; }
-    .btn-secondary { background: #e8f0fe; color: #1a56a0; }
-    .btn-secondary:hover { background: #d0e2fd; }
-    .error { background: #fdecea; color: #c0392b; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; display: none; }
-    .error.show { display: block; }
-    .success { background: #e8f5e9; color: #2e7d32; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; display: none; }
-    .success.show { display: block; }
+    .step h2 { font-size: 15px; color: var(--text); margin-bottom: 16px; border-bottom: 2px solid var(--brand-light); padding-bottom: 8px; }
     .progress { display: flex; gap: 8px; margin-bottom: 24px; }
-    .progress-dot { flex: 1; height: 4px; background: #e0e0e0; border-radius: 2px; }
-    .progress-dot.done { background: #1a56a0; }
-    .info-box { background: #e8f0fe; color: #1a56a0; padding: 10px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; }
+    .progress-dot { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+    .progress-dot.done { background: var(--brand); }
+    .info-box { background: var(--brand-light); color: var(--brand); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+    .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+    .error.show { display: block; }
+    .success { background: #e8f5e9; color: #2e7d32; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+    .success.show { display: block; }
+    .btn { width: 100%; padding: 11px; font-size: 15px; margin-top: 10px; border-radius: var(--radius-sm); }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>PopoWebApp</h1>
-    <p class="subtitle" id="wizardHeading">ตัวช่วยติดตั้งระบบครั้งแรก</p>
+  <div class="wizard-card">
+    <h1 class="wizard-title">PopoWebApp</h1>
+    <p class="wizard-subtitle" id="wizardHeading">ตัวช่วยติดตั้งระบบครั้งแรก</p>
 
     <div class="progress">
       <div class="progress-dot done" id="dot1"></div>
