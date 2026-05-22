@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-019
+- What was implemented: Already fully implemented in a prior iteration (alongside US-018). Verified all acceptance criteria met.
+- Files confirmed complete: `src/enrollments.gs` (`clientBulkAssign` with Mode A/B, LockService 30s timeout, audit logging, created/reassigned/unchanged counters), `src/admin_enrollments.html` (bulk-assign tab with mode toggle, Mode A multi-subject form, Mode B multi-class form, result summary panel), `src/testapi.gs` (all required ops: `seed_class`, `seed_subject`, `seed_user`, `seed_enrollment`, `query_rows`, `cleanup`), `tests/helpers/seed.ts` (`queryTestRows`), `tests/admin.spec.ts` (US-019 describe block: tab visibility, Mode B 3-created summary, API row verification).
+- **Learnings:**
+  - `clientBulkAssign` shares one LockService acquisition for all pairs — if lock can't be acquired within 30s, `{ error: 'Could not acquire lock...' }` is returned before any writes happen (no partial writes).
+  - The result summary uses Thai text: `data.created + ' เพิ่มใหม่, ' + data.reassigned + ' เปลี่ยนครู, ' + data.unchanged + ' ไม่เปลี่ยน'` — the Playwright assertion matches `'3 เพิ่มใหม่'` as a substring.
+  - Multi-select in Playwright requires evaluating the DOM directly: `sel.options[i].selected = ids.includes(opt.value)` — the standard `page.selectOption()` multi-value API also works but the evaluate approach handles the case where options are identified by value rather than label.
+  - Mode B (many classes, one subject) maps to `classIds.split(',').forEach(cid => pairs.push({class_id: cid, subject_id}))` — the pairMap lookup ensures existing enrollments are updated not duplicated.
+---
+
 ## 2026-05-22 - US-018
 - What was implemented: Already fully implemented in a prior iteration. Verified all acceptance criteria met.
 - Files confirmed complete: `src/enrollments.gs` (all server functions: `clientGetEnrollmentsData`, `clientGetTeacherEnrollments`, `clientAddEnrollment`, `clientRemoveEnrollment`, `clientConfirmReassign`, `clientGetAllPairsMatrix`, `clientBulkAssign`), `src/admin_enrollments.html` (left teacher panel, right detail panel with add-pair form and enrollment table, reassign confirmation dialog, all-pairs tab, bulk-assign tab), `src/Code.gs` (router case, admin whitelist, `handleReadAction` cases), `src/testapi.gs` (`seed_enrollment`, `query_rows` API ops), `tests/helpers/seed.ts` (`seedTestEnrollment`, `queryTestRows`), `tests/admin.spec.ts` (US-018 describe block with 8 tests).
