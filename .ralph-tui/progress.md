@@ -26,6 +26,16 @@ after each iteration and it's included in prompts for context.
 
 ---
 
+## 2026-05-22 - US-020
+- What was implemented: Already fully implemented in a prior iteration. Fixed one defect: `WEB_APP_URL` was referenced in `admin_workload.html` but never defined, causing drill-down grade-book links to render as `undefined?page=gradebook...`. Fixed by injecting `ScriptApp.getService().getUrl()` via the template tag `<?= data.web_app_url || ScriptApp.getService().getUrl() ?>`, and also passing `web_app_url` in the `doGet` `admin_workload` case.
+- Files confirmed complete: `src/admin_workload_api.gs` (`getWorkloadData` with 60s CacheService cache, `invalidateWorkloadCache`, `clientGetWorkloadData` with admin guard), `src/admin_workload.html` (workload table sorted descending by pair_count, drill-down panel with `#drillPanel.open` class toggle, drill-link per row, `#workloadTable`/`#workloadBody` IDs for Playwright), `src/Code.gs` (`admin_workload` in both `adminPages` arrays + `doGet` switch case with `web_app_url` injected), `tests/admin.spec.ts` (US-020 describe block: 5 tests — page load, sort order, drill-down count ≥ 3, grade-book links, non-admin 403).
+- Files changed: `src/admin_workload.html` (added `WEB_APP_URL` JS var), `src/Code.gs` (added `web_app_url: ScriptApp.getService().getUrl()` to admin_workload buildPage call)
+- **Learnings:**
+  - GAS templates can call `ScriptApp.getService().getUrl()` directly inside `<?= ... ?>` tags — no need to pass through `data` from `doGet`. But for `getPageHtml` (used when navigating via `google.script.run`), `data` doesn't carry extra fields, so the template must have a fallback: `<?= data.web_app_url || ScriptApp.getService().getUrl() ?>`.
+  - `document.workloadTeachers = teachers` stores the full data array on the `document` object so `showDrill(row, idx)` can access it by index — avoids a second server round-trip on row click.
+  - `CacheService.getScriptCache()` (not `getUserCache()`) is used for workload caching because the data is not user-specific and is shared across all admin sessions.
+---
+
 ## 2026-05-22 - US-019
 - What was implemented: Already fully implemented in a prior iteration (alongside US-018). Verified all acceptance criteria met.
 - Files confirmed complete: `src/enrollments.gs` (`clientBulkAssign` with Mode A/B, LockService 30s timeout, audit logging, created/reassigned/unchanged counters), `src/admin_enrollments.html` (bulk-assign tab with mode toggle, Mode A multi-subject form, Mode B multi-class form, result summary panel), `src/testapi.gs` (all required ops: `seed_class`, `seed_subject`, `seed_user`, `seed_enrollment`, `query_rows`, `cleanup`), `tests/helpers/seed.ts` (`queryTestRows`), `tests/admin.spec.ts` (US-019 describe block: tab visibility, Mode B 3-created summary, API row verification).

@@ -46,7 +46,7 @@ function doGet(e) {
       case 'admin_enrollments':
         return buildPage('admin_enrollments', { session: session, token: token });
       case 'admin_workload':
-        return buildPage('admin_workload', { session: session, token: token });
+        return buildPage('admin_workload', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl() });
       case 'admin_users':
         return buildPage('admin_users', { session: session, token: token });
       case 'admin_setup':

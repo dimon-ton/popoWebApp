@@ -53,6 +53,7 @@
 
 <script>
 var TOKEN = '<?= data.token ?>';
+var WEB_APP_URL = '<?= data.web_app_url || ScriptApp.getService().getUrl() ?>';
 
 function navigate(page) {
   google.script.run
