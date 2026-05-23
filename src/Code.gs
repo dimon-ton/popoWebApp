@@ -123,7 +123,7 @@ function doGet(e) {
           subject_id: params.subject_id || ''
         });
       case 'dashboard':
-        return buildPage('dashboard', { session: session, token: token });
+        return buildPage('dashboard', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl() });
       default:
         return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
     }
@@ -218,6 +218,31 @@ function getPageHtml(token, page) {
     }
     var tmpl = HtmlService.createTemplateFromFile(page);
     tmpl.data = { session: session, token: token };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+function getPageHtmlWithParams(token, page, classId, subjectId) {
+  try {
+    var session = getSession(token);
+    if (!session) {
+      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    }
+    var templateMap = {
+      'class_students': 'class_students',
+      'class_attendance': 'class_attendance',
+      'class_formative': 'class_formative',
+      'class_summative': 'class_summative',
+      'class_characteristics': 'class_characteristics',
+      'class_readthinkwrite': 'class_readthinkwrite',
+      'class_report': 'class_report'
+    };
+    var tmplName = templateMap[page];
+    if (!tmplName) return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">ไม่พบหน้า: ' + page + '</div>';
+    var tmpl = HtmlService.createTemplateFromFile(tmplName);
+    tmpl.data = { session: session, token: token, class_id: classId || '', subject_id: subjectId || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';

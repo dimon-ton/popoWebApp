@@ -91,3 +91,41 @@ function clientGetWorkloadData(token) {
     return { error: err.message };
   }
 }
+
+function clientGetTeacherOwnClasses(token) {
+  try {
+    var session = getSession(token);
+    if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+
+    var enrollments = dbGetAll('Enrollments').filter(function(e) {
+      return e.teacher_user_id === session.user_id;
+    });
+
+    var subjects = {};
+    dbGetAll('Subjects').forEach(function(s) { subjects[s.subject_id] = s; });
+    var classes = {};
+    dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
+    var students = dbGetAll('Students');
+    var studentsPerClass = {};
+    students.forEach(function(s) {
+      if (!studentsPerClass[s.class_id]) studentsPerClass[s.class_id] = 0;
+      studentsPerClass[s.class_id]++;
+    });
+
+    var pairs = enrollments.map(function(e) {
+      var cls = classes[e.class_id] || {};
+      var sub = subjects[e.subject_id] || {};
+      return {
+        class_id: e.class_id,
+        class_label: (cls.level || '') + '/' + (cls.section || ''),
+        subject_id: e.subject_id,
+        subject_name: sub.subject_name || e.subject_id,
+        student_count: studentsPerClass[e.class_id] || 0
+      };
+    });
+
+    return { pairs: pairs };
+  } catch (err) {
+    return { error: err.message };
+  }
+}

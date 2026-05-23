@@ -15,7 +15,10 @@
 <body>
   <div class="navbar">
     <span class="navbar-title" onclick="goHome()">PopoWebApp</span>
-    <div class="navbar-user"><?= data.session ? data.session.full_name : '' ?></div>
+    <div class="navbar-user">
+      <span><?= data.session ? data.session.full_name : '' ?></span>
+      <button id="logoutBtn" class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
   </div>
 
   <div class="container wide">
@@ -81,6 +84,24 @@ function goHome() {
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
     .getDashboardHtml(TOKEN);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
 }
 
 function showToast(msg) {

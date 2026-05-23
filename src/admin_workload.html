@@ -15,7 +15,10 @@
   <span class="navbar-title">PopoWebApp</span>
   <a href="#" onclick="navigate('dashboard'); return false;">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
-  <div class="navbar-user"><span><?= data.session ? data.session.full_name : '' ?> (admin)</span></div>
+  <div class="navbar-user">
+    <span><?= data.session ? data.session.full_name : '' ?> (admin)</span>
+    <button id="logoutBtn" class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+  </div>
 </div>
 
 <div class="container">
@@ -41,6 +44,24 @@ function navigate(page) {
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
     .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
     .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
 }
 
 loadWorkload();
