@@ -64,17 +64,20 @@
       </div>
     </div>
 
-    <div id="teacherSection" class="teacher-section" style="display:none">
+    <? if (data.session && data.session.role !== 'admin') { ?>
+    <div id="teacherSection" class="teacher-section">
       <div class="card">
         <h3>รายวิชาที่สอน</h3>
         <div id="teacherLoading" class="loading-msg">
           <div class="skeleton-block" style="width:80%"></div>
           <div class="skeleton-block" style="width:60%"></div>
           <div class="skeleton-block" style="width:70%"></div>
+          <div class="skeleton-block" style="width:50%"></div>
         </div>
         <div id="teacherPairs"></div>
       </div>
     </div>
+    <? } ?>
   </div>
 <script>
 var TOKEN = '<?= data.token || '' ?>';
@@ -107,7 +110,6 @@ function renderTeacherPairs(pairs) {
     document.getElementById('teacherPairs').innerHTML = '<p style="color:var(--text-muted)">ยังไม่มีรายวิชาที่สอน — กรุณาติดต่อผู้ดูแลระบบ</p>';
     return;
   }
-  document.getElementById('teacherSection').style.display = 'block';
   var container = document.getElementById('teacherPairs');
   var html = '';
   pairs.forEach(function(p) {
