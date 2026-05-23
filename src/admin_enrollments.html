@@ -75,9 +75,13 @@
       <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">ทุกคู่</button>
       <button class="tab-btn" id="tab-bulk" onclick="switchTab('bulk')">กำหนดกลุ่ม</button>
     </div>
-    <div class="teacher-list" id="teacherList">
-      <div style="padding:16px;color:#888;font-size:13px">กำลังโหลด...</div>
-    </div>
+      <div id="teacherList" class="teacher-list loading-msg">
+        <div class="skeleton-block" style="width:80%"></div>
+        <div class="skeleton-block" style="width:60%"></div>
+        <div class="skeleton-block" style="width:70%"></div>
+        <div class="skeleton-block" style="width:50%"></div>
+        <div class="skeleton-block" style="width:65%"></div>
+      </div>
   </div>
 
   <!-- RIGHT -->
@@ -88,7 +92,14 @@
     </div>
     <div class="all-pairs-panel" id="allPairsTab" style="display:none">
       <div class="section-title">ทุกคู่ (class, subject) ในโรงเรียน</div>
-      <div id="allPairsContent">กำลังโหลด...</div>
+      <div id="allPairsContent" class="loading-msg">
+        <div class="skeleton-table">
+          <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
+        </div>
+      </div>
     </div>
     <!-- US-019: Bulk assign panel -->
     <div class="all-pairs-panel" id="bulkAssignTab" style="display:none">

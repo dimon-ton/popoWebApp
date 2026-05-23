@@ -52,7 +52,15 @@
   <!-- User list -->
   <div class="card">
     <h3>รายชื่อผู้ใช้ทั้งหมด</h3>
-    <p class="loading-msg" id="usersLoading">กำลังโหลด...</p>
+    <div class="loading-msg" id="usersLoading">
+      <div class="skeleton-table">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+      </div>
+    </div>
     <table id="usersTable" style="display:none">
       <thead>
         <tr>

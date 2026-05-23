@@ -439,6 +439,29 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .toast.error { background: var(--red-dark); color: white; }
 #toast { position: fixed; top: 64px; right: 20px; }
 
+/* ===== SKELETON LOADING ===== */
+@keyframes skeleton-pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; background: #e2e5e9; border-radius: 4px; }
+.skeleton-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.skeleton-line { height: 14px; background: #e2e5e9; border-radius: 4px; animation: skeleton-pulse 1.5s ease-in-out infinite; }
+.skeleton-line.w20 { width: 20%; }
+.skeleton-line.w30 { width: 30%; }
+.skeleton-line.w40 { width: 40%; }
+.skeleton-line.w50 { width: 50%; }
+.skeleton-line.w60 { width: 60%; }
+.skeleton-line.w70 { width: 70%; }
+.skeleton-line.w80 { width: 80%; }
+.skeleton-line.w100 { width: 100%; }
+.skeleton-block { height: 38px; background: #e2e5e9; border-radius: 4px; animation: skeleton-pulse 1.5s ease-in-out infinite; margin-bottom: 10px; }
+.skeleton-table { width: 100%; }
+.skeleton-table-row { display: flex; gap: 1px; margin-bottom: 1px; }
+.skeleton-table-cell { height: 32px; background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: 2px; }
+.skeleton-table-head .skeleton-table-cell { height: 36px; background: #d5dae0; }
+
 /* ===== STATUS / NOTICES ===== */
 .loading-msg {
   color: var(--text-muted);

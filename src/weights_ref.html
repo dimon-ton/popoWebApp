@@ -29,7 +29,15 @@
 
   <div class="card">
     <p class="notice">หน้านี้แสดงน้ำหนักคะแนนของทุกวิชาในโรงเรียน — สำหรับข้อมูลอ้างอิงเท่านั้น ผู้ดูแลระบบสามารถแก้ไขได้ที่เมนู "กำหนดน้ำหนักคะแนน"</p>
-    <p class="loading-msg" id="weightsLoading">กำลังโหลด...</p>
+    <div class="loading-msg" id="weightsLoading">
+      <div class="skeleton-table">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+      </div>
+    </div>
     <div id="weightsTableWrap" style="display:none">
       <table id="weightsTable">
         <thead>
