@@ -45,7 +45,7 @@
     </div>
   </div>
   <div class="container" style="max-width:880px">
-    <div class="card">
+    <div class="card" id="dashContent" style="display:none">
       <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
       <? if (data.session && data.session.role === 'admin') { ?>
       <div class="menu-grid">
@@ -61,6 +61,17 @@
       <div class="menu-grid" style="margin-top:12px">
         <a class="menu-item" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
         <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
+      </div>
+    </div>
+    <div class="card" id="dashSkeleton">
+      <div class="skeleton-block" style="width:50%"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px">
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
       </div>
     </div>
 
@@ -83,6 +94,13 @@
 var TOKEN = '<?= data.token || '' ?>';
 var ROLE = '<?= data.session ? data.session.role : "" ?>';
 if (TOKEN) localStorage.setItem('popo_token', TOKEN);
+
+setTimeout(function() {
+  var sk = document.getElementById('dashSkeleton');
+  var ct = document.getElementById('dashContent');
+  if (sk) sk.style.display = 'none';
+  if (ct) ct.style.display = 'block';
+}, 300);
 
 <? if (data.session && data.session.role !== 'admin') { ?>
 loadTeacherClasses();
@@ -135,17 +153,32 @@ function renderTeacherPairs(pairs) {
 }
 
 function goPage(page, classId, subjectId) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
     .getPageHtmlWithParams(TOKEN, page, classId || '', subjectId || '');
 }
 
 function navigate(page) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
     .getPageHtml(TOKEN, page);
+}
+
+function showNavLoading() {
+  var el = document.createElement('div');
+  el.className = 'nav-loading';
+  el.id = 'navLoading';
+  el.innerHTML = '<div class="skeleton-block"></div><div class="skeleton-block" style="width:80%"></div><div class="skeleton-menu"><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div></div>';
+  document.body.appendChild(el);
+}
+
+function hideNavLoading() {
+  var el = document.getElementById('navLoading');
+  if (el) el.remove();
 }
 
 function doLogout() {
