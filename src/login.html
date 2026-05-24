@@ -18,10 +18,18 @@
     .login-btn:disabled { background: #93b8d8; cursor: not-allowed; }
     .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 16px; display: none; border-left: 3px solid var(--red); }
     .error.show { display: block; }
+    .login-card { display: none; }
+    .login-card.visible { display: block; }
+    .login-checking { text-align: center; color: var(--text-muted); font-size: 15px; padding: 40px; }
   </style>
 </head>
 <body>
-  <div class="login-card">
+  <div class="login-checking" id="loginChecking">
+    <div class="skeleton-block" style="width:60%;margin:0 auto 12px"></div>
+    <div class="skeleton-block" style="width:80%;margin:0 auto 12px"></div>
+    <div class="skeleton-block" style="width:40%;margin:0 auto"></div>
+  </div>
+  <div class="login-card" id="loginCard">
     <h1 class="login-logo">PopoWebApp</h1>
     <p class="login-subtitle">ระบบสมุดเกรดโรงเรียน</p>
     <div class="error" id="errBox">
@@ -54,13 +62,24 @@
         google.script.run
           .withSuccessHandler(function(html) {
             if (html) { document.open(); document.write(html); document.close(); }
+            else { showLoginForm(); }
           })
           .withFailureHandler(function() {
             localStorage.removeItem('popo_token');
+            showLoginForm();
           })
           .getDashboardHtml(stored);
+      } else {
+        showLoginForm();
       }
     })();
+
+    function showLoginForm() {
+      var checking = document.getElementById('loginChecking');
+      var card = document.getElementById('loginCard');
+      if (checking) checking.style.display = 'none';
+      if (card) card.classList.add('visible');
+    }
 
     function doLogin() {
       var username = document.getElementById('username').value.trim();
