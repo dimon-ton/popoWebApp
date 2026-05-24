@@ -124,9 +124,9 @@ function escHtml(s) {
 }
 
 function loadTeachers() {
+  var sel = document.getElementById('newHomeroomTeacher');
   google.script.run
     .withSuccessHandler(function(result) {
-      var sel = document.getElementById('newHomeroomTeacher');
       (result.teachers || []).forEach(function(t) {
         teachersMap[t.user_id] = t.full_name;
         var opt = document.createElement('option');
@@ -134,8 +134,9 @@ function loadTeachers() {
         opt.textContent = t.full_name;
         sel.appendChild(opt);
       });
+      loadClasses();
     })
-    .withFailureHandler(function() {})
+    .withFailureHandler(function() { loadClasses(); })
     .getTeachersList(TOKEN);
 }
 
@@ -218,7 +219,6 @@ function viewStudents(class_id) {
 }
 
 loadTeachers();
-loadClasses();
 </script>
 </body>
 </html>
