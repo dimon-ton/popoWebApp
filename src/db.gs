@@ -123,6 +123,24 @@ function dbFindOne(tabName, field, value) {
   return rows.length > 0 ? rows[0] : null;
 }
 
+function ensureColumns(tabName, requiredHeaders) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    requiredHeaders.forEach(function(header) {
+      if (headers.indexOf(header) === -1) {
+        sheet.getRange(1, headers.length + 1).setValue(header);
+        headers.push(header);
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function generateId(prefix) {
   return prefix + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
 }

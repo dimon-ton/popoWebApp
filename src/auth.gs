@@ -2,6 +2,26 @@
 
 var SESSION_TTL_SECONDS = 43200; // 12 hours
 
+function ensureUserAuthColumns() {
+  ensureColumns('Users', ['avatar', 'must_change_pwd', 'last_login_at']);
+}
+
+function isMustChangePassword(value) {
+  return value === true || String(value).toLowerCase() === 'true' || String(value) === '1';
+}
+
+function buildSessionData(user) {
+  return {
+    user_id: user.user_id,
+    username: user.username,
+    full_name: user.full_name,
+    avatar: user.avatar || '',
+    role: user.role,
+    must_change_pwd: isMustChangePassword(user.must_change_pwd),
+    expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
+  };
+}
+
 function handleLogin(e) {
   var params = e.parameter;
   var username = (params.username || '').trim();
@@ -13,6 +33,7 @@ function handleLogin(e) {
     return tmpl.evaluate().setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL);
   }
 
+  ensureUserAuthColumns();
   var users = dbGetAll('Users');
   var user = null;
   for (var i = 0; i < users.length; i++) {
@@ -33,13 +54,7 @@ function handleLogin(e) {
 
   var token = generateToken();
   var cache = CacheService.getScriptCache();
-  var sessionData = JSON.stringify({
-    user_id: user.user_id,
-    username: user.username,
-    full_name: user.full_name,
-    role: user.role,
-    expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
-  });
+  var sessionData = JSON.stringify(buildSessionData(user));
   cache.put('session_' + token, sessionData, SESSION_TTL_SECONDS);
 
   var tmpl = HtmlService.createTemplateFromFile('dashboard');
@@ -107,13 +122,15 @@ function getLoginHtml() {
 // US-003: User management — list, add, reset password
 
 function getUsersList() {
+  ensureUserAuthColumns();
   var users = dbGetAll('Users');
   return users.map(function(u) {
-    return { user_id: u.user_id, username: u.username, full_name: u.full_name, role: u.role };
+    return { user_id: u.user_id, username: u.username, full_name: u.full_name, avatar: u.avatar || '', role: u.role };
   });
 }
 
 function serverAddUser(username, full_name, role, password) {
+  ensureUserAuthColumns();
   username = (username || '').trim();
   full_name = (full_name || '').trim();
   role = (role || 'teacher').trim();
@@ -139,7 +156,7 @@ function serverAddUser(username, full_name, role, password) {
     salt: salt,
     full_name: full_name,
     role: role,
-    must_change_pwd: 'true',
+    must_change_pwd: role === 'teacher' ? 'true' : '',
     created_at: new Date().toISOString()
   });
   appendAuditLog(userId, 'Users', userId, null, { username: username, role: role });
@@ -147,6 +164,7 @@ function serverAddUser(username, full_name, role, password) {
 }
 
 function serverResetPassword(user_id, new_password) {
+  ensureUserAuthColumns();
   new_password = new_password || '';
   if (!user_id || !new_password) {
     return { error: 'กรุณากรอกรหัสผ่านใหม่' };
@@ -157,7 +175,11 @@ function serverResetPassword(user_id, new_password) {
 
   var salt = Utilities.getUuid();
   var hash = computeHash(new_password, salt);
-  var updated = dbUpdate('Users', 'user_id', user_id, { password_hash: hash, salt: salt });
+  var updated = dbUpdate('Users', 'user_id', user_id, {
+    password_hash: hash,
+    salt: salt,
+    must_change_pwd: user.role === 'teacher' ? 'true' : ''
+  });
   if (!updated) return { error: 'ไม่สามารถอัพเดตรหัสผ่านได้' };
 
   appendAuditLog(user_id, 'Users', user_id, { action: 'password_reset' }, { action: 'password_reset', username: user.username });
@@ -165,6 +187,7 @@ function serverResetPassword(user_id, new_password) {
 }
 
 function serverEditUser(user_id, full_name, role) {
+  ensureUserAuthColumns();
   full_name = (full_name || '').trim();
   role = (role || '').trim();
 
@@ -193,6 +216,7 @@ function getUsersListForPage(token) {
 
 function serverLogin(username, password) {
   try {
+    ensureUserAuthColumns();
     username = (username || '').trim();
     password = password || '';
 
@@ -212,14 +236,8 @@ function serverLogin(username, password) {
     if (hash !== user.password_hash) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
 
     var token = generateToken();
-    var sessionData = {
-      user_id: user.user_id,
-      username: user.username,
-      full_name: user.full_name,
-      role: user.role,
-      must_change_pwd: !!user.must_change_pwd,
-      expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
-    };
+    var sessionData = buildSessionData(user);
+    dbUpdate('Users', 'user_id', user.user_id, { last_login_at: new Date().toISOString() });
     CacheService.getScriptCache().put('session_' + token, JSON.stringify(sessionData), SESSION_TTL_SECONDS);
 
     return { token: token, session: sessionData };
@@ -230,6 +248,7 @@ function serverLogin(username, password) {
 
 function serverChangePassword(token, old_password, new_password) {
   try {
+    ensureUserAuthColumns();
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     if (!old_password || !new_password) return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
@@ -249,6 +268,7 @@ function serverChangePassword(token, old_password, new_password) {
       user_id: session.user_id,
       username: session.username,
       full_name: session.full_name,
+      avatar: session.avatar || '',
       role: session.role,
       must_change_pwd: false,
       expires_at: session.expires_at
@@ -275,10 +295,13 @@ function getChangePasswordHtml(token) {
 
 function serverUploadAvatar(token, base64Data) {
   try {
+    ensureUserAuthColumns();
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     if (!base64Data || base64Data.length > 500000) return { error: 'ไฟล์รูปภาพใหญ่เกินไป' };
     dbUpdate('Users', 'user_id', session.user_id, { avatar: base64Data });
+    session.avatar = base64Data;
+    CacheService.getScriptCache().put('session_' + token, JSON.stringify(session), SESSION_TTL_SECONDS);
     return { ok: true };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
@@ -287,10 +310,32 @@ function serverUploadAvatar(token, base64Data) {
 
 function serverRemoveAvatar(token) {
   try {
+    ensureUserAuthColumns();
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     dbUpdate('Users', 'user_id', session.user_id, { avatar: '' });
+    session.avatar = '';
+    CacheService.getScriptCache().put('session_' + token, JSON.stringify(session), SESSION_TTL_SECONDS);
     return { ok: true };
+  } catch (err) {
+    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+  }
+}
+
+function serverGetCurrentUserProfile(token) {
+  try {
+    ensureUserAuthColumns();
+    var session = getSession(token);
+    if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (!user) return { error: 'ไม่พบผู้ใช้' };
+    return {
+      user_id: user.user_id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role,
+      avatar: user.avatar || ''
+    };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
   }

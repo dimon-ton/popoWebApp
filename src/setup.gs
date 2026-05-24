@@ -12,7 +12,7 @@
 // DB_SHEET_ID from Project Settings → Script properties first.
 
 var TAB_SCHEMA = {
-  'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'created_at'],
+  'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'avatar', 'must_change_pwd', 'last_login_at', 'created_at'],
   'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year'],
   'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id'],
   'Subjects':         ['subject_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'description'],
