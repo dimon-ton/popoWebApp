@@ -692,6 +692,9 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 
   .modal { padding: 20px; }
 }
+.back-btn { display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.3);border-radius:var(--radius-sm);font-size:12.5px;font-family:inherit;cursor:pointer;text-decoration:none;font-weight:500;transition:background 0.15s;white-space:nowrap; }
+.back-btn:hover { background:rgba(255,255,255,0.28);color:white;text-decoration:none; }
+.back-btn svg { width:14px;height:14px;fill:currentColor; }
 </style>
 <script>
 function showNavLoading() {
@@ -728,4 +731,20 @@ function btnReset(btn) {
   btn.disabled = false;
   btn.textContent = btn.dataset.origText || btn.textContent;
 }
+(function() {
+  var nb = document.querySelector('.navbar');
+  if (!nb) return;
+  if (document.title.indexOf('หน้าหลัก') > -1) return;
+  var a = document.createElement('a');
+  a.className = 'back-btn';
+  a.href = '#';
+  a.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> ย้อนกลับ';
+  a.onclick = function(e) {
+    e.preventDefault();
+    if (typeof navigate === 'function') navigate('dashboard');
+  };
+  var title = nb.querySelector('.navbar-title');
+  if (title && title.nextSibling) nb.insertBefore(a, title.nextSibling);
+  else nb.appendChild(a);
+})();
 </script>
