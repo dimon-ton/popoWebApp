@@ -18,7 +18,8 @@
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('help')">คู่มือ</a>
   <div class="navbar-user">
-    <span><?= data.session ? data.session.full_name : '' ?></span>
+    <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" onclick="uploadAvatar()" title="เปลี่ยนรูปภาพ"><? } else { ?><div class="navbar-avatar-placeholder" onclick="uploadAvatar()" title="เพิ่มรูปภาพ"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
+    <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
     <button id="logoutBtn" class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
   </div>
 </div>
