@@ -139,6 +139,7 @@ function serverAddUser(username, full_name, role, password) {
     salt: salt,
     full_name: full_name,
     role: role,
+    must_change_pwd: 'true',
     created_at: new Date().toISOString()
   });
   appendAuditLog(userId, 'Users', userId, null, { username: username, role: role });
@@ -216,11 +217,80 @@ function serverLogin(username, password) {
       username: user.username,
       full_name: user.full_name,
       role: user.role,
+      must_change_pwd: !!user.must_change_pwd,
       expires_at: Date.now() + SESSION_TTL_SECONDS * 1000
     };
     CacheService.getScriptCache().put('session_' + token, JSON.stringify(sessionData), SESSION_TTL_SECONDS);
 
     return { token: token, session: sessionData };
+  } catch (err) {
+    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+  }
+}
+
+function serverChangePassword(token, old_password, new_password) {
+  try {
+    var session = getSession(token);
+    if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+    if (!old_password || !new_password) return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
+    if (new_password.length < 4) return { error: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' };
+
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (!user) return { error: 'ไม่พบผู้ใช้' };
+
+    var hash = computeHash(old_password, user.salt);
+    if (hash !== user.password_hash) return { error: 'รหัสผ่านเดิมไม่ถูกต้อง' };
+
+    var newSalt = Utilities.getUuid();
+    var newHash = computeHash(new_password, newSalt);
+    dbUpdate('Users', 'user_id', session.user_id, { password_hash: newHash, salt: newSalt, must_change_pwd: '' });
+
+    var updatedSession = {
+      user_id: session.user_id,
+      username: session.username,
+      full_name: session.full_name,
+      role: session.role,
+      must_change_pwd: false,
+      expires_at: session.expires_at
+    };
+    CacheService.getScriptCache().put('session_' + token, JSON.stringify(updatedSession), SESSION_TTL_SECONDS);
+
+    return { ok: true };
+  } catch (err) {
+    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+  }
+}
+
+function getChangePasswordHtml(token) {
+  try {
+    var session = getSession(token);
+    if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    var tmpl = HtmlService.createTemplateFromFile('change_password');
+    tmpl.data = { session: session, token: token };
+    return tmpl.evaluate().getContent();
+  } catch (err) {
+    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+  }
+}
+
+function serverUploadAvatar(token, base64Data) {
+  try {
+    var session = getSession(token);
+    if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+    if (!base64Data || base64Data.length > 500000) return { error: 'ไฟล์รูปภาพใหญ่เกินไป' };
+    dbUpdate('Users', 'user_id', session.user_id, { avatar: base64Data });
+    return { ok: true };
+  } catch (err) {
+    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+  }
+}
+
+function serverRemoveAvatar(token) {
+  try {
+    var session = getSession(token);
+    if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+    dbUpdate('Users', 'user_id', session.user_id, { avatar: '' });
+    return { ok: true };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
   }

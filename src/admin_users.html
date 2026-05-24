@@ -28,9 +28,24 @@
         <label>ชื่อผู้ใช้ (username)</label>
         <input type="text" id="newUsername" placeholder="username">
       </div>
+      <div class="form-group" style="min-width:100px">
+        <label>คำนำหน้า</label>
+        <input type="text" id="newPrefix" list="prefixList" placeholder="คำนำหน้า">
+        <datalist id="prefixList">
+          <option value="เด็กชาย">
+          <option value="เด็กหญิง">
+          <option value="นาย">
+          <option value="นาง">
+          <option value="นางสาว">
+        </datalist>
+      </div>
       <div class="form-group">
-        <label>ชื่อ-สกุล</label>
-        <input type="text" id="newFullName" placeholder="ชื่อ-สกุล">
+        <label>ชื่อ</label>
+        <input type="text" id="newFirstName" placeholder="ชื่อ">
+      </div>
+      <div class="form-group">
+        <label>นามสกุล</label>
+        <input type="text" id="newLastName" placeholder="นามสกุล">
       </div>
       <div class="form-group">
         <label>บทบาท</label>
@@ -79,9 +94,26 @@
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h3>แก้ไขผู้ใช้ — <span id="editTargetUsername"></span></h3>
-    <div class="form-group">
-      <label>ชื่อ-สกุล</label>
-      <input type="text" id="editFullName" placeholder="ชื่อ-สกุล">
+    <div class="form-row">
+      <div class="form-group" style="min-width:100px">
+        <label>คำนำหน้า</label>
+        <input type="text" id="editPrefix" list="editPrefixList" placeholder="คำนำหน้า">
+        <datalist id="editPrefixList">
+          <option value="เด็กชาย">
+          <option value="เด็กหญิง">
+          <option value="นาย">
+          <option value="นาง">
+          <option value="นางสาว">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>ชื่อ</label>
+        <input type="text" id="editFirstName" placeholder="ชื่อ">
+      </div>
+      <div class="form-group">
+        <label>นามสกุล</label>
+        <input type="text" id="editLastName" placeholder="นามสกุล">
+      </div>
     </div>
     <div class="form-group">
       <label>บทบาท</label>
@@ -190,11 +222,14 @@ function escHtml(s) {
 
 function addUser() {
   var username = document.getElementById('newUsername').value.trim();
-  var full_name = document.getElementById('newFullName').value.trim();
+  var prefix = document.getElementById('newPrefix').value.trim();
+  var firstName = document.getElementById('newFirstName').value.trim();
+  var lastName = document.getElementById('newLastName').value.trim();
+  var full_name = (prefix + ' ' + firstName + ' ' + lastName).trim().replace(/\s+/g, ' ');
   var role = document.getElementById('newRole').value;
   var password = document.getElementById('newPassword').value;
 
-  if (!username || !full_name || !password) {
+  if (!username || !firstName || !lastName || !password) {
     showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
     return;
   }
@@ -208,7 +243,9 @@ function addUser() {
       if (result.error) { showToast(result.error, 'error'); return; }
       showToast('เพิ่มผู้ใช้ ' + username + ' สำเร็จ', 'success');
       document.getElementById('newUsername').value = '';
-      document.getElementById('newFullName').value = '';
+      document.getElementById('newPrefix').value = '';
+      document.getElementById('newFirstName').value = '';
+      document.getElementById('newLastName').value = '';
       document.getElementById('newPassword').value = '';
       document.getElementById('usersLoading').style.display = 'block';
       document.getElementById('usersTable').style.display = 'none';
@@ -258,8 +295,21 @@ function confirmReset() {
 function openEditModal(userId, username, fullName, role) {
   editUserId = userId;
   document.getElementById('editTargetUsername').textContent = username;
-  document.getElementById('editFullName').value = fullName;
   document.getElementById('editRole').value = role;
+  var knownPrefixes = ['เด็กชาย','เด็กหญิง','นาย','นาง','นางสาว'];
+  var parts = fullName.split(' ');
+  var prefix = '', firstName = '', lastName = '';
+  if (knownPrefixes.indexOf(parts[0]) !== -1) {
+    prefix = parts[0];
+    firstName = parts[1] || '';
+    lastName = parts.slice(2).join(' ');
+  } else {
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ');
+  }
+  document.getElementById('editPrefix').value = prefix;
+  document.getElementById('editFirstName').value = firstName;
+  document.getElementById('editLastName').value = lastName;
   document.getElementById('editModal').classList.add('open');
   document.getElementById('confirmEditBtn').disabled = false;
 }
@@ -270,9 +320,12 @@ function closeEditModal() {
 }
 
 function confirmEdit() {
-  var fullName = document.getElementById('editFullName').value.trim();
+  var prefix = document.getElementById('editPrefix').value.trim();
+  var firstName = document.getElementById('editFirstName').value.trim();
+  var lastName = document.getElementById('editLastName').value.trim();
+  var fullName = (prefix + ' ' + firstName + ' ' + lastName).trim().replace(/\s+/g, ' ');
   var role = document.getElementById('editRole').value;
-  if (!fullName) { showToast('กรุณากรอกชื่อ-สกุล', 'error'); return; }
+  if (!firstName || !lastName) { showToast('กรุณากรอกชื่อและนามสกุล', 'error'); return; }
 
   var btn = document.getElementById('confirmEditBtn');
   btn.disabled = true;

@@ -103,18 +103,33 @@
             btn.textContent = 'เข้าสู่ระบบ';
           } else {
             localStorage.setItem('popo_token', result.token);
-            google.script.run
-              .withSuccessHandler(function(html) {
-                document.open();
-                document.write(html);
-                document.close();
-              })
-              .withFailureHandler(function(err) {
-                showError('เกิดข้อผิดพลาด: ' + err.message);
-                btn.disabled = false;
-                btn.textContent = 'เข้าสู่ระบบ';
-              })
-              .getDashboardHtml(result.token);
+            if (result.session && result.session.must_change_pwd) {
+              google.script.run
+                .withSuccessHandler(function(html) {
+                  document.open();
+                  document.write(html);
+                  document.close();
+                })
+                .withFailureHandler(function(err) {
+                  showError('เกิดข้อผิดพลาด: ' + err.message);
+                  btn.disabled = false;
+                  btn.textContent = 'เข้าสู่ระบบ';
+                })
+                .getChangePasswordHtml(result.token);
+            } else {
+              google.script.run
+                .withSuccessHandler(function(html) {
+                  document.open();
+                  document.write(html);
+                  document.close();
+                })
+                .withFailureHandler(function(err) {
+                  showError('เกิดข้อผิดพลาด: ' + err.message);
+                  btn.disabled = false;
+                  btn.textContent = 'เข้าสู่ระบบ';
+                })
+                .getDashboardHtml(result.token);
+            }
           }
         })
         .withFailureHandler(function(err) {

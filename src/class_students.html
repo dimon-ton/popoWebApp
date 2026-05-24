@@ -43,9 +43,24 @@
         <label>เลขประจำตัวประชาชน</label>
         <input type="text" id="newCitizenId" placeholder="13 หลัก" maxlength="13">
       </div>
-      <div class="form-group" style="min-width:200px">
-        <label>ชื่อ-สกุล</label>
-        <input type="text" id="newFullName" placeholder="ชื่อ นามสกุล">
+      <div class="form-group" style="min-width:90px">
+        <label>คำนำหน้า</label>
+        <input type="text" id="newPrefix" list="studentPrefixList" placeholder="คำนำหน้า">
+        <datalist id="studentPrefixList">
+          <option value="เด็กชาย">
+          <option value="เด็กหญิง">
+          <option value="นาย">
+          <option value="นาง">
+          <option value="นางสาว">
+        </datalist>
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label>ชื่อ</label>
+        <input type="text" id="newFirstName" placeholder="ชื่อ">
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label>นามสกุล</label>
+        <input type="text" id="newLastName" placeholder="นามสกุล">
       </div>
       <div class="form-group" style="min-width:110px">
         <label>วันเกิด</label>
@@ -248,11 +263,14 @@ function addStudent() {
   var seq_no = document.getElementById('newSeqNo').value.trim();
   var student_code = document.getElementById('newStudentCode').value.trim();
   var citizen_id = document.getElementById('newCitizenId').value.trim();
-  var full_name = document.getElementById('newFullName').value.trim();
+  var prefix = document.getElementById('newPrefix').value.trim();
+  var firstName = document.getElementById('newFirstName').value.trim();
+  var lastName = document.getElementById('newLastName').value.trim();
+  var full_name = (prefix + ' ' + firstName + ' ' + lastName).trim().replace(/\s+/g, ' ');
   var dob = document.getElementById('newDob').value.trim();
   var note = document.getElementById('newNote').value.trim();
 
-  if (!full_name) { showToast('กรุณากรอกชื่อ-สกุล', 'error'); return; }
+  if (!firstName || !lastName) { showToast('กรุณากรอกชื่อและนามสกุล', 'error'); return; }
 
   var btn = document.getElementById('addStudentBtn');
   btn.disabled = true;
@@ -265,7 +283,9 @@ function addStudent() {
       document.getElementById('newSeqNo').value = '';
       document.getElementById('newStudentCode').value = '';
       document.getElementById('newCitizenId').value = '';
-      document.getElementById('newFullName').value = '';
+      document.getElementById('newPrefix').value = '';
+      document.getElementById('newFirstName').value = '';
+      document.getElementById('newLastName').value = '';
       document.getElementById('newDob').value = '';
       document.getElementById('newNote').value = '';
       loadStudents();

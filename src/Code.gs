@@ -205,6 +205,8 @@ function fmtClassLabel(level, section) {
 function getDashboardHtml(token) {
   var session = getSession(token);
   if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+  var user = dbFindOne('Users', 'user_id', session.user_id);
+  if (user) session.avatar = user.avatar || '';
   var tmpl = HtmlService.createTemplateFromFile('dashboard');
   tmpl.data = { session: session, token: token };
   return tmpl.evaluate().getContent();
@@ -221,6 +223,8 @@ function getPageHtml(token, page) {
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (user) session.avatar = user.avatar || '';
     var tmpl = HtmlService.createTemplateFromFile(page);
     tmpl.data = { session: session, token: token };
     return tmpl.evaluate().getContent();
@@ -235,6 +239,8 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
     if (!session) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (user) session.avatar = user.avatar || '';
     var templateMap = {
       'class_students': 'class_students',
       'class_attendance': 'class_attendance',

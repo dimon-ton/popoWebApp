@@ -87,6 +87,18 @@ body {
   gap: 8px;
 }
 
+.navbar-avatar {
+  width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.5); cursor: pointer; flex-shrink: 0;
+}
+.navbar-avatar-placeholder {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8);
+  cursor: pointer; flex-shrink: 0;
+}
+
 .btn-logout {
   padding: 5px 13px;
   background: rgba(255,255,255,0.15);
@@ -729,6 +741,31 @@ function btnLoading(btn, text) {
 function fmtCls(level, section) {
   if (!section || section === '1') return level || '';
   return (level || '') + '/' + section;
+}
+function uploadAvatar() {
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    if (file.size > 350000) { if (typeof showToast === 'function') showToast('ไฟล์รูปภาพใหญ่เกินไป (สูงสุด ~350KB)', 'error'); else alert('ไฟล์รูปภาพใหญ่เกินไป'); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var b64 = ev.target.result;
+      if (typeof TOKEN !== 'undefined' && TOKEN && typeof google !== 'undefined') {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.error) { if (typeof showToast === 'function') showToast(result.error, 'error'); return; }
+            var avatarEl = document.querySelector('.navbar-avatar');
+            if (avatarEl) avatarEl.src = b64;
+            if (typeof showToast === 'function') showToast('อัพเดตรูปภาพสำเร็จ', 'success');
+          })
+          .withFailureHandler(function(err) { if (typeof showToast === 'function') showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+          .serverUploadAvatar(TOKEN, b64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
 }
 function btnReset(btn) {
   if (!btn) return;
