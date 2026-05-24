@@ -3,3 +3,13 @@ dist/
 tests/.auth/
 *.env
 .env.*
+
+# Logs and temporary files
+*.log
+*.stackdump
+.playwright-mcp/
+.ralph-tui/
+
+# Screenshots and generated images
+*.png
+logo_b64.txt
