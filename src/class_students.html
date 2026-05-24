@@ -98,10 +98,11 @@ var CLASS_ID = '<?!= data.class_id || '' ?>';
 var CAN_EDIT = false;
 
 function navigate(page, extra) {
+  showNavLoading();
   var args = [TOKEN, page];
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .getPageHtml(TOKEN, page);
 }
 

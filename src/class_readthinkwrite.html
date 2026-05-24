@@ -77,9 +77,10 @@ var COLUMNS = [
 var currentData = null;
 
 function navigate(page) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .getPageHtml(TOKEN, page);
 }
 

@@ -58,7 +58,15 @@
   <div class="card">
     <h3>รายการวิชาทั้งหมด</h3>
     <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedSubjects()">เพิ่มวิชาเริ่มต้น 11 วิชา</button>
-    <p class="loading-msg" id="subjectsLoading">กำลังโหลด...</p>
+    <div class="loading-msg" id="subjectsLoading">
+      <div class="skeleton-table">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+      </div>
+    </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
@@ -81,9 +89,10 @@
 var TOKEN = '<?= data.token || '' ?>';
 
 function navigate(page) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .getPageHtml(TOKEN, page);
 }
 

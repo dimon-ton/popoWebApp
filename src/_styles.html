@@ -693,3 +693,39 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   .modal { padding: 20px; }
 }
 </style>
+<script>
+function showNavLoading() {
+  if (document.getElementById('navOverlay')) return;
+  var d = document.createElement('div');
+  d.id = 'navOverlay';
+  d.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:10000;display:flex;flex-direction:column;align-items:center;padding-top:80px;';
+  d.innerHTML = '<div style="width:260px;height:20px;background:#e2e5e9;border-radius:4px;animation:navPulse 1.5s ease-in-out infinite;margin-bottom:12px"></div>' +
+    '<div style="width:180px;height:20px;background:#e2e5e9;border-radius:4px;animation:navPulse 1.5s ease-in-out infinite;margin-bottom:24px"></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,140px);gap:10px">' +
+      '<div style="height:44px;background:#e2e5e9;border-radius:6px;animation:navPulse 1.5s ease-in-out infinite"></div>'.repeat(3) +
+      '<div style="height:44px;background:#e2e5e9;border-radius:6px;animation:navPulse 1.5s ease-in-out infinite"></div>'.repeat(3) +
+    '</div>';
+  document.body.appendChild(d);
+  if (!document.getElementById('navPulseStyle')) {
+    var s = document.createElement('style');
+    s.id = 'navPulseStyle';
+    s.textContent = '@keyframes navPulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}';
+    document.head.appendChild(s);
+  }
+}
+function hideNavLoading() {
+  var el = document.getElementById('navOverlay');
+  if (el) el.remove();
+}
+function btnLoading(btn, text) {
+  if (!btn) return;
+  btn.dataset.origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = text || 'กำลังบันทึก...';
+}
+function btnReset(btn) {
+  if (!btn) return;
+  btn.disabled = false;
+  btn.textContent = btn.dataset.origText || btn.textContent;
+}
+</script>

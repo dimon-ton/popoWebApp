@@ -48,9 +48,10 @@ var TOKEN = '<?= data.token ?>';
 var WEB_APP_URL = '<?= data.web_app_url || ScriptApp.getService().getUrl() ?>';
 
 function navigate(page) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
     .getPageHtml(TOKEN, page);
 }
 

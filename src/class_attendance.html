@@ -91,9 +91,10 @@ var STATUS_CLASS = { '/': 'status-slash', 'ล': 'status-la', 'ข': 'status-kho
 var pendingChanges = {};
 
 function navigate(page) {
+  showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
-    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .getPageHtml(TOKEN, page);
 }
 
