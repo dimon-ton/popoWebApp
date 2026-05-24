@@ -169,7 +169,7 @@ function renderGrid(data) {
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
   document.getElementById('pageHeading').textContent =
-    'การเข้าเรียน — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+    'การเข้าเรียน — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
   document.getElementById('weekLabel').textContent = 'สัปดาห์ที่ ' + data.week;
 
   var readonlyNotice = document.getElementById('readonlyNotice');

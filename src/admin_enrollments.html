@@ -279,7 +279,7 @@ function renderDetailPanel(teacher, enrollments) {
 
   // Build class & subject dropdowns from allData
   var classOptions = (allData.classes || []).map(function(c) {
-    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.level + '/' + c.section) + '</option>';
+    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(fmtCls(c.level, c.section)) + '</option>';
   }).join('');
   var subjectOptions = (allData.subjects || []).map(function(s) {
     return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(s.subject_name) + '</option>';
@@ -482,7 +482,7 @@ var bulkMode = 'A';
 function populateBulkDropdowns() {
   if (!allData) return;
   var classOptions = (allData.classes || []).map(function(c) {
-    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.level + '/' + c.section) + '</option>';
+    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(fmtCls(c.level, c.section)) + '</option>';
   }).join('');
   var subjectOptions = (allData.subjects || []).map(function(s) {
     return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(s.subject_name) + '</option>';

@@ -101,7 +101,7 @@ function serverAddClass(token, class_id, level, section, homeroom_teacher_user_i
   if (!level || !section) throw new Error('กรุณาระบุระดับชั้นและห้อง');
   var autoId = 'class_' + level.replace(/[\.\s]/g, '') + '_' + section.replace(/[\.\s]/g, '');
   var existing = dbFindOne('Classes', 'class_id', autoId);
-  if (existing) throw new Error('ชั้นเรียน ' + level + '/' + section + ' มีอยู่แล้ว');
+  if (existing) throw new Error('ชั้นเรียน ' + fmtClassLabel(level, section) + ' มีอยู่แล้ว');
   dbInsert('Classes', {
     class_id: autoId,
     level: level,

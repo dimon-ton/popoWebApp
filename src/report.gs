@@ -166,7 +166,7 @@ function serverExportReportPdf(token, class_id, subject_id) {
   rows.push(['รายงานผลการเรียน', '', '', '']);
   rows.push(['โรงเรียน', school.school_name || '-', 'ปีการศึกษา', school.academic_year || '-']);
   rows.push(['อำเภอ', school.district   || '-', 'จังหวัด',   school.province    || '-']);
-  rows.push(['ชั้น',  (cls.level || '') + '/' + (cls.section || ''), 'รหัสวิชา', subj.subject_code || '-']);
+  rows.push(['ชั้น',  fmtClassLabel(cls.level, cls.section), 'รหัสวิชา', subj.subject_code || '-']);
   rows.push(['เวลาเรียน (ชม./ปี)', subj.hours_per_year || '-', '', '']);
   rows.push(['ครูผู้สอน', d.teacher_name || '-', 'ครูประจำชั้น', d.homeroom_teacher_name || '-']);
   rows.push(['จำนวนนักเรียน', d.total_students, '', '']);

@@ -62,7 +62,7 @@ function getWorkloadData() {
         var sub = subjects[e.subject_id] || {};
         return {
           class_id: e.class_id,
-          class_label: (cls.level || '') + '/' + (cls.section || ''),
+          class_label: fmtClassLabel(cls.level, cls.section),
           subject_id: e.subject_id,
           subject_name: sub.subject_name || e.subject_id
         };
@@ -117,7 +117,7 @@ function clientGetTeacherOwnClasses(token) {
       var sub = subjects[e.subject_id] || {};
       return {
         class_id: e.class_id,
-        class_label: (cls.level || '') + '/' + (cls.section || ''),
+        class_label: fmtClassLabel(cls.level, cls.section),
         subject_id: e.subject_id,
         subject_name: sub.subject_name || e.subject_id,
         student_count: studentsPerClass[e.class_id] || 0

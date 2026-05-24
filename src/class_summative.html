@@ -147,7 +147,7 @@ function renderGrid(data) {
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
   document.getElementById('pageHeading').textContent =
-    'คะแนนผลการเรียน — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+    'คะแนนผลการเรียน — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
 
   var readonlyNotice = document.getElementById('readonlyNotice');
   var saveBar = document.getElementById('saveBar');

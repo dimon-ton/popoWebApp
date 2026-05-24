@@ -44,7 +44,7 @@ function getTeacherEnrollments(teacherUserId) {
     return {
       enrollment_id: e.enrollment_id,
       class_id: e.class_id,
-      class_label: (cls.level || '') + '/' + (cls.section || ''),
+      class_label: fmtClassLabel(cls.level, cls.section),
       subject_id: e.subject_id,
       subject_name: sub.subject_name || e.subject_id
     };
@@ -192,7 +192,7 @@ function getAllPairsMatrix() {
       var teacherName = teacherId && users[teacherId] ? users[teacherId].full_name : 'ยังไม่ได้กำหนด';
       rows.push({
         class_id: cls.class_id,
-        class_label: cls.level + '/' + cls.section,
+        class_label: fmtClassLabel(cls.level, cls.section),
         subject_id: sub.subject_id,
         subject_name: sub.subject_name,
         teacher_user_id: teacherId || '',

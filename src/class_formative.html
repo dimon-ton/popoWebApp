@@ -132,7 +132,7 @@ function renderGrid(data) {
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
   document.getElementById('pageHeading').textContent =
-    'คะแนนตัวชี้วัด — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+    'คะแนนตัวชี้วัด — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
 
   var readonlyNotice = document.getElementById('readonlyNotice');
   var saveBar = document.getElementById('saveBar');

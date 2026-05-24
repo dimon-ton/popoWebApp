@@ -153,7 +153,7 @@ function loadStudents() {
       CAN_EDIT = result.can_edit === true;
       var info = result.class_info || {};
       document.getElementById('pageHeading').textContent =
-        'ทะเบียนนักเรียน — ' + escHtml(info.level || '') + '/' + escHtml(info.section || '') +
+        'ทะเบียนนักเรียน — ' + escHtml(fmtCls(info.level, info.section)) +
         ' (' + escHtml(CLASS_ID) + ')';
       document.getElementById('tableHeading').textContent =
         'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';

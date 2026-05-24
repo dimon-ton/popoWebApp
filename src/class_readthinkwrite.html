@@ -155,7 +155,7 @@ function renderGrid(data) {
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
   document.getElementById('pageHeading').textContent =
-    'อ่าน คิดวิเคราะห์ และเขียน — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+    'อ่าน คิดวิเคราะห์ และเขียน — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
 
   var readonlyNotice = document.getElementById('readonlyNotice');
   var saveBar = document.getElementById('saveBar');

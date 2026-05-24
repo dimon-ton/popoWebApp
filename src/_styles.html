@@ -726,6 +726,10 @@ function btnLoading(btn, text) {
   btn.disabled = true;
   btn.textContent = text || 'กำลังบันทึก...';
 }
+function fmtCls(level, section) {
+  if (!section || section === '1') return level || '';
+  return (level || '') + '/' + section;
+}
 function btnReset(btn) {
   if (!btn) return;
   btn.disabled = false;

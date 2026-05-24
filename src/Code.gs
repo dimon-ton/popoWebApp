@@ -197,6 +197,11 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+function fmtClassLabel(level, section) {
+  if (!section || section === '1') return level || '';
+  return (level || '') + '/' + section;
+}
+
 function getDashboardHtml(token) {
   var session = getSession(token);
   if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();

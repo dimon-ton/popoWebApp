@@ -216,7 +216,7 @@ function renderReport(d) {
   var school = d.school_info || {};
 
   document.getElementById('pageHeading').textContent =
-    'รายงานผลการเรียน (ปก) — ' + (cls.level || '') + '/' + (cls.section || '') + ' — ' + (subj.subject_name || '');
+    'รายงานผลการเรียน (ปก) — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
 
   // Info grid
   var info = [
@@ -224,7 +224,7 @@ function renderReport(d) {
     { label: 'อำเภอ', value: school.district || '-' },
     { label: 'จังหวัด', value: school.province || '-' },
     { label: 'ปีการศึกษา', value: school.academic_year || '-' },
-    { label: 'ชั้น', value: (cls.level || '') + '/' + (cls.section || '') },
+    { label: 'ชั้น', value: fmtCls(cls.level, cls.section) },
     { label: 'รหัสวิชา', value: subj.subject_code || '-' },
     { label: 'เวลาเรียน (ชม./ปี)', value: subj.hours_per_year || '-' },
     { label: 'ครูผู้สอน', value: d.teacher_name || '-' },
