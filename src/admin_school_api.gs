@@ -98,16 +98,17 @@ function getClassesList(token) {
 function serverAddClass(token, class_id, level, section, homeroom_teacher_user_id) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  if (!class_id) throw new Error('class_id is required');
-  var existing = dbFindOne('Classes', 'class_id', class_id);
-  if (existing) throw new Error('class_id นี้มีอยู่แล้ว');
+  if (!level || !section) throw new Error('กรุณาระบุระดับชั้นและห้อง');
+  var autoId = 'class_' + level.replace(/[\.\s]/g, '') + '_' + section.replace(/[\.\s]/g, '');
+  var existing = dbFindOne('Classes', 'class_id', autoId);
+  if (existing) throw new Error('ชั้นเรียน ' + level + '/' + section + ' มีอยู่แล้ว');
   dbInsert('Classes', {
-    class_id: class_id,
-    level: level || '',
-    section: section || '',
+    class_id: autoId,
+    level: level,
+    section: section,
     homeroom_teacher_user_id: homeroom_teacher_user_id || ''
   });
-  return { ok: true, class_id: class_id };
+  return { ok: true, class_id: autoId };
 }
 
 function serverUpdateClass(token, class_id, level, section, homeroom_teacher_user_id) {

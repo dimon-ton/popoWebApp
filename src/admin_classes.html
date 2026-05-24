@@ -27,10 +27,6 @@
     <h3>เพิ่มชั้นเรียนใหม่</h3>
     <div class="form-row">
       <div class="form-group">
-        <label>รหัสชั้น (class_id)</label>
-        <input type="text" id="newClassId" placeholder="เช่น class_p1_1">
-      </div>
-      <div class="form-group">
         <label>ระดับชั้น</label>
         <select id="newLevel">
           <option value="ป.1">ป.1</option>
@@ -176,12 +172,11 @@ function renderClasses(classes) {
 }
 
 function addClass() {
-  var class_id = document.getElementById('newClassId').value.trim();
   var level = document.getElementById('newLevel').value;
   var section = document.getElementById('newSection').value.trim();
   var homeroom = document.getElementById('newHomeroomTeacher').value;
 
-  if (!class_id) { showToast('กรุณากรอกรหัสชั้น', 'error'); return; }
+  if (!level || !section) { showToast('กรุณาระบุระดับชั้นและห้อง', 'error'); return; }
 
   var btn = document.getElementById('addClassBtn');
   btn.disabled = true;
@@ -190,8 +185,7 @@ function addClass() {
     .withSuccessHandler(function(result) {
       btn.disabled = false;
       if (result && result.error) { showToast(result.error, 'error'); return; }
-      showToast('เพิ่มชั้นเรียนสำเร็จ', 'success');
-      document.getElementById('newClassId').value = '';
+      showToast('เพิ่มชั้นเรียนสำเร็จ (' + result.class_id + ')', 'success');
       document.getElementById('newSection').value = '';
       document.getElementById('classesLoading').style.display = 'block';
       document.getElementById('classesTable').style.display = 'none';
@@ -201,7 +195,7 @@ function addClass() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddClass(TOKEN, class_id, level, section, homeroom);
+    .serverAddClass(TOKEN, '', level, section, homeroom);
 }
 
 function deleteClass(class_id) {
