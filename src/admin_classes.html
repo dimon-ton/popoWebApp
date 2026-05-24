@@ -28,14 +28,18 @@
     <div class="form-row">
       <div class="form-group">
         <label>ระดับชั้น</label>
-        <select id="newLevel">
-          <option value="ป.1">ป.1</option>
-          <option value="ป.2">ป.2</option>
-          <option value="ป.3">ป.3</option>
-          <option value="ป.4">ป.4</option>
-          <option value="ป.5">ป.5</option>
-          <option value="ป.6">ป.6</option>
-        </select>
+        <input type="text" id="newLevel" list="levelOptions" placeholder="เลือกหรือพิมพ์ระดับชั้น">
+        <datalist id="levelOptions">
+          <option value="ป.1">
+          <option value="ป.2">
+          <option value="ป.3">
+          <option value="ป.4">
+          <option value="ป.5">
+          <option value="ป.6">
+          <option value="ม.1">
+          <option value="ม.2">
+          <option value="ม.3">
+        </datalist>
       </div>
       <div class="form-group">
         <label>ห้อง</label>
