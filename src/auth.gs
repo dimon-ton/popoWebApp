@@ -10,7 +10,7 @@ function handleLogin(e) {
   if (!username || !password) {
     var tmpl = HtmlService.createTemplateFromFile('login');
     tmpl.data = { error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' };
-    return tmpl.evaluate().setTitle('PopoWebApp');
+    return tmpl.evaluate().setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL);
   }
 
   var users = dbGetAll('Users');
@@ -44,7 +44,7 @@ function handleLogin(e) {
 
   var tmpl = HtmlService.createTemplateFromFile('dashboard');
   tmpl.data = { session: JSON.parse(sessionData), token: token };
-  return tmpl.evaluate().setTitle('PopoWebApp');
+  return tmpl.evaluate().setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL);
 }
 
 function getSession(token) {
@@ -88,7 +88,7 @@ function generateToken() {
 function loginError(msg) {
   var tmpl = HtmlService.createTemplateFromFile('login');
   tmpl.data = { error: msg };
-  return tmpl.evaluate().setTitle('PopoWebApp');
+  return tmpl.evaluate().setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL);
 }
 
 function serverLogout(token) {

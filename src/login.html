@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เข้าสู่ระบบ — PopoWebApp</title>
+  <title>ระบบจัดการ ปพ.5 ออนไลน์ — โรงเรียนบ้านโพนแท่น</title>
   <?!= include('_styles') ?>
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .login-card { background: white; border-radius: 10px; padding: 40px 36px; width: 340px; box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
+    .login-card { background: white; border-radius: 10px; padding: 40px 36px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
     .login-logo { font-size: 24px; color: var(--brand); margin-bottom: 6px; text-align: center; font-weight: 700; }
     .login-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
     .form-group input { width: 100%; padding: 10px 12px; }
-    .login-btn { width: 100%; padding: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; font-weight: 600; transition: background 0.15s; }
+    .login-btn { width: 100%; padding: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; font-weight: 600; display: flex; justify-content: center; text-align: center; transition: background 0.15s; }
     .login-btn:hover { background: var(--brand-dark); }
     .login-btn:disabled { background: #93b8d8; cursor: not-allowed; }
     .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 16px; display: none; border-left: 3px solid var(--red); }
@@ -30,8 +30,11 @@
     <div class="skeleton-block" style="width:40%;margin:0 auto"></div>
   </div>
   <div class="login-card" id="loginCard">
-    <h1 class="login-logo">PopoWebApp</h1>
-    <p class="login-subtitle">ระบบสมุดเกรดโรงเรียน</p>
+    <h1 class="login-logo">ระบบจัดการ ปพ.5 ออนไลน์</h1>
+    <p class="login-subtitle">
+      โรงเรียนบ้านโพนแท่น<br>
+      สำนักงานเขตพื้นที่การศึกษาประถมศึกษาร้อยเอ็ดเขต 2
+    </p>
     <div class="error" id="errBox">
       <? if (data.error) { ?><?= data.error ?><? } ?>
     </div>

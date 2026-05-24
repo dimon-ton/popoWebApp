@@ -1,6 +1,9 @@
 // Entry point for the Apps Script web app
 // Handles routing based on `page` parameter and auth checks
 
+var APP_TITLE = 'ระบบจัดการ ปพ.5 ออนไลน์ — โรงเรียนบ้านโพนแท่น';
+var APP_FAVICON_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/new-circular-logo.png';
+
 function doGet(e) {
   try {
     var params = e ? e.parameter : {};
@@ -131,7 +134,7 @@ function doGet(e) {
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
       '<b>เกิดข้อผิดพลาด (GET):</b> ' + err.message + '</div>'
-    ).setTitle('PopoWebApp').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    ).setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
 
@@ -180,7 +183,7 @@ function doPost(e) {
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
       '<b>เกิดข้อผิดพลาด:</b> ' + err.message + '</div>'
-    ).setTitle('PopoWebApp').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    ).setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
 
@@ -188,7 +191,8 @@ function buildPage(pageName, data) {
   var template = HtmlService.createTemplateFromFile(pageName);
   template.data = data || {};
   return template.evaluate()
-    .setTitle('PopoWebApp')
+    .setTitle(APP_TITLE)
+    .setFaviconUrl(APP_FAVICON_URL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
