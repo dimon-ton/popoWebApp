@@ -75,6 +75,28 @@
   </div>
 </div>
 
+<!-- Edit user modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>แก้ไขผู้ใช้ — <span id="editTargetUsername"></span></h3>
+    <div class="form-group">
+      <label>ชื่อ-สกุล</label>
+      <input type="text" id="editFullName" placeholder="ชื่อ-สกุล">
+    </div>
+    <div class="form-group">
+      <label>บทบาท</label>
+      <select id="editRole">
+        <option value="teacher">ครู</option>
+        <option value="admin">ผู้ดูแลระบบ</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="confirmEditBtn" onclick="confirmEdit()">บันทึก</button>
+      <button class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reset password modal -->
 <div class="modal-overlay" id="resetModal">
   <div class="modal">
@@ -95,6 +117,7 @@
 <script>
 var TOKEN = '<?= data.token || '' ?>';
 var resetUserId = null;
+var editUserId = null;
 
 function navigate(page) {
   google.script.run
@@ -153,7 +176,8 @@ function renderUsers(users) {
       '<td>' + escHtml(u.username) + '</td>' +
       '<td>' + escHtml(u.full_name) + '</td>' +
       '<td><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
-      '<td><button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button></td>';
+      '<td><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button> ' +
+      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button></td>';
     tbody.appendChild(tr);
   });
   document.getElementById('usersTable').style.display = 'table';
@@ -228,6 +252,45 @@ function confirmReset() {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverResetPassword(resetUserId, newPwd);
+}
+
+function openEditModal(userId, username, fullName, role) {
+  editUserId = userId;
+  document.getElementById('editTargetUsername').textContent = username;
+  document.getElementById('editFullName').value = fullName;
+  document.getElementById('editRole').value = role;
+  document.getElementById('editModal').classList.add('open');
+  document.getElementById('confirmEditBtn').disabled = false;
+}
+
+function closeEditModal() {
+  editUserId = null;
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function confirmEdit() {
+  var fullName = document.getElementById('editFullName').value.trim();
+  var role = document.getElementById('editRole').value;
+  if (!fullName) { showToast('กรุณากรอกชื่อ-สกุล', 'error'); return; }
+
+  var btn = document.getElementById('confirmEditBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result.error) { showToast(result.error, 'error'); return; }
+      showToast('แก้ไขข้อมูลผู้ใช้สำเร็จ', 'success');
+      closeEditModal();
+      document.getElementById('usersLoading').style.display = 'block';
+      document.getElementById('usersTable').style.display = 'none';
+      loadUsers();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverEditUser(editUserId, fullName, role);
 }
 
 // Load users on page open

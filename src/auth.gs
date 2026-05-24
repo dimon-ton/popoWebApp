@@ -163,6 +163,27 @@ function serverResetPassword(user_id, new_password) {
   return { ok: true };
 }
 
+function serverEditUser(user_id, full_name, role) {
+  full_name = (full_name || '').trim();
+  role = (role || '').trim();
+
+  if (!user_id || !full_name) {
+    return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
+  }
+  if (role !== 'teacher' && role !== 'admin') {
+    return { error: 'บทบาทไม่ถูกต้อง' };
+  }
+
+  var user = dbFindOne('Users', 'user_id', user_id);
+  if (!user) return { error: 'ไม่พบผู้ใช้' };
+
+  var updated = dbUpdate('Users', 'user_id', user_id, { full_name: full_name, role: role });
+  if (!updated) return { error: 'ไม่สามารถแก้ไขข้อมูลได้' };
+
+  appendAuditLog(user_id, 'Users', user_id, { full_name: user.full_name, role: user.role }, { full_name: full_name, role: role });
+  return { ok: true };
+}
+
 function getUsersListForPage(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') return { error: 'Forbidden' };
