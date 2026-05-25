@@ -127,6 +127,8 @@ function doGet(e) {
         });
       case 'dashboard':
         return buildPage('dashboard', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl() });
+      case 'profile_edit':
+        return buildPage('profile_edit', { session: session, token: token });
       default:
         return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
     }

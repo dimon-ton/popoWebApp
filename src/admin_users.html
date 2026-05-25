@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -12,9 +12,15 @@
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_enrollments')">จัดการผู้สอน</a>
   <div class="navbar-user">
-    <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" onclick="uploadAvatar()" title="เปลี่ยนรูปภาพ"><? } else { ?><div class="navbar-avatar-placeholder" onclick="uploadAvatar()" title="เพิ่มรูปภาพ"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
-    <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-    <button id="logoutBtn" class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+  <div class="navbar-user-trigger">
+          <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" ><? } else { ?><div class="navbar-avatar-placeholder" ><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
+          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
+        </div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
   </div>
 </div>
 
@@ -29,7 +35,7 @@
         <label>ชื่อผู้ใช้ (username)</label>
         <input type="text" id="newUsername" placeholder="username">
       </div>
-      <div class="form-group" style="min-width:100px">
+      <div class="form-group" style="min-width:110px">
         <label>คำนำหน้า</label>
         <input type="text" id="newPrefix" list="prefixList" placeholder="คำนำหน้า">
         <datalist id="prefixList">
@@ -96,7 +102,7 @@
   <div class="modal">
     <h3>แก้ไขผู้ใช้ — <span id="editTargetUsername"></span></h3>
     <div class="form-row">
-      <div class="form-group" style="min-width:100px">
+      <div class="form-group" style="min-width:110px">
         <label>คำนำหน้า</label>
         <input type="text" id="editPrefix" list="editPrefixList" placeholder="คำนำหน้า">
         <datalist id="editPrefixList">
@@ -211,7 +217,8 @@ function renderUsers(users) {
       '<td>' + escHtml(u.full_name) + '</td>' +
       '<td><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
       '<td><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button> ' +
-      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button></td>';
+      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button> ' +
+      '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">ลบ</button></td>';
     tbody.appendChild(tr);
   });
   document.getElementById('usersTable').style.display = 'table';
@@ -226,7 +233,7 @@ function addUser() {
   var prefix = document.getElementById('newPrefix').value.trim();
   var firstName = document.getElementById('newFirstName').value.trim();
   var lastName = document.getElementById('newLastName').value.trim();
-  var full_name = (prefix + ' ' + firstName + ' ' + lastName).trim().replace(/\s+/g, ' ');
+  var full_name = ((prefix ? prefix : '') + firstName + ' ' + lastName).trim();
   var role = document.getElementById('newRole').value;
   var password = document.getElementById('newPassword').value;
 
@@ -298,13 +305,21 @@ function openEditModal(userId, username, fullName, role) {
   document.getElementById('editTargetUsername').textContent = username;
   document.getElementById('editRole').value = role;
   var knownPrefixes = ['เด็กชาย','เด็กหญิง','นาย','นาง','นางสาว'];
-  var parts = fullName.split(' ');
   var prefix = '', firstName = '', lastName = '';
-  if (knownPrefixes.indexOf(parts[0]) !== -1) {
-    prefix = parts[0];
-    firstName = parts[1] || '';
-    lastName = parts.slice(2).join(' ');
-  } else {
+  var found = false;
+  for (var i = 0; i < knownPrefixes.length; i++) {
+    if (fullName.indexOf(knownPrefixes[i]) === 0) {
+      prefix = knownPrefixes[i];
+      var rest = fullName.substring(knownPrefixes[i].length);
+      var parts = rest.trim().split(/\s+/);
+      firstName = parts[0] || '';
+      lastName = parts.slice(1).join(' ');
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    var parts = fullName.trim().split(/\s+/);
     firstName = parts[0] || '';
     lastName = parts.slice(1).join(' ');
   }
@@ -324,7 +339,7 @@ function confirmEdit() {
   var prefix = document.getElementById('editPrefix').value.trim();
   var firstName = document.getElementById('editFirstName').value.trim();
   var lastName = document.getElementById('editLastName').value.trim();
-  var fullName = (prefix + ' ' + firstName + ' ' + lastName).trim().replace(/\s+/g, ' ');
+  var fullName = ((prefix ? prefix : '') + firstName + ' ' + lastName).trim();
   var role = document.getElementById('editRole').value;
   if (!firstName || !lastName) { showToast('กรุณากรอกชื่อและนามสกุล', 'error'); return; }
 
@@ -346,6 +361,22 @@ function confirmEdit() {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverEditUser(editUserId, fullName, role);
+}
+
+function deleteUser(userId, fullName) {
+  if (!confirm('ยืนยันการลบผู้ใช้ "' + fullName + '"?')) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('ลบผู้ใช้สำเร็จ', 'success');
+      document.getElementById('usersLoading').style.display = 'block';
+      document.getElementById('usersTable').style.display = 'none';
+      loadUsers();
+    })
+    .withFailureHandler(function(err) {
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverDeleteUser(TOKEN, userId);
 }
 
 // Load users on page open

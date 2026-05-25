@@ -1,12 +1,12 @@
 {
   "version": 1,
   "sessionId": "a07cdb63-5389-455e-93f9-185e65db44cc",
-  "status": "running",
+  "status": "interrupted",
   "startedAt": "2026-05-19T11:55:20.368Z",
-  "updatedAt": "2026-05-22T10:25:47.914Z",
-  "currentIteration": 6,
+  "updatedAt": "2026-05-22T11:47:52.835Z",
+  "currentIteration": 7,
   "maxIterations": 0,
-  "tasksCompleted": 21,
+  "tasksCompleted": 22,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -143,8 +143,8 @@
       {
         "id": "US-022",
         "title": "Playwright seed/cleanup helper",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       }
     ]
   },
@@ -758,6 +758,16 @@
       "durationMs": 58063,
       "startedAt": "2026-05-22T10:23:42.261Z",
       "endedAt": "2026-05-22T10:24:40.324Z"
+    },
+    {
+      "iteration": 7,
+      "status": "completed",
+      "taskId": "US-022",
+      "taskTitle": "Playwright seed/cleanup helper",
+      "taskCompleted": true,
+      "durationMs": 66322,
+      "startedAt": "2026-05-22T10:24:41.589Z",
+      "endedAt": "2026-05-22T10:25:47.911Z"
     }
   ],
   "skippedTaskIds": [],

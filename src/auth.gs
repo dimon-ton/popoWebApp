@@ -208,6 +208,29 @@ function serverEditUser(user_id, full_name, role) {
   return { ok: true };
 }
 
+function serverEditProfile(token, full_name) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+
+  full_name = (full_name || '').trim();
+  if (!full_name) return { error: 'กรุณากรอกชื่อ' };
+
+  var user = dbFindOne('Users', 'user_id', session.user_id);
+  if (!user) return { error: 'ไม่พบผู้ใช้' };
+
+  var before = { full_name: user.full_name };
+  var after = { full_name: full_name };
+
+  dbUpdate('Users', 'user_id', session.user_id, { full_name: full_name });
+  appendAuditLog(session.user_id, 'Users', session.user_id, before, after);
+
+  var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
+  cached.full_name = full_name;
+  CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS);
+
+  return { ok: true };
+}
+
 function getUsersListForPage(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') return { error: 'Forbidden' };
@@ -299,10 +322,30 @@ function serverUploadAvatar(token, base64Data) {
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     if (!base64Data || base64Data.length > 500000) return { error: 'ไฟล์รูปภาพใหญ่เกินไป' };
-    dbUpdate('Users', 'user_id', session.user_id, { avatar: base64Data });
-    session.avatar = base64Data;
-    CacheService.getScriptCache().put('session_' + token, JSON.stringify(session), SESSION_TTL_SECONDS);
-    return { ok: true };
+
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (user && user.avatar && user.avatar.indexOf('drive.google') !== -1) {
+      try {
+        var oldId = user.avatar.match(/id=([a-zA-Z0-9_-]+)/);
+        if (oldId && oldId[1]) DriveApp.getFileById(oldId[1]).setTrashed(true);
+      } catch (e) {}
+    }
+
+    var mimeMatch = base64Data.match(/^data:(image\/\w+);base64,/);
+    var mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+    var raw = Utilities.base64Decode(base64Data.split(',')[1] || base64Data);
+    var blob = Utilities.newBlob(raw, mimeType, session.user_id + '_avatar.png');
+    var file = DriveApp.createFile(blob);
+    file.setName(session.user_id + '_avatar.png');
+    file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+    var avatarUrl = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w200';
+
+    dbUpdate('Users', 'user_id', session.user_id, { avatar: avatarUrl });
+
+    var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
+    if (cached) { cached.avatar = avatarUrl; CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
+
+    return { ok: true, avatarUrl: avatarUrl };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
   }
@@ -313,9 +356,20 @@ function serverRemoveAvatar(token) {
     ensureUserAuthColumns();
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+
+    var user = dbFindOne('Users', 'user_id', session.user_id);
+    if (user && user.avatar && user.avatar.indexOf('drive.google') !== -1) {
+      try {
+        var oldId = user.avatar.match(/id=([a-zA-Z0-9_-]+)/);
+        if (oldId && oldId[1]) DriveApp.getFileById(oldId[1]).setTrashed(true);
+      } catch (e) {}
+    }
+
     dbUpdate('Users', 'user_id', session.user_id, { avatar: '' });
-    session.avatar = '';
-    CacheService.getScriptCache().put('session_' + token, JSON.stringify(session), SESSION_TTL_SECONDS);
+
+    var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
+    if (cached) { cached.avatar = ''; CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
+
     return { ok: true };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
@@ -339,4 +393,18 @@ function serverGetCurrentUserProfile(token) {
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };
   }
+}
+
+function serverDeleteUser(token, user_id) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (session.role !== 'admin') throw new Error('ต้องเป็นผู้ดูแลระบบเท่านั้น');
+
+  var user = dbFindOne('Users', 'user_id', user_id);
+  if (!user) throw new Error('ไม่พบผู้ใช้');
+  if (user.user_id === session.user_id) throw new Error('ไม่สามารถลบตัวเองได้');
+
+  appendAuditLog(session.user_id, 'Users', user_id, user, null);
+  dbDelete('Users', 'user_id', user_id);
+  return { ok: true };
 }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แก้ไขโปรไฟล์ — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title">PopoWebApp</span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <div class="navbar-user">
+  <div class="navbar-user-trigger">
+      <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" ><? } else { ?><div class="navbar-avatar-placeholder" ><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
+      <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
+    </div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+  </div>
+</div>
+
+<div class="container narrow">
+  <h2 class="page-title">แก้ไขโปรไฟล์</h2>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+      <div id="profileAvatarWrap">
+        <? if (data.session && data.session.avatar) { ?>
+        <img id="profileAvatar" src="<?= data.session.avatar ?>" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
+        <? } else { ?>
+        <div id="profileAvatarPlaceholder" style="width:64px;height:64px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:var(--brand)"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
+        <? } ?>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:15px"><?= data.session ? data.session.full_name : '' ?></div>
+        <div style="color:var(--text-muted);font-size:13px">@<?= data.session ? data.session.username : '' ?></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="min-width:110px">
+        <label>คำนำหน้า</label>
+        <input type="text" id="editPrefix" list="prefixList" placeholder="คำนำหน้า">
+        <datalist id="prefixList">
+          <option value="เด็กชาย">
+          <option value="เด็กหญิง">
+          <option value="นาย">
+          <option value="นาง">
+          <option value="นางสาว">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>ชื่อ</label>
+        <input type="text" id="editFirstName" placeholder="ชื่อ">
+      </div>
+      <div class="form-group">
+        <label>นามสกุล</label>
+        <input type="text" id="editLastName" placeholder="นามสกุล">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>บทบาท</label>
+      <input type="text" id="editRoleDisplay" disabled style="background:#f5f5f5">
+    </div>
+    <div class="form-group">
+      <label>รูปภาพ</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <label class="btn-secondary" style="cursor:pointer;margin:0;position:relative;overflow:hidden">
+          เลือกรูป
+          <input type="file" accept="image/*" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onchange="onAvatarSelect(this)">
+        </label>
+        <span id="avatarFileName" style="font-size:12px;color:var(--text-muted)">ยังไม่ได้เลือก</span>
+        <button type="button" class="btn-secondary" id="removeAvatarBtn" style="display:none;color:var(--red)" onclick="removeAvatar()">ลบรูป</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="saveBtn" onclick="saveProfile()">บันทึก</button>
+      <button class="btn-secondary" onclick="navigate('dashboard')">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token ?>';
+var SESSION = {
+  user_id: '<?= data.session ? data.session.user_id : "" ?>',
+  full_name: '<?= data.session ? data.session.full_name : "" ?>',
+  role: '<?= data.session ? data.session.role : "" ?>',
+  avatar: ''
+};
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || 'success');
+  setTimeout(function() { t.className = 'toast'; }, 3000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+(function init() {
+  var knownPrefixes = ['เด็กชาย','เด็กหญิง','นาย','นาง','นางสาว'];
+  var fullName = SESSION.full_name;
+  var prefix = '', firstName = '', lastName = '';
+  var found = false;
+  for (var i = 0; i < knownPrefixes.length; i++) {
+    if (fullName.indexOf(knownPrefixes[i]) === 0) {
+      prefix = knownPrefixes[i];
+      var rest = fullName.substring(knownPrefixes[i].length);
+      var parts = rest.trim().split(/\s+/);
+      firstName = parts[0] || '';
+      lastName = parts.slice(1).join(' ');
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    var parts = fullName.trim().split(/\s+/);
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ');
+  }
+  document.getElementById('editPrefix').value = prefix;
+  document.getElementById('editFirstName').value = firstName;
+  document.getElementById('editLastName').value = lastName;
+  document.getElementById('editRoleDisplay').value = SESSION.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู';
+
+  if (SESSION.avatar) {
+    document.getElementById('removeAvatarBtn').style.display = 'inline-block';
+  }
+})();
+
+function onAvatarSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  if (file.size > 350000) {
+    showToast('ไฟล์ใหญ่เกินไป (สูงสุด 350KB)', 'error');
+    input.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var b64 = ev.target.result;
+    document.getElementById('avatarFileName').textContent = 'กำลังอัพโหลด...';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.error) { showToast(result.error, 'error'); document.getElementById('avatarFileName').textContent = 'ยังไม่ได้เลือก'; return; }
+        var url = result.avatarUrl;
+        SESSION.avatar = url;
+        document.getElementById('avatarFileName').textContent = file.name;
+        document.getElementById('removeAvatarBtn').style.display = 'inline-block';
+        var img = document.getElementById('profileAvatar');
+        if (img) { img.src = url; }
+        else {
+          var ph = document.getElementById('profileAvatarPlaceholder');
+          if (ph) {
+            var newImg = document.createElement('img');
+            newImg.id = 'profileAvatar';
+            newImg.src = url;
+            newImg.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+            ph.parentNode.replaceChild(newImg, ph);
+          }
+        }
+        showToast('อัพโหลดรูปภาพสำเร็จ', 'success');
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('avatarFileName').textContent = 'ยังไม่ได้เลือก';
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      })
+      .serverUploadAvatar(TOKEN, b64);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAvatar() {
+  document.getElementById('avatarFileName').textContent = 'ยังไม่ได้เลือก';
+  document.getElementById('removeAvatarBtn').style.display = 'none';
+  var img = document.getElementById('profileAvatar');
+  if (img) {
+    var ph = document.createElement('div');
+    ph.id = 'profileAvatarPlaceholder';
+    ph.style.cssText = 'width:64px;height:64px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:var(--brand)';
+    ph.textContent = SESSION.full_name.charAt(0);
+    img.parentNode.replaceChild(ph, img);
+  }
+  google.script.run
+    .withSuccessHandler(function() {})
+    .withFailureHandler(function() {})
+    .serverRemoveAvatar(TOKEN);
+}
+
+function saveProfile() {
+  var prefix = document.getElementById('editPrefix').value.trim();
+  var firstName = document.getElementById('editFirstName').value.trim();
+  var lastName = document.getElementById('editLastName').value.trim();
+  var full_name = ((prefix ? prefix : '') + firstName + ' ' + lastName).trim();
+
+  if (!firstName || !lastName) { showToast('กรุณากรอกชื่อและนามสกุล', 'error'); return; }
+
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกสำเร็จ', 'success');
+      setTimeout(function() { navigate('dashboard'); }, 800);
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverEditProfile(TOKEN, full_name);
+}
+
+function navigate(page, params) {
+  if (typeof showNavLoading === 'function') showNavLoading();
+  var qs = '?page=' + page + '&token=' + encodeURIComponent(TOKEN);
+  if (params) { for (var k in params) { qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
+  google.script.run
+    .withSuccessHandler(function(html) {
+      document.open(); document.write(html); document.close();
+      if (typeof hideNavLoading === 'function') hideNavLoading();
+    })
+    .withFailureHandler(function(err) {
+      if (typeof hideNavLoading === 'function') hideNavLoading();
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getPageHtmlWithParams(page, TOKEN, params || {});
+}
+
+function doLogout() {
+  localStorage.removeItem('popo_token');
+  window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+}
+</script>
+</body>
+</html>
