@@ -112,6 +112,7 @@ body {
   font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8);
   flex-shrink: 0;
 }
+.avatar-data, .avd { display: none; }
 
 .navbar-dropdown {
   display: none;
@@ -842,4 +843,26 @@ function initNavbarDropdown() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarDropdown);
 else initNavbarDropdown();
+
+function initNavbarAvatar() {
+  if (typeof google === 'undefined' || !google.script) return;
+  var el = document.querySelector('.navbar-avatar-placeholder');
+  if (!el) return;
+  if (typeof TOKEN === 'undefined' || !TOKEN) return;
+  google.script.run
+    .withSuccessHandler(function(profile) {
+      if (!profile || profile.error || !profile.avatar) return;
+      var ph = document.querySelector('.navbar-avatar-placeholder');
+      if (!ph) return;
+      var img = new Image();
+      img.className = 'navbar-avatar';
+      img.onload = function() { ph.parentNode.replaceChild(img, ph); };
+      img.onerror = function() {};
+      img.src = profile.avatar;
+    })
+    .withFailureHandler(function() {})
+    .serverGetCurrentUserProfile(TOKEN);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarAvatar);
+else initNavbarAvatar();
 </script>

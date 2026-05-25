@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <div class="navbar-user">
   <div class="navbar-user-trigger">
-      <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" ><? } else { ?><div class="navbar-avatar-placeholder" ><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
+      <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
       <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
     </div>
   <div class="navbar-dropdown">
@@ -28,11 +28,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
       <div id="profileAvatarWrap">
-        <? if (data.session && data.session.avatar) { ?>
-        <img id="profileAvatar" src="<?= data.session.avatar ?>" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
-        <? } else { ?>
         <div id="profileAvatarPlaceholder" style="width:64px;height:64px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:var(--brand)"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-        <? } ?>
       </div>
       <div>
         <div style="font-weight:600;font-size:15px"><?= data.session ? data.session.full_name : '' ?></div>
@@ -91,8 +87,22 @@ var SESSION = {
   user_id: '<?= data.session ? data.session.user_id : "" ?>',
   full_name: '<?= data.session ? data.session.full_name : "" ?>',
   role: '<?= data.session ? data.session.role : "" ?>',
-  avatar: ''
+  avatar: '<?= data.session && data.session.avatar ? data.session.avatar : "" ?>'
 };
+
+function initProfileAvatar() {
+  var ph = document.getElementById('profileAvatarPlaceholder');
+  if (!ph) return;
+  var url = SESSION.avatar;
+  if (!url) return;
+  var img = new Image();
+  img.id = 'profileAvatar';
+  img.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+  img.onload = function() { ph.parentNode.replaceChild(img, ph); };
+  img.src = url;
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initProfileAvatar);
+else initProfileAvatar();
 
 function showToast(msg, type) {
   var t = document.getElementById('toast');

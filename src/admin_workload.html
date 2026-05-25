@@ -17,7 +17,7 @@
   <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
     <div class="navbar-user">
   <div class="navbar-user-trigger">
-            <? if (data.session && data.session.avatar) { ?><img class="navbar-avatar" src="<?= data.session.avatar ?>" ><? } else { ?><div class="navbar-avatar-placeholder" ><?= data.session ? data.session.full_name.charAt(0) : '' ?></div><? } ?>
+            <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
             <span><?= data.session ? data.session.full_name : '' ?> (admin)</span>
         </div>
   <div class="navbar-dropdown">

@@ -338,7 +338,7 @@ function serverUploadAvatar(token, base64Data) {
     var file = DriveApp.createFile(blob);
     file.setName(session.user_id + '_avatar.png');
     file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-    var avatarUrl = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w200';
+    var avatarUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
 
     dbUpdate('Users', 'user_id', session.user_id, { avatar: avatarUrl });
 
