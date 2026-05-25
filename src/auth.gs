@@ -224,9 +224,9 @@ function serverEditProfile(token, full_name) {
   dbUpdate('Users', 'user_id', session.user_id, { full_name: full_name });
   appendAuditLog(session.user_id, 'Users', session.user_id, before, after);
 
-  var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
+  var cached = JSON.parse(CacheService.getScriptCache().get('session_' + token));
   cached.full_name = full_name;
-  CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS);
+  CacheService.getScriptCache().put('session_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS);
 
   return { ok: true };
 }
@@ -342,8 +342,8 @@ function serverUploadAvatar(token, base64Data) {
 
     dbUpdate('Users', 'user_id', session.user_id, { avatar: avatarUrl });
 
-    var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
-    if (cached) { cached.avatar = avatarUrl; CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
+    var cached = JSON.parse(CacheService.getScriptCache().get('session_' + token));
+    if (cached) { cached.avatar = avatarUrl; CacheService.getScriptCache().put('session_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
 
     return { ok: true, avatarUrl: avatarUrl };
   } catch (err) {
@@ -367,8 +367,8 @@ function serverRemoveAvatar(token) {
 
     dbUpdate('Users', 'user_id', session.user_id, { avatar: '' });
 
-    var cached = JSON.parse(CacheService.getScriptCache().get('sess_' + token));
-    if (cached) { cached.avatar = ''; CacheService.getScriptCache().put('sess_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
+    var cached = JSON.parse(CacheService.getScriptCache().get('session_' + token));
+    if (cached) { cached.avatar = ''; CacheService.getScriptCache().put('session_' + token, JSON.stringify(cached), SESSION_TTL_SECONDS); }
 
     return { ok: true };
   } catch (err) {
@@ -407,4 +407,9 @@ function serverDeleteUser(token, user_id) {
   appendAuditLog(session.user_id, 'Users', user_id, user, null);
   dbDelete('Users', 'user_id', user_id);
   return { ok: true };
+}
+
+function authorizeDrive() {
+  var files = DriveApp.getFiles();
+  return 'Drive authorized: ' + (files.hasNext() ? 'ok' : 'empty');
 }

@@ -212,7 +212,7 @@ function getDashboardHtml(token) {
   var session = getSession(token);
   if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
   var user = dbFindOne('Users', 'user_id', session.user_id);
-  if (user) session.avatar = user.avatar || '';
+  if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
   var tmpl = HtmlService.createTemplateFromFile('dashboard');
   tmpl.data = { session: session, token: token };
   return tmpl.evaluate().getContent();
@@ -223,14 +223,16 @@ function getPageHtml(token, page) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      var loginTmpl = HtmlService.createTemplateFromFile('login');
+      loginTmpl.data = { error: null };
+      return loginTmpl.evaluate().getContent();
     }
     var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }
     var user = dbFindOne('Users', 'user_id', session.user_id);
-    if (user) session.avatar = user.avatar || '';
+    if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
     var tmpl = HtmlService.createTemplateFromFile(page);
     tmpl.data = { session: session, token: token };
     return tmpl.evaluate().getContent();
@@ -243,10 +245,12 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      var loginTmpl = HtmlService.createTemplateFromFile('login');
+      loginTmpl.data = { error: null };
+      return loginTmpl.evaluate().getContent();
     }
     var user = dbFindOne('Users', 'user_id', session.user_id);
-    if (user) session.avatar = user.avatar || '';
+    if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
     var templateMap = {
       'class_students': 'class_students',
       'class_attendance': 'class_attendance',

@@ -222,18 +222,29 @@ function saveProfile() {
 
 function navigate(page, params) {
   if (typeof showNavLoading === 'function') showNavLoading();
-  var qs = '?page=' + page + '&token=' + encodeURIComponent(TOKEN);
-  if (params) { for (var k in params) { qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
-  google.script.run
-    .withSuccessHandler(function(html) {
-      document.open(); document.write(html); document.close();
-      if (typeof hideNavLoading === 'function') hideNavLoading();
-    })
-    .withFailureHandler(function(err) {
-      if (typeof hideNavLoading === 'function') hideNavLoading();
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
-    })
-    .getPageHtmlWithParams(page, TOKEN, params || {});
+  if (params) {
+    google.script.run
+      .withSuccessHandler(function(html) {
+        document.open(); document.write(html); document.close();
+        if (typeof hideNavLoading === 'function') hideNavLoading();
+      })
+      .withFailureHandler(function(err) {
+        if (typeof hideNavLoading === 'function') hideNavLoading();
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      })
+      .getPageHtmlWithParams(TOKEN, page, params.class_id || '', params.subject_id || '');
+  } else {
+    google.script.run
+      .withSuccessHandler(function(html) {
+        document.open(); document.write(html); document.close();
+        if (typeof hideNavLoading === 'function') hideNavLoading();
+      })
+      .withFailureHandler(function(err) {
+        if (typeof hideNavLoading === 'function') hideNavLoading();
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      })
+      .getPageHtml(TOKEN, page);
+  }
 }
 
 function doLogout() {
