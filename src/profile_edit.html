@@ -93,13 +93,20 @@ var SESSION = {
 function initProfileAvatar() {
   var ph = document.getElementById('profileAvatarPlaceholder');
   if (!ph) return;
-  var url = SESSION.avatar;
-  if (!url) return;
-  var img = new Image();
-  img.id = 'profileAvatar';
-  img.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
-  img.onload = function() { ph.parentNode.replaceChild(img, ph); };
-  img.src = url;
+  if (typeof google === 'undefined' || !google.script || !TOKEN) return;
+  google.script.run
+    .withSuccessHandler(function(profile) {
+      if (!profile || profile.error || !profile.avatar) return;
+      var p = document.getElementById('profileAvatarPlaceholder');
+      if (!p) return;
+      var img = new Image();
+      img.id = 'profileAvatar';
+      img.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+      img.onload = function() { p.parentNode.replaceChild(img, p); };
+      img.src = profile.avatar;
+    })
+    .withFailureHandler(function() {})
+    .serverGetCurrentUserProfile(TOKEN);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initProfileAvatar);
 else initProfileAvatar();
@@ -161,18 +168,17 @@ function onAvatarSelect(input) {
     google.script.run
       .withSuccessHandler(function(result) {
         if (result && result.error) { showToast(result.error, 'error'); document.getElementById('avatarFileName').textContent = 'ยังไม่ได้เลือก'; return; }
-        var url = result.avatarUrl;
-        SESSION.avatar = url;
+        SESSION.avatar = result.avatarUrl;
         document.getElementById('avatarFileName').textContent = file.name;
         document.getElementById('removeAvatarBtn').style.display = 'inline-block';
-        var img = document.getElementById('profileAvatar');
-        if (img) { img.src = url; }
+        var imgEl = document.getElementById('profileAvatar');
+        if (imgEl) { imgEl.src = b64; }
         else {
           var ph = document.getElementById('profileAvatarPlaceholder');
           if (ph) {
             var newImg = document.createElement('img');
             newImg.id = 'profileAvatar';
-            newImg.src = url;
+            newImg.src = b64;
             newImg.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
             ph.parentNode.replaceChild(newImg, ph);
           }

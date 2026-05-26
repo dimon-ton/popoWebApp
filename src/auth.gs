@@ -383,12 +383,24 @@ function serverGetCurrentUserProfile(token) {
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (!user) return { error: 'ไม่พบผู้ใช้' };
+    var avatar = '';
+    if (user.avatar && user.avatar.indexOf('drive.google') !== -1) {
+      var idMatch = user.avatar.match(/id=([a-zA-Z0-9_-]+)/);
+      if (idMatch && idMatch[1]) {
+        try {
+          var file = DriveApp.getFileById(idMatch[1]);
+          var mime = file.getMimeType();
+          var b64 = Utilities.base64Encode(file.getBlob().getBytes());
+          avatar = 'data:' + mime + ';base64,' + b64;
+        } catch (e) {}
+      }
+    }
     return {
       user_id: user.user_id,
       username: user.username,
       full_name: user.full_name,
       role: user.role,
-      avatar: user.avatar || ''
+      avatar: avatar
     };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };

@@ -795,9 +795,8 @@ function uploadAvatar() {
         google.script.run
           .withSuccessHandler(function(result) {
             if (result && result.error) { if (typeof showToast === 'function') showToast(result.error, 'error'); return; }
-            var url = result.avatarUrl;
             var avatarEl = document.querySelector('.navbar-avatar');
-            if (avatarEl && url) avatarEl.src = url;
+            if (avatarEl) avatarEl.src = b64;
             if (typeof showToast === 'function') showToast('อัพเดตรูปภาพสำเร็จ', 'success');
           })
           .withFailureHandler(function(err) { if (typeof showToast === 'function') showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
