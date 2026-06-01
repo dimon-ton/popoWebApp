@@ -54,10 +54,25 @@ async function apiCall(params: Record<string, string | number>): Promise<Record<
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
   });
   const url = `${BASE_URL}?${qs.toString()}`;
-  const res = await fetch(url, { redirect: 'follow' });
-  const json = await res.json() as Record<string, unknown>;
-  if (json.error) throw new Error(`Test API error for api=${params.api}: ${json.error}`);
-  return json;
+  
+  const maxRetries = 5;
+  let delay = 1000;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, { redirect: 'follow' });
+      const json = await res.json() as Record<string, unknown>;
+      if (json.error) throw new Error(`Test API error for api=${params.api}: ${json.error}`);
+      return json;
+    } catch (err: any) {
+      if (attempt === maxRetries) {
+        throw err;
+      }
+      console.warn(`[Seed API] Attempt ${attempt} failed: ${err.message}. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+    }
+  }
+  throw new Error("API call failed after all retries");
 }
 
 export async function seedTestClass(opts: SeedClassOpts): Promise<string> {

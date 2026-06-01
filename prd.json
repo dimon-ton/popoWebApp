@@ -1,5 +1,5 @@
 {
-  "name": "PopoWebApp — School Grade Book Web App (Final / Single Source of Truth)",
+  "name": "ระบบจัดการ ป.พ.5 ออนไลน์",
   "description": "Convert the Thai elementary-school grade-book Excel (`ภาษาอังกฤษ ป.1.xlsx`, 18 sheets) into a school-wide web application used by all teachers and one admin at โรงเรียนบ้านโพนแท่น.",
   "branchName": "feature/popowebapp-school-grade-book-web-app-final-single-source-of-truth",
   "userStories": [

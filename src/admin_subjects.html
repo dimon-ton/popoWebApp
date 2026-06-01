@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -8,17 +8,14 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
   <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -28,33 +25,22 @@
 </div>
 
 <div class="container">
-  <h2 class="page-title">จัดการวิชา</h2>
+  <h2 class="page-title" id="pageHeading">จัดการวิชา</h2>
 
   <div class="card">
     <h3>เพิ่มวิชาใหม่</h3>
     <div class="form-row">
       <div class="form-group">
-        <label>รหัสวิชา (subject_id)</label>
-        <input type="text" id="newSubjectId" placeholder="เช่น subj_eng">
+        <label>รหัสวิชา (ไม่บังคับ)</label>
+        <input type="text" id="newSubjectCode" placeholder="เช่น ท11101">
       </div>
       <div class="form-group">
         <label>ชื่อวิชา</label>
         <input type="text" id="newSubjectName" placeholder="ชื่อวิชา">
       </div>
       <div class="form-group">
-        <label>รหัสสาระ</label>
-        <input type="text" id="newSubjectCode" placeholder="เช่น T06">
-      </div>
-      <div class="form-group">
         <label>เวลาเรียน (ชม./ปี)</label>
         <input type="number" id="newHours" placeholder="80" min="0">
-      </div>
-      <div class="form-group">
-        <label>กลุ่มวิชา</label>
-        <select id="newWeightGroup">
-          <option value="1">กลุ่ม 1 (70:30)</option>
-          <option value="2">กลุ่ม 2 (80:20)</option>
-        </select>
       </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
@@ -67,21 +53,20 @@
     <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedSubjects()">เพิ่มวิชาเริ่มต้น 11 วิชา</button>
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
       </div>
     </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
+          <th>รหัสระบบ</th>
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
-          <th>รหัสสาระ</th>
           <th>เวลาเรียน</th>
-          <th>กลุ่ม</th>
           <th></th>
         </tr>
       </thead>
@@ -152,13 +137,12 @@ function renderSubjects(subjects) {
     tr.setAttribute('data-subject-id', s.subject_id);
     tr.innerHTML =
       '<td>' + escHtml(s.subject_id) + '</td>' +
+      '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
-      '<td>' + escHtml(s.subject_code) + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
-      '<td>กลุ่ม ' + escHtml(s.weight_group) + '</td>' +
       '<td>' +
-        '<button class="btn-primary" style="margin-right:6px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
-        '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')">ลบ</button>' +
+        '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
+        '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
       '</td>';
     tbody.appendChild(tr);
   });
@@ -166,13 +150,11 @@ function renderSubjects(subjects) {
 }
 
 function addSubject() {
-  var subject_id = document.getElementById('newSubjectId').value.trim();
   var subject_name = document.getElementById('newSubjectName').value.trim();
   var subject_code = document.getElementById('newSubjectCode').value.trim();
   var hours = document.getElementById('newHours').value.trim();
-  var weight_group = document.getElementById('newWeightGroup').value;
 
-  if (!subject_id || !subject_name) { showToast('กรุณากรอก รหัสวิชา และ ชื่อวิชา', 'error'); return; }
+  if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
 
   var btn = document.getElementById('addSubjectBtn');
   btn.disabled = true;
@@ -182,7 +164,6 @@ function addSubject() {
       btn.disabled = false;
       if (result && result.error) { showToast(result.error, 'error'); return; }
       showToast('เพิ่มวิชาสำเร็จ', 'success');
-      document.getElementById('newSubjectId').value = '';
       document.getElementById('newSubjectName').value = '';
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
@@ -194,7 +175,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, subject_id, subject_name, subject_code, hours, weight_group, '');
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', '');
 }
 
 function viewIndicators(subject_id) {

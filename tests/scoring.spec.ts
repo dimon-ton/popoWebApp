@@ -3,7 +3,7 @@
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/custom-test';
 import {
   seedTestClass,
   seedTestSubject,
@@ -347,6 +347,7 @@ test.describe('US-013: Cover report aggregates', () => {
   // Expected grade_dist: 4→2, 3.5→1, 3→2, others→0
 
   test.beforeAll(async () => {
+    test.setTimeout(180_000);
     await cleanupTestData();
     classId = await seedTestClass({ suffix: 'us013_c1', level: 'ป.1', section: '1' });
     subjectId = await seedTestSubject({ suffix: 'us013_eng', name: 'ภาษาอังกฤษทดสอบ013', code: 'TST013', group: 1 });

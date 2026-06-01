@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -15,14 +15,11 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('help')">คู่มือการใช้งาน</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -40,9 +37,9 @@
       <div class="skeleton-table">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
       </div>
     </div>
     <div id="weightsTableWrap" style="display:none">
@@ -50,7 +47,6 @@
         <thead>
           <tr>
             <th class="left" rowspan="2">วิชา</th>
-            <th class="left" rowspan="2">กลุ่ม</th>
             <th colspan="4" class="col-group">ระหว่างเรียน (coursework)</th>
             <th rowspan="2">สอบปลายภาค</th>
             <th rowspan="2">รวม</th>
@@ -64,7 +60,6 @@
         </thead>
         <tbody id="weightsBody"></tbody>
       </table>
-      <p class="legend">กลุ่ม 1 = ภาษาไทย, คณิตศาสตร์, วิทยาศาสตร์, สังคมศึกษา, ประวัติศาสตร์, ภาษาอังกฤษ &nbsp;|&nbsp; กลุ่ม 2 = ศิลปะ, สุขศึกษาพลศึกษา, การงานอาชีพ, วิทยาการคำนวณ, การป้องกัน</p>
     </div>
   </div>
 </div>
@@ -133,7 +128,6 @@ function renderWeights(weights) {
     tr.setAttribute('data-subject-name', w.subject_name || '');
     tr.innerHTML =
       '<td class="left">' + escHtml(w.subject_name || w.subject_id) + '</td>' +
-      '<td class="left">กลุ่ม ' + escHtml(w.weight_group || '') + '</td>' +
       '<td class="col-group">' + preMid + '</td>' +
       '<td class="col-group">' + mid + '</td>' +
       '<td class="col-group">' + postMid + '</td>' +

@@ -8,7 +8,7 @@
  *
  * Required env vars: WEB_APP_URL, TEST_API_TOKEN
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './custom-test';
 import {
   seedTestClass,
   seedTestSubject,

@@ -3,7 +3,7 @@
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/custom-test';
 import {
   seedTestClass,
   seedTestSubject,

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -16,17 +16,14 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
   <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -36,17 +33,17 @@
 </div>
 
 <div class="container wide">
-  <h2 class="page-title">กำหนดน้ำหนักคะแนนวิชา</h2>
+  <h2 class="page-title" id="pageHeading">กำหนดน้ำหนักคะแนนวิชา</h2>
 
   <div class="card">
     <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
     <div class="loading-msg" id="weightsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
       </div>
     </div>
     <div id="weightsTableWrap" style="display:none">
@@ -54,7 +51,6 @@
         <thead>
           <tr>
             <th class="left" rowspan="2">วิชา</th>
-            <th class="left" rowspan="2">กลุ่ม</th>
             <th colspan="4" class="col-group">ระหว่างเรียน (coursework)</th>
             <th rowspan="2">สอบปลายภาค<br>(final_exam_max)</th>
             <th rowspan="2">รวม<br>(ต้องเท่ากับ 100)</th>
@@ -148,7 +144,6 @@ function renderWeights(weights) {
     var sumClass = total === 100 ? 'sum-cell ok' : 'sum-cell bad';
     tr.innerHTML =
       '<td class="left">' + escHtml(w.subject_name || w.subject_id) + '</td>' +
-      '<td class="left">กลุ่ม ' + escHtml(w.weight_group || '') + '</td>' +
       '<td class="col-group"><input type="number" class="pre-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + preMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
       '<td class="col-group"><input type="number" class="mid" data-sid="' + escHtml(w.subject_id) + '" value="' + mid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
       '<td class="col-group"><input type="number" class="post-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + postMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +

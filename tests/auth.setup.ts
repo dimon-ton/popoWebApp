@@ -1,13 +1,4 @@
-/**
- * US-021: Playwright auth bootstrap
- *
- * Run once: pnpm playwright test --project=setup
- * Then follow the browser prompt to log in (and complete Google "authorize script" consent if prompted).
- * The session is saved to tests/.auth/auth.json and reused by all other test projects.
- *
- * Re-run whenever specs start failing at the login screen (sessions expire after 12h per FR-2).
- */
-import { test as setup } from '@playwright/test';
+import { test as setup, expect } from './helpers/custom-test';
 import path from 'path';
 import fs from 'fs';
 
@@ -25,8 +16,17 @@ setup('authenticate and save storageState', async ({ page, context }) => {
 
   await page.goto(webAppUrl);
 
-  // Pause so the human can log in and complete any Google consent flow
-  await page.pause();
+  // Programmatically login with admin credentials
+  const adminUser = process.env.ADMIN_USERNAME ?? 'admin';
+  const adminPass = process.env.ADMIN_PASSWORD ?? 'admin1234';
+
+  await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
+  await page.fill('#username', adminUser);
+  await page.fill('#password', adminPass);
+  await page.click('#loginBtn');
+
+  // Wait for dashboard heading to appear to verify login succeeded
+  await expect(page.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
 
   // Save the authenticated session
   await context.storageState({ path: AUTH_FILE });

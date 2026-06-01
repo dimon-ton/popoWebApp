@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -11,15 +11,12 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -29,58 +26,70 @@
 </div>
 
 <div class="container">
-  <h2 class="page-title">ตัวชี้วัด — <?= data.subject_name || data.subject_id ?></h2>
-  <p class="subject-label">รหัสวิชา: <strong><?= data.subject_id ?></strong></p>
+  <h2 class="page-title" id="pageHeading">ตัวชี้วัด <span id="headingSubjectName"><?= data.subject_id ? '— ' + (data.subject_name || data.subject_id) : '' ?></span></h2>
 
   <div class="card">
-    <h3>เพิ่มตัวชี้วัดใหม่</h3>
-    <div class="form-row">
-      <div class="form-group" style="flex:2;min-width:200px">
-        <label>รหัสตัวชี้วัด (code)</label>
-        <input type="text" id="newCode" placeholder="เช่น ต 1.1 ป.1/1">
-      </div>
-      <div class="form-group" style="flex:3;min-width:200px">
-        <label>คำอธิบาย</label>
-        <input type="text" id="newDesc" placeholder="คำอธิบาย (ไม่บังคับ)">
-      </div>
-      <div class="form-group" style="min-width:100px">
-        <label>คะแนนสูงสุด</label>
-        <input type="number" id="newMaxScore" value="3" min="1" max="10">
-      </div>
-      <div class="form-group" style="min-width:80px">
-        <label>ลำดับ</label>
-        <input type="number" id="newOrder" placeholder="0" min="0">
-      </div>
-      <div class="form-group" style="justify-content:flex-end">
-        <button class="btn-primary" id="addIndicatorBtn" onclick="addIndicator()">เพิ่ม</button>
+    <div class="form-row" style="align-items: center;">
+      <div class="form-group" style="margin-bottom:0; flex:1">
+        <label for="subjectSelect" style="font-weight:bold;font-size:14px">เลือกวิชาเพื่อจัดการตัวชี้วัด</label>
+        <select id="subjectSelect" onchange="onSubjectChange()" style="width:100%;max-width:400px;margin-top:8px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          <option value="">— กรุณาเลือกวิชา —</option>
+        </select>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <h3>รายการตัวชี้วัด</h3>
-    <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedIndicators()">เพิ่มตัวชี้วัดเริ่มต้น (ภาษาอังกฤษ ป.1)</button>
-    <div class="loading-msg" id="indicatorsLoading">
-      <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+  <div id="editorSection" style="<?= data.subject_id ? '' : 'display:none' ?>">
+    <div class="card">
+      <h3>เพิ่มตัวชี้วัดใหม่</h3>
+      <div class="form-row">
+        <div class="form-group" style="flex:2;min-width:200px">
+          <label>รหัสตัวชี้วัด (code)</label>
+          <input type="text" id="newCode" placeholder="เช่น ต 1.1 ป.1/1">
+        </div>
+        <div class="form-group" style="flex:3;min-width:200px">
+          <label>คำอธิบาย</label>
+          <input type="text" id="newDesc" placeholder="คำอธิบาย (ไม่บังคับ)">
+        </div>
+        <div class="form-group" style="min-width:100px">
+          <label>คะแนนสูงสุด</label>
+          <input type="number" id="newMaxScore" value="3" min="1" max="10">
+        </div>
+        <div class="form-group" style="min-width:80px">
+          <label>ลำดับ</label>
+          <input type="number" id="newOrder" placeholder="0" min="0">
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <button class="btn-primary" id="addIndicatorBtn" onclick="addIndicator()">เพิ่ม</button>
+        </div>
       </div>
     </div>
-    <table id="indicatorsTable" style="display:none">
-      <thead>
-        <tr>
-          <th>ลำดับ</th>
-          <th>รหัสตัวชี้วัด</th>
-          <th>คำอธิบาย</th>
-          <th>คะแนนสูงสุด</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="indicatorsBody"></tbody>
-    </table>
+
+    <div class="card">
+      <h3>รายการตัวชี้วัด</h3>
+      <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedIndicators()">เพิ่มตัวชี้วัดเริ่มต้น (ภาษาอังกฤษ ป.1)</button>
+      <div class="loading-msg" id="indicatorsLoading">
+        <div class="skeleton-table">
+          <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        </div>
+      </div>
+      <table id="indicatorsTable" style="display:none">
+        <thead>
+          <tr>
+            <th>ลำดับ</th>
+            <th>รหัสตัวชี้วัด</th>
+            <th>คำอธิบาย</th>
+            <th>คะแนนสูงสุด</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="indicatorsBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -155,7 +164,7 @@ function renderIndicators(indicators) {
         '<td>' + escHtml(ind.code) + '</td>' +
         '<td>' + escHtml(ind.description) + '</td>' +
         '<td>' + escHtml(ind.max_score) + '</td>' +
-        '<td><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')">ลบ</button></td>';
+        '<td><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></td>';
       tbody.appendChild(tr);
     });
   }
@@ -220,7 +229,51 @@ function preseedIndicators() {
     .preseedIndicators(TOKEN, SUBJECT_ID);
 }
 
-loadIndicators();
+function loadSubjects() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var sel = document.getElementById('subjectSelect');
+      var subjects = (result && result.subjects) ? result.subjects : [];
+      sel.innerHTML = '<option value="">— กรุณาเลือกวิชา —</option>';
+      subjects.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s.subject_id;
+        opt.textContent = (s.subject_code ? s.subject_code + ' — ' : '') + s.subject_name;
+        sel.appendChild(opt);
+      });
+      if (SUBJECT_ID) {
+        sel.value = SUBJECT_ID;
+      }
+    })
+    .withFailureHandler(function(err) {
+      showToast('โหลดรายชื่อวิชาไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getSubjectsList(TOKEN);
+}
+
+function onSubjectChange() {
+  var sel = document.getElementById('subjectSelect');
+  var val = sel.value;
+  var headingSubjectName = document.getElementById('headingSubjectName');
+  var editorSection = document.getElementById('editorSection');
+  
+  if (!val) {
+    SUBJECT_ID = '';
+    headingSubjectName.textContent = '';
+    editorSection.style.display = 'none';
+  } else {
+    SUBJECT_ID = val;
+    var selectedText = sel.options[sel.selectedIndex].text;
+    headingSubjectName.textContent = ' — ' + selectedText;
+    editorSection.style.display = 'block';
+    loadIndicators();
+  }
+}
+
+loadSubjects();
+if (SUBJECT_ID) {
+  loadIndicators();
+}
 </script>
 </body>
 </html>

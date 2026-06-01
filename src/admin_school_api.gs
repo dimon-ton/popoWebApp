@@ -84,6 +84,7 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   } finally {
     lock.releaseLock();
   }
+  try { CacheService.getScriptCache().remove('school_name'); } catch(e) {}
   return { ok: true };
 }
 
@@ -106,7 +107,7 @@ function serverAddClass(token, class_id, level, section, homeroom_teacher_user_i
     class_id: autoId,
     level: level,
     section: section,
-    homeroom_teacher_user_id: homeroom_teacher_user_id || ''
+    homeroom_teacher_user_id: (homeroom_teacher_user_id || '').trim()
   });
   return { ok: true, class_id: autoId };
 }
@@ -117,7 +118,7 @@ function serverUpdateClass(token, class_id, level, section, homeroom_teacher_use
   dbUpdate('Classes', 'class_id', class_id, {
     level: level,
     section: section,
-    homeroom_teacher_user_id: homeroom_teacher_user_id || ''
+    homeroom_teacher_user_id: (homeroom_teacher_user_id || '').trim()
   });
   return { ok: true };
 }
@@ -137,11 +138,50 @@ function getSubjectsList(token) {
   return { subjects: dbGetAll('Subjects') };
 }
 
+function generateSubjectId(subject_code, subject_name) {
+  var str = (subject_code || subject_name || '').trim().toLowerCase();
+  var mapped = '';
+  var thaiToAscii = {
+    'ก':'g', 'ข':'k', 'ค':'k', 'ฆ':'k',
+    'ง':'ng', 'จ':'j', 'ฉ':'ch', 'ช':'ch', 'ซ':'s', 'ฌ':'ch',
+    'ญ':'y', 'ฎ':'d', 'ฏ':'t', 'ฐ':'th', 'ฑ':'th', 'ฒ':'th',
+    'ณ':'n', 'ด':'d', 'ต':'t', 'ถ':'th', 'ท':'t', 'ธ':'t',
+    'น':'n', 'บ':'b', 'ป':'p', 'ผ':'ph', 'ฝ':'f', 'พ':'p',
+    'ฟ':'f', 'ภ':'p', 'ม':'m', 'ย':'y', 'ร':'r', 'ล':'l',
+    'ว':'w', 'ศ':'s', 'ษ':'s', 'ส':'s', 'ห':'h', 'ฬ':'l',
+    'อ':'a', 'ฮ':'h',
+    'ะ':'a', 'า':'a', 'ิ':'i', 'ี':'i', 'ึ':'ue', 'ื':'ue',
+    'ุ':'u', 'ู':'u', 'เ':'e', 'แ':'ae', 'โ':'o', 'ใ':'ai', 'ไ':'ai'
+  };
+  for (var i = 0; i < str.length; i++) {
+    var char = str.charAt(i);
+    if (/[a-z0-9_-]/.test(char)) {
+      mapped += char;
+    } else if (thaiToAscii[char]) {
+      mapped += thaiToAscii[char];
+    }
+  }
+  mapped = mapped.replace(/[^a-z0-9_]/g, '');
+  if (!mapped) {
+    mapped = 'subject_' + Math.random().toString(36).substring(2, 8);
+  }
+  return 'subj_' + mapped;
+}
+
 function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  if (!subject_id) throw new Error('subject_id is required');
+  
+  if (!subject_id) {
+    subject_id = generateSubjectId(subject_code, subject_name);
+  }
+  
   var existing = dbFindOne('Subjects', 'subject_id', subject_id);
+  if (existing) {
+    subject_id += '_' + Math.random().toString(36).substring(2, 5);
+    existing = dbFindOne('Subjects', 'subject_id', subject_id);
+    if (existing) throw new Error('เกิดข้อผิดพลาดในการสร้าง subject_id กรุณาลองใหม่');
+  }
   if (existing) throw new Error('subject_id นี้มีอยู่แล้ว');
   var grp = parseInt(weight_group) || 1;
   dbInsert('Subjects', {
@@ -193,7 +233,7 @@ function getTeachersList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   var users = dbGetAll('Users');
-  return { teachers: users.filter(function(u) { return u.role === 'teacher'; }) };
+  return { teachers: users };
 }
 
 // ── Subject Weights (US-010) ──────────────────────────────────────────────────

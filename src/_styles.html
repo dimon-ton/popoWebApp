@@ -37,6 +37,9 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+body:has(.navbar) {
+  padding-top: 52px;
+}
 
 /* ===== NAVBAR ===== */
 .navbar {
@@ -48,18 +51,33 @@ body {
   gap: 4px;
   height: 52px;
   box-shadow: var(--shadow-nav);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 
 .navbar-title {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
-  line-height: 1.2;
+  justify-content: center;
   margin-right: 8px;
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1.25;
+  gap: 3px;
+}
+.navbar-title .title-text {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+.navbar-title .subtitle-text {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
 }
 .navbar-title .title-main {
   font-size: 15px;
@@ -133,9 +151,10 @@ body {
   background: white;
   border-radius: var(--radius);
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  min-width: 170px;
+  min-width: 200px;
   z-index: 1000;
   overflow: hidden;
+  border: 1px solid var(--border);
 }
 .navbar-dropdown.open { display: block; }
 .navbar-dropdown a {
@@ -161,6 +180,57 @@ body {
 .navbar-dropdown .dropdown-divider {
   border-top: 1px solid var(--border);
   margin: 0;
+}
+
+.dropdown-profile-header {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--bg-page);
+}
+.dropdown-avatar-wrap {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dropdown-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.dropdown-avatar-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 24px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.dropdown-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+.dropdown-profile-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* ===== CONTAINER ===== */
@@ -524,6 +594,46 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .skeleton-table-cell { height: 32px; background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: 2px; }
 .skeleton-table-head .skeleton-table-cell { height: 36px; background: #d5dae0; }
 
+/* ===== NAVBAR SKELETONS ===== */
+.navbar-title-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.navbar-title-skeleton .skeleton-line-main {
+  width: 140px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.navbar-title-skeleton .skeleton-line-sub {
+  width: 90px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.navbar-user-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.navbar-user-skeleton .skeleton-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.navbar-user-skeleton .skeleton-name {
+  width: 80px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
 /* ===== STATUS / NOTICES ===== */
 .loading-msg {
   color: var(--text-muted);
@@ -734,6 +844,9 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   .navbar a { padding: 4px 6px; font-size: 12.5px; }
   .navbar-title .title-main { font-size: 14px; }
   .navbar-title .title-sub { font-size: 10px; }
+  .navbar-title { font-size: 13px; }
+  .navbar-title .title-text { font-size: 13px; }
+  .navbar-title .subtitle-text { font-size: 9.5px; }
 
   .container { margin: 16px auto; padding: 0 12px; }
   .card { padding: 16px; }
@@ -841,6 +954,63 @@ function initNavbarDropdown() {
   var trigger = document.querySelector('.navbar-user-trigger');
   var dropdown = document.querySelector('.navbar-dropdown');
   if (!trigger || !dropdown) return;
+
+  // Prepend Profile Header inside dropdown menu dynamically if not present
+  if (!dropdown.querySelector('.dropdown-profile-header')) {
+    var initialEl = trigger.querySelector('.navbar-avatar-placeholder, .navbar-avatar');
+    var initialText = '';
+    var avatarSrc = '';
+    if (initialEl) {
+      if (initialEl.classList.contains('navbar-avatar')) {
+        avatarSrc = initialEl.src;
+      } else {
+        initialText = initialEl.textContent;
+      }
+    }
+
+    var spanEl = trigger.querySelector('span');
+    var rawName = spanEl ? spanEl.textContent : '';
+    var cleanName = rawName.replace(/\s*\(admin\)$/i, '');
+    var isAdmin = rawName.toLowerCase().indexOf('(admin)') !== -1;
+    var roleText = isAdmin ? 'ผู้ดูแลระบบ' : 'ครู';
+
+    var header = document.createElement('div');
+    header.className = 'dropdown-profile-header';
+
+    var avatarWrap = document.createElement('div');
+    avatarWrap.className = 'dropdown-avatar-wrap';
+
+    if (avatarSrc) {
+      var img = document.createElement('img');
+      img.className = 'dropdown-avatar';
+      img.src = avatarSrc;
+      avatarWrap.appendChild(img);
+    } else {
+      var ph = document.createElement('div');
+      ph.className = 'dropdown-avatar-placeholder';
+      ph.textContent = initialText || '?';
+      avatarWrap.appendChild(ph);
+    }
+
+    var nameEl = document.createElement('div');
+    nameEl.className = 'dropdown-profile-name';
+    nameEl.textContent = cleanName;
+
+    var roleEl = document.createElement('div');
+    roleEl.className = 'dropdown-profile-role';
+    roleEl.textContent = roleText;
+
+    header.appendChild(avatarWrap);
+    header.appendChild(nameEl);
+    header.appendChild(roleEl);
+
+    var divider = document.createElement('div');
+    divider.className = 'dropdown-divider';
+
+    dropdown.insertBefore(divider, dropdown.firstChild);
+    dropdown.insertBefore(header, dropdown.firstChild);
+  }
+
   trigger.addEventListener('click', function(e) {
     e.stopPropagation();
     dropdown.classList.toggle('open');
@@ -855,23 +1025,91 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initNavbarDropdown();
 
 function initNavbarAvatar() {
-  if (typeof google === 'undefined' || !google.script) return;
-  var el = document.querySelector('.navbar-avatar-placeholder');
-  if (!el) return;
-  if (typeof TOKEN === 'undefined' || !TOKEN) return;
+  var titleEl = document.querySelector('.navbar-title');
+  var userTrigger = document.querySelector('.navbar-user-trigger');
+  
+  if (typeof google === 'undefined' || !google.script) {
+    restoreNavbarDefaults(titleEl, userTrigger);
+    return;
+  }
+  
+  if (typeof TOKEN === 'undefined' || !TOKEN) {
+    restoreNavbarDefaults(titleEl, userTrigger);
+    return;
+  }
+  
+  // Show skeletons immediately while loading (redundant but ensures they show if page started differently)
+  if (titleEl && !titleEl.querySelector('.navbar-title-skeleton')) {
+    titleEl.innerHTML = '<div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div>';
+  }
+  if (userTrigger && !userTrigger.querySelector('.navbar-user-skeleton')) {
+    userTrigger.innerHTML = '<div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div>';
+  }
+  
   google.script.run
     .withSuccessHandler(function(profile) {
-      if (!profile || profile.error || !profile.avatar) return;
-      var ph = document.querySelector('.navbar-avatar-placeholder');
-      if (!ph) return;
-      var img = new Image();
-      img.className = 'navbar-avatar';
-      img.onload = function() { ph.parentNode.replaceChild(img, ph); };
-      img.onerror = function() {};
-      img.src = profile.avatar;
+      if (!profile || profile.error) {
+        restoreNavbarDefaults(titleEl, userTrigger);
+        return;
+      }
+
+      if (profile.school_name) {
+        if (titleEl) {
+          titleEl.innerHTML = '<span class="title-text">ระบบจัดการ ป.พ.5 ออนไลน์</span>' +
+                              '<span class="subtitle-text">' + profile.school_name + '</span>';
+        }
+      } else {
+        if (titleEl) {
+          titleEl.innerHTML = '<span class="title-text">ระบบจัดการ ป.พ.5 ออนไลน์</span>' +
+                              '<span class="subtitle-text">โรงเรียนบ้านโพนแท่น</span>';
+        }
+      }
+
+      if (userTrigger) {
+        var avatarHtml = '';
+        if (profile.avatar) {
+          avatarHtml = '<img class="navbar-avatar" src="' + profile.avatar + '" />';
+        } else {
+          var firstChar = profile.full_name ? profile.full_name.charAt(0) : '';
+          avatarHtml = '<div class="navbar-avatar-placeholder">' + firstChar + '</div>';
+        }
+        var nameSuffix = profile.role === 'admin' ? ' (admin)' : '';
+        userTrigger.innerHTML = avatarHtml + '<span>' + profile.full_name + nameSuffix + '</span>';
+      }
+
+      if (profile.avatar) {
+        var dropdownAvatarWrap = document.querySelector('.dropdown-avatar-wrap');
+        if (dropdownAvatarWrap) {
+          dropdownAvatarWrap.innerHTML = '';
+          var lgImg = document.createElement('img');
+          lgImg.className = 'dropdown-avatar';
+          lgImg.src = profile.avatar;
+          dropdownAvatarWrap.appendChild(lgImg);
+        }
+      }
+
+      var dropdownName = document.querySelector('.dropdown-profile-name');
+      if (dropdownName && profile.full_name) {
+        dropdownName.textContent = profile.full_name;
+      }
+      var dropdownRole = document.querySelector('.dropdown-profile-role');
+      if (dropdownRole && profile.role) {
+        dropdownRole.textContent = profile.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู';
+      }
     })
-    .withFailureHandler(function() {})
+    .withFailureHandler(function() {
+      restoreNavbarDefaults(titleEl, userTrigger);
+    })
     .serverGetCurrentUserProfile(TOKEN);
+}
+
+function restoreNavbarDefaults(titleEl, userTrigger) {
+  if (titleEl) {
+    titleEl.innerHTML = '<span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span>';
+  }
+  if (userTrigger) {
+    userTrigger.innerHTML = '<div class="navbar-avatar-placeholder">?</div><span>ผู้ใช้งาน</span>';
+  }
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarAvatar);
 else initNavbarAvatar();

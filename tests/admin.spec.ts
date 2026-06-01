@@ -3,7 +3,7 @@
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/custom-test';
 import {
   seedTestClass,
   seedTestSubject,
@@ -11,6 +11,7 @@ import {
   seedTestUser,
   seedTestEnrollment,
   seedTestSubjectWeights,
+  seedTestIndicator,
   cleanupTestData,
   queryTestRows,
 } from './helpers/seed';
@@ -18,6 +19,22 @@ import {
 // ---- US-015: Static reference pages ----
 
 test.describe('US-015: Static reference pages', () => {
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    // Seed at least one indicator for subj_eng so it is always present
+    await seedTestIndicator({
+      suffix: 'us015_eng',
+      subject_id: 'subj_eng',
+      code: 'ต 1.1 ป.1/1',
+      max_score: 3,
+      display_order: 1,
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
   test('US-015: /help page has at least one Thai heading', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=help`);
@@ -119,15 +136,14 @@ test.describe('US-004: School info, classes, and subjects', () => {
     // Wait for table to load (may already have rows)
     await expect(page.locator('#classesTable')).toBeVisible({ timeout: 20_000 });
 
-    await page.fill('#newClassId', 'test_class_p1_1');
-    await page.selectOption('#newLevel', 'ป.1');
+    await page.fill('#newLevel', 'test_class_p1');
     await page.fill('#newSection', '1');
     await page.click('#addClassBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มชั้นเรียนสำเร็จ', { timeout: 15_000 });
 
     // Assert row appears with data-class-id attribute
-    await expect(page.locator('tr[data-class-id="test_class_p1_1"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('tr[data-class-id="class_test_class_p1_1"]')).toBeVisible({ timeout: 15_000 });
   });
 
   test('US-004: create subject test_subject_eng and assert it appears in list', async ({ page }) => {
@@ -138,17 +154,15 @@ test.describe('US-004: School info, classes, and subjects', () => {
 
     await expect(page.locator('#subjectsTable')).toBeVisible({ timeout: 20_000 });
 
-    await page.fill('#newSubjectId', 'test_subject_eng');
     await page.fill('#newSubjectName', 'ภาษาอังกฤษทดสอบ');
     await page.fill('#newSubjectCode', 'test_001');
     await page.fill('#newHours', '80');
-    await page.selectOption('#newWeightGroup', '1');
     await page.click('#addSubjectBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มวิชาสำเร็จ', { timeout: 15_000 });
 
-    // Assert row appears with data-subject-id attribute
-    await expect(page.locator('tr[data-subject-id="test_subject_eng"]')).toBeVisible({ timeout: 15_000 });
+    // Assert row appears with data-subject-id attribute (generated from code)
+    await expect(page.locator('tr[data-subject-id="subj_test_001"]')).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -178,7 +192,8 @@ test.describe('US-005: Student roster CRUD', () => {
     await page.fill('#newSeqNo', '1');
     await page.fill('#newStudentCode', 'S001');
     await page.fill('#newCitizenId', '1459700000001');
-    await page.fill('#newFullName', 'test_นักเรียนทดสอบ');
+    await page.fill('#newFirstName', 'test_นักเรียน');
+    await page.fill('#newLastName', 'ทดสอบ');
     await page.fill('#newDob', '01 ม.ค. 60');
     await page.fill('#newNote', '');
     await page.click('#addStudentBtn');
@@ -186,7 +201,7 @@ test.describe('US-005: Student roster CRUD', () => {
     await expect(page.locator('#toast')).toContainText('เพิ่มนักเรียนสำเร็จ', { timeout: 15_000 });
 
     // Row should appear in table
-    await expect(page.locator('#studentsBody')).toContainText('test_นักเรียนทดสอบ', { timeout: 15_000 });
+    await expect(page.locator('#studentsBody')).toContainText('test_นักเรียน ทดสอบ', { timeout: 15_000 });
     await expect(page.locator('#studentsBody')).toContainText('1459700000001');
   });
 
@@ -431,7 +446,7 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
 
     // Left panel should be visible
-    await expect(page.locator('.teacher-panel')).toBeVisible();
+    await expect(page.locator('.teacher-panel')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('.panel-header')).toContainText('รายชื่อครู');
 
     // Our seeded teachers should appear
@@ -565,7 +580,7 @@ test.describe('US-018: Teacher enrollment management', () => {
     // There should be audit log entries (at least 2: removal from A + addition to B)
     // Note: audit entries use admin's user_id, not test_ prefix — we check Enrollments changes instead
     // Check via enrollment rows that the reassign happened
-    const enrollments = await queryTestRows('Enrollments', 'enrollment_id');
+    const enrollments = await queryTestRows('Enrollments', 'subject_id');
     // After reassign: class X -> teacher B, class Y -> teacher A
     const classXEnrollment = enrollments.find(
       (e) => (e as Record<string, string>).class_id === classXId && (e as Record<string, string>).subject_id === subjectZId
@@ -672,7 +687,7 @@ test.describe('US-019: Bulk assignment', () => {
 
   test('US-019: all 3 (class, subject) rows now have the test teacher via API', async () => {
     // Verify via test API that the 3 enrollments were created correctly
-    const enrollments = await queryTestRows('Enrollments', 'enrollment_id');
+    const enrollments = await queryTestRows('Enrollments', 'subject_id');
     const myEnrollments = (enrollments as Record<string, string>[]).filter(
       (e) => e.subject_id === subjectId && e.teacher_user_id === teacherId
     );

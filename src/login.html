@@ -62,16 +62,30 @@
     (function() {
       var stored = localStorage.getItem('popo_token');
       if (stored) {
-        google.script.run
-          .withSuccessHandler(function(html) {
-            if (html) { document.open(); document.write(html); document.close(); }
-            else { showLoginForm(); }
-          })
-          .withFailureHandler(function() {
-            localStorage.removeItem('popo_token');
-            showLoginForm();
-          })
-          .getDashboardHtml(stored);
+        var redirectPage = '<?= data.redirect_page || "" ?>';
+        var classId = '<?= data.class_id || "" ?>';
+        var subjectId = '<?= data.subject_id || "" ?>';
+        
+        var successHandler = function(html) {
+          if (html) { document.open(); document.write(html); document.close(); }
+          else { showLoginForm(); }
+        };
+        var errorHandler = function() {
+          localStorage.removeItem('popo_token');
+          showLoginForm();
+        };
+
+        if (redirectPage && redirectPage !== 'dashboard' && redirectPage !== 'login') {
+          google.script.run
+            .withSuccessHandler(successHandler)
+            .withFailureHandler(errorHandler)
+            .getPageHtmlWithParams(stored, redirectPage, classId, subjectId);
+        } else {
+          google.script.run
+            .withSuccessHandler(successHandler)
+            .withFailureHandler(errorHandler)
+            .getDashboardHtml(stored);
+        }
       } else {
         showLoginForm();
       }
@@ -120,18 +134,32 @@
                 })
                 .getChangePasswordHtml(result.token);
             } else {
-              google.script.run
-                .withSuccessHandler(function(html) {
-                  document.open();
-                  document.write(html);
-                  document.close();
-                })
-                .withFailureHandler(function(err) {
-                  showError('เกิดข้อผิดพลาด: ' + err.message);
-                  btn.disabled = false;
-                  btn.textContent = 'เข้าสู่ระบบ';
-                })
-                .getDashboardHtml(result.token);
+              var redirectPage = '<?= data.redirect_page || "" ?>';
+              var classId = '<?= data.class_id || "" ?>';
+              var subjectId = '<?= data.subject_id || "" ?>';
+              
+              var successHandler = function(html) {
+                document.open();
+                document.write(html);
+                document.close();
+              };
+              var errorHandler = function(err) {
+                showError('เกิดข้อผิดพลาด: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'เข้าสู่ระบบ';
+              };
+
+              if (redirectPage && redirectPage !== 'dashboard' && redirectPage !== 'login') {
+                google.script.run
+                  .withSuccessHandler(successHandler)
+                  .withFailureHandler(errorHandler)
+                  .getPageHtmlWithParams(result.token, redirectPage, classId, subjectId);
+              } else {
+                google.script.run
+                  .withSuccessHandler(successHandler)
+                  .withFailureHandler(errorHandler)
+                  .getDashboardHtml(result.token);
+              }
             }
           }
         })

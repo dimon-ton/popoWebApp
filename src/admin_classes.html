@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -8,17 +8,14 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
   <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -28,7 +25,7 @@
 </div>
 
 <div class="container">
-  <h2 class="page-title">จัดการชั้นเรียน</h2>
+  <h2 class="page-title" id="pageHeading">จัดการชั้นเรียน</h2>
 
   <div class="card">
     <h3>เพิ่มชั้นเรียนใหม่</h3>
@@ -90,6 +87,43 @@
   </div>
 </div>
 
+<!-- Edit class modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>แก้ไขชั้นเรียน — <span id="editTargetClassId"></span></h3>
+    <input type="hidden" id="editClassId">
+    <div class="form-group">
+      <label>ระดับชั้น</label>
+      <input type="text" id="editLevel" list="editLevelOptions" placeholder="ระดับชั้น">
+      <datalist id="editLevelOptions">
+        <option value="ป.1">
+        <option value="ป.2">
+        <option value="ป.3">
+        <option value="ป.4">
+        <option value="ป.5">
+        <option value="ป.6">
+        <option value="ม.1">
+        <option value="ม.2">
+        <option value="ม.3">
+      </datalist>
+    </div>
+    <div class="form-group">
+      <label>ห้อง</label>
+      <input type="text" id="editSection" placeholder="ห้อง">
+    </div>
+    <div class="form-group">
+      <label>ครูประจำชั้น</label>
+      <select id="editHomeroomTeacher">
+        <option value="">— ไม่ระบุ —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="confirmEditBtn" onclick="confirmEdit()">บันทึก</button>
+      <button class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -136,14 +170,22 @@ function escHtml(s) {
 
 function loadTeachers() {
   var sel = document.getElementById('newHomeroomTeacher');
+  var editSel = document.getElementById('editHomeroomTeacher');
   google.script.run
     .withSuccessHandler(function(result) {
       (result.teachers || []).forEach(function(t) {
-        teachersMap[t.user_id] = t.full_name;
+        var cleanId = (t.user_id || '').trim();
+        teachersMap[cleanId] = t.full_name;
+        
         var opt = document.createElement('option');
-        opt.value = t.user_id;
+        opt.value = cleanId;
         opt.textContent = t.full_name;
         sel.appendChild(opt);
+
+        var optEdit = document.createElement('option');
+        optEdit.value = cleanId;
+        optEdit.textContent = t.full_name;
+        editSel.appendChild(optEdit);
       });
       loadClasses();
     })
@@ -166,7 +208,8 @@ function renderClasses(classes) {
   var tbody = document.getElementById('classesBody');
   tbody.innerHTML = '';
   classes.forEach(function(c) {
-    var teacherName = teachersMap[c.homeroom_teacher_user_id] || c.homeroom_teacher_user_id || '—';
+    var rawTeacherId = (c.homeroom_teacher_user_id || '').trim();
+    var teacherName = teachersMap[rawTeacherId] || '—';
     var tr = document.createElement('tr');
     tr.setAttribute('data-class-id', c.class_id);
     tr.innerHTML =
@@ -176,7 +219,8 @@ function renderClasses(classes) {
       '<td>' + escHtml(teacherName) + '</td>' +
       '<td>' +
       '<button class="btn-secondary" onclick="viewStudents(\'' + escHtml(c.class_id) + '\')" style="margin-right:6px;background:#1a56a0;color:white;font-size:12px;padding:5px 12px">นักเรียน</button>' +
-      '<button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')">ลบ</button>' +
+      '<button class="btn-secondary" onclick="openEditModal(\'' + escHtml(c.class_id) + '\', \'' + escHtml(c.level) + '\', \'' + escHtml(c.section) + '\', \'' + escHtml(rawTeacherId) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
+      '<button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
       '</td>';
     tbody.appendChild(tr);
   });
@@ -208,6 +252,51 @@ function addClass() {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverAddClass(TOKEN, '', level, section, homeroom);
+}
+
+function openEditModal(classId, level, section, homeroomTeacherUserId) {
+  document.getElementById('editTargetClassId').textContent = classId;
+  document.getElementById('editClassId').value = classId;
+  document.getElementById('editLevel').value = level;
+  document.getElementById('editSection').value = section;
+  document.getElementById('editHomeroomTeacher').value = homeroomTeacherUserId || '';
+  document.getElementById('editModal').classList.add('open');
+  document.getElementById('confirmEditBtn').disabled = false;
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function confirmEdit() {
+  var classId = document.getElementById('editClassId').value;
+  var level = document.getElementById('editLevel').value;
+  var section = document.getElementById('editSection').value.trim();
+  var homeroom = document.getElementById('editHomeroomTeacher').value;
+
+  if (!level || !section) { showToast('กรุณาระบุระดับชั้นและห้อง', 'error'); return; }
+
+  var btn = document.getElementById('confirmEditBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังแก้ไข';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      btn.textContent = 'บันทึก';
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('แก้ไขชั้นเรียนสำเร็จ', 'success');
+      closeEditModal();
+      document.getElementById('classesLoading').style.display = 'block';
+      document.getElementById('classesTable').style.display = 'none';
+      loadClasses();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.textContent = 'บันทึก';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverUpdateClass(TOKEN, classId, level, section, homeroom);
 }
 
 function deleteClass(class_id) {

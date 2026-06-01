@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -16,14 +16,11 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <?!= data.session && data.session.role === 'admin' ? '<a href="#" onclick="navigate(\'admin_classes\')">ชั้นเรียน</a>' : '' ?>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -206,8 +203,8 @@ function renderStudents(students) {
     tr.setAttribute('data-student-id', s.student_id);
     var actionCell = CAN_EDIT
       ? '<td><div class="action-btns">' +
-          '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')">แก้ไข</button>' +
-          '<button class="btn-danger" onclick="deleteStudent(\'' + escHtml(s.student_id) + '\')">ลบ</button>' +
+          '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
+          '<button class="btn-danger" onclick="deleteStudent(\'' + escHtml(s.student_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
         '</div></td>'
       : '<td></td>';
     tr.innerHTML =

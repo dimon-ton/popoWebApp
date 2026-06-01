@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -8,14 +8,11 @@
 </head>
 <body>
 <div class="navbar">
-  <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_enrollments')">จัดการผู้สอน</a>
   <div class="navbar-user">
-  <div class="navbar-user-trigger">
-          <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-          <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -25,7 +22,7 @@
 </div>
 
 <div class="container">
-  <h2 class="page-title">จัดการผู้ใช้</h2>
+  <h2 class="page-title" id="pageHeading">จัดการผู้ใช้</h2>
 
   <!-- Add user form -->
   <div class="card">
@@ -216,9 +213,9 @@ function renderUsers(users) {
       '<td>' + escHtml(u.username) + '</td>' +
       '<td>' + escHtml(u.full_name) + '</td>' +
       '<td><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
-      '<td><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button> ' +
-      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button> ' +
-      '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">ลบ</button></td>';
+      '<td><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button> ' +
+      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">รีเซตรหัสผ่าน</button> ' +
+      '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></td>';
     tbody.appendChild(tr);
   });
   document.getElementById('usersTable').style.display = 'table';

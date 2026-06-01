@@ -23,7 +23,12 @@ function doGet(e) {
 
     // Unauthenticated: show login (wizard page is accessible without auth)
     if (!session && page !== 'login' && page !== 'setup_wizard') {
-      return buildPage('login', { error: null });
+      return buildPage('login', {
+        error: null,
+        redirect_page: page,
+        class_id: params.class_id || '',
+        subject_id: params.subject_id || ''
+      });
     }
 
     // Admin-only pages
@@ -258,10 +263,13 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
       'class_summative': 'class_summative',
       'class_characteristics': 'class_characteristics',
       'class_readthinkwrite': 'class_readthinkwrite',
-      'class_report': 'class_report'
+      'class_report': 'class_report',
+      'admin_indicators': 'admin_indicators',
+      'subject_description': 'subject_description',
+      'subject_indicators_ref': 'subject_indicators_ref'
     };
     var tmplName = templateMap[page];
-    if (!tmplName) return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">ไม่พบหน้า: ' + page + '</div>';
+    if (!tmplName) return getPageHtml(token, page);
     var tmpl = HtmlService.createTemplateFromFile(tmplName);
     tmpl.data = { session: session, token: token, class_id: classId || '', subject_id: subjectId || '' };
     return tmpl.evaluate().getContent();
@@ -469,5 +477,19 @@ function handleReadAction(action, params, session) {
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getCachedSchoolName() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('school_name');
+  if (cached) return cached;
+  try {
+    var rows = dbGetAll('SchoolInfo');
+    var name = (rows && rows.length > 0 && rows[0].school_name) ? rows[0].school_name : 'PopoWebApp';
+    cache.put('school_name', name, 3600); // Cache for 1 hour
+    return name;
+  } catch (e) {
+    return 'PopoWebApp';
   }
 }

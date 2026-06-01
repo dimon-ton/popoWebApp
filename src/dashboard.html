@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -29,21 +29,91 @@
     .pair-link.students:hover { background: #ebebeb; }
     .teacher-section { margin-top: 18px; }
     .teacher-section h3 { font-size: 15px; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--brand-light); }
+
+    /* ===== STEP CARDS ===== */
+    .admin-setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 24px;
+    }
+    .step-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .step-card:hover {
+      background-color: var(--brand-hover);
+      border-color: var(--brand);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(26,86,160,0.06);
+    }
+    .step-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(26,86,160,0.25);
+    }
+    .step-card:hover .step-badge {
+      background: var(--brand-dark);
+      transform: scale(1.05);
+    }
+    .step-content {
+      flex: 1;
+    }
+    .step-content h4 {
+      margin: 0 0 3px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .step-card:hover .step-content h4 {
+      color: var(--brand);
+    }
+    .step-content p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .step-action-arrow {
+      font-size: 16px;
+      color: var(--text-muted);
+      transition: transform 0.15s, color 0.15s;
+    }
+    .step-card:hover .step-action-arrow {
+      transform: translateX(4px);
+      color: var(--brand);
+    }
   </style>
 </head>
 <body>
   <div class="navbar">
-    <span class="navbar-title"><span class="title-main">ระบบจัดการ ปพ.5 ออนไลน์</span><span class="title-sub">โรงเรียนบ้านโพนแท่น</span></span>
+    <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
     <? if (data.session && data.session.role === 'admin') { ?>
     <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
     <a href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
     <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
     <? } ?>
     <div class="navbar-user">
-  <div class="navbar-user-trigger">
-            <div class="navbar-avatar-placeholder"><?= data.session ? data.session.full_name.charAt(0) : '' ?></div>
-            <span><?= data.session ? data.session.full_name : '' ?><?= data.session && data.session.role === 'admin' ? ' (admin)' : '' ?></span>
-        </div>
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">
     <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
     <div class="dropdown-divider"></div>
@@ -55,30 +125,117 @@
     <div class="card" id="dashContent" style="display:none">
       <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
       <? if (data.session && data.session.role === 'admin') { ?>
-      <div class="menu-grid">
-        <a class="menu-item" href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_classes'); return false;">ชั้นเรียน</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_subjects'); return false;">วิชา</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_audit'); return false;">บันทึกการเปลี่ยนแปลง</a>
+      <div class="admin-setup-steps">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--brand);border-bottom:2px solid var(--brand-light);padding-bottom:8px">ขั้นตอนการจัดการข้อมูลระบบ (System Setup Steps)</h3>
+        
+        <!-- Step 1 -->
+        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>เพิ่มและจัดการชั้นเรียน (Classroom Setup)</h4>
+            <p>สร้างรายชื่อห้องเรียนทั้งหมด (เช่น ป.1/1, ม.3/2) เพื่อลงทะเบียนข้อมูลนักเรียนและผู้สอนในภายหลัง</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 2 -->
+        <a class="step-card" href="#" onclick="navigate('admin_subjects'); return false;">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>สร้างและจัดการรายวิชา (Subject Catalog Setup)</h4>
+            <p>กำหนดรหัสวิชา ชื่อวิชา และจัดกลุ่มสาระการเรียนรู้ตามหลักสูตรแกนกลางของโรงเรียน</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 3 -->
+        <a class="step-card" href="#" onclick="navigate('admin_weights'); return false;">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>กำหนดสัดส่วนน้ำหนักคะแนน (Weights Configuration)</h4>
+            <p>แบ่งสัดส่วนน้ำหนักคะแนนรายวิชา (เช่น คะแนนเก็บ, สอบกลางภาค, สอบปลายภาค) ให้แต่ละวิชา</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 4 -->
+        <a class="step-card" href="#" onclick="navigate('admin_indicators'); return false;">
+          <div class="step-badge">4</div>
+          <div class="step-content">
+            <h4>จัดเตรียมตัวชี้วัด/ผลการเรียนรู้ (Indicators Setup)</h4>
+            <p>ใส่รายการตัวชี้วัดรายวิชาที่จำเป็นต้องประเมิน สำหรับนำไปใช้ตัดเกรดในคะแนนเก็บและคะแนนคุณลักษณะ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 5 -->
+        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge">5</div>
+          <div class="step-content">
+            <h4>ลงทะเบียนและอัปโหลดรายชื่อนักเรียน (Student Roster Setup)</h4>
+            <p>เข้าไปในแต่ละห้องเรียนเพื่อกรอกชื่อสกุล เลขที่ และข้อมูลนักเรียนทั้งหมดในห้องเรียนนั้นๆ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 6 -->
+        <a class="step-card" href="#" onclick="navigate('admin_users'); return false;">
+          <div class="step-badge">6</div>
+          <div class="step-content">
+            <h4>สร้างบัญชีผู้ใช้สำหรับผู้สอน (Teacher Accounts)</h4>
+            <p>สร้างชื่อผู้ใช้ รหัสผ่านเริ่มต้น และระดับสิทธิ์การทำงานให้กับคุณครูผู้ประเมินผลการเรียน</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 7 -->
+        <a class="step-card" href="#" onclick="navigate('admin_enrollments'); return false;">
+          <div class="step-badge">7</div>
+          <div class="step-content">
+            <h4>มอบหมายครูผู้สอนประจำรายวิชา (Teacher Assignments)</h4>
+            <p>ระบุว่าคุณครูท่านใดสอนรายวิชาใดในห้องเรียนใด (รองรับการมอบหมายแบบทีละวิชาและมอบหมายจำนวนมาก)</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 8 -->
+        <a class="step-card" href="#" onclick="navigate('admin_workload'); return false;">
+          <div class="step-badge">8</div>
+          <div class="step-content">
+            <h4>ตรวจสอบและควบคุมภาระงานครู (Teacher Workload Monitor)</h4>
+            <p>ดูสรุปภาระงานสอนของคุณครูแต่ละท่าน จำนวนวิชาที่สอน และจำนวนนักเรียนรวมเพื่อความสมดุล</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 9 -->
+        <a class="step-card" href="#" onclick="navigate('admin_audit'); return false;">
+          <div class="step-badge">9</div>
+          <div class="step-content">
+            <h4>ตรวจสอบประวัติการแก้ไขข้อมูล (Audit Trail Tracking)</h4>
+            <p>ตรวจสอบและสืบค้นประวัติการแก้ไขคะแนนหรือข้อมูลสำคัญในฐานข้อมูลระบบ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
       </div>
       <? } ?>
-      <div class="menu-grid" style="margin-top:12px">
+
+      <h3 style="font-size:15px;font-weight:600;margin-top:20px;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px">การจัดการทั่วไป (General Management)</h3>
+      <div class="menu-grid">
+        <? if (data.session && data.session.role === 'admin') { ?>
+        <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
+        <? } ?>
         <a class="menu-item" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
         <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
       </div>
     </div>
     <div class="card" id="dashSkeleton">
-      <div class="skeleton-block" style="width:50%"></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px">
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div class="skeleton-menu-item" style="height:44px;background:#e2e5e9;border-radius:6px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+      <div class="skeleton-block" style="width:40%;height:20px;background:#e2e5e9;border-radius:4px;animation:skeleton-pulse 1.5s ease-in-out infinite;margin-bottom:20px"></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
       </div>
     </div>
 

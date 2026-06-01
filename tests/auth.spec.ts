@@ -3,7 +3,7 @@
  * US-002: Login form, session handling, and logout.
  * US-003: Admin user management and password reset.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, wrapPage } from './helpers/custom-test';
 import { seedTestUser, cleanupTestData } from './helpers/seed';
 
 // US-002 tests run in a fresh context without auth.json — we test the login flow itself
@@ -126,7 +126,9 @@ test.describe('US-003: User management and password reset', () => {
 
     // Fill in the add user form
     await page.fill('#newUsername', newTeacherUsername);
-    await page.fill('#newFullName', 'ครูทดสอบสร้างใหม่');
+    await page.fill('#newPrefix', 'ครู');
+    await page.fill('#newFirstName', 'ทดสอบ');
+    await page.fill('#newLastName', 'สร้างใหม่');
     await page.selectOption('#newRole', 'teacher');
     await page.fill('#newPassword', 'initpass_003');
     await page.click('#addUserBtn');
@@ -148,7 +150,7 @@ test.describe('US-003: User management and password reset', () => {
     // Find the reset password button for the seeded teacher row and click it
     const teacherRow = page.locator(`tr[data-user-id="${seededTeacherId}"]`);
     await expect(teacherRow).toBeVisible({ timeout: 15_000 });
-    await teacherRow.locator('button').click();
+    await teacherRow.locator('button:has-text("รีเซต")').click();
 
     // Modal should open
     await expect(page.locator('#resetModal')).toHaveClass(/open/, { timeout: 10_000 });
@@ -165,7 +167,8 @@ test.describe('US-003: User management and password reset', () => {
 
     // Now verify the new password works — log in as the seeded teacher in a fresh context
     const freshCtx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const freshPage = await freshCtx.newPage();
+    const rawFreshPage = await freshCtx.newPage();
+    const freshPage = wrapPage(rawFreshPage);
     await freshPage.goto(url);
 
     await expect(freshPage.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
@@ -173,8 +176,8 @@ test.describe('US-003: User management and password reset', () => {
     await freshPage.fill('#password', resetPassword);
     await freshPage.click('#loginBtn');
 
-    // Should land on dashboard (teacher sees ยินดีต้อนรับ)
-    await expect(freshPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+    // Should land on change password page (teacher sees เปลี่ยนรหัสผ่าน)
+    await expect(freshPage.locator('h2')).toContainText('เปลี่ยนรหัสผ่าน', { timeout: 30_000 });
 
     await freshCtx.close();
   });

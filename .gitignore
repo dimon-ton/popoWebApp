@@ -13,3 +13,4 @@ tests/.auth/
 # Screenshots and generated images
 *.png
 logo_b64.txt
+test-results/

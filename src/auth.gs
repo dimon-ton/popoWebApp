@@ -400,7 +400,8 @@ function serverGetCurrentUserProfile(token) {
       username: user.username,
       full_name: user.full_name,
       role: user.role,
-      avatar: avatar
+      avatar: avatar,
+      school_name: getCachedSchoolName()
     };
   } catch (err) {
     return { error: 'เกิดข้อผิดพลาด: ' + err.message };

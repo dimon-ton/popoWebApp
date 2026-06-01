@@ -25,6 +25,7 @@ function wizardSaveSchoolInfo(school_name, district, province, academic_year) {
     } else {
       sheet.getRange(2, 1, 1, 4).setValues([[school_name, district, province, academic_year]]);
     }
+    try { CacheService.getScriptCache().remove('school_name'); } catch(e) {}
     return { ok: true };
   } catch (err) {
     return { error: err.message };

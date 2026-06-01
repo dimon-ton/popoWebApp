@@ -33,6 +33,7 @@ function handleTestApi(e) {
     switch (api) {
       case 'seed_class':
         ensureTestPrefix(params.class_id);
+        dbDelete('Classes', 'class_id', params.class_id);
         dbInsert('Classes', {
           class_id: params.class_id,
           level: params.level || 'ป.1',
@@ -43,6 +44,7 @@ function handleTestApi(e) {
 
       case 'seed_subject':
         ensureTestPrefix(params.subject_id);
+        dbDelete('Subjects', 'subject_id', params.subject_id);
         dbInsert('Subjects', {
           subject_id: params.subject_id,
           subject_name: params.name || params.subject_id,
@@ -55,6 +57,7 @@ function handleTestApi(e) {
 
       case 'seed_student':
         ensureTestPrefix(params.student_id);
+        dbDelete('Students', 'student_id', params.student_id);
         dbInsert('Students', {
           student_id: params.student_id,
           class_id: params.class_id,
@@ -69,6 +72,8 @@ function handleTestApi(e) {
 
       case 'seed_user':
         ensureTestPrefix(params.user_id);
+        dbDelete('Users', 'user_id', params.user_id);
+        dbDelete('Users', 'username', params.user_id);
         var salt = Utilities.getUuid();
         var hash = computeHash(params.password || 'test1234', salt);
         dbInsert('Users', {
@@ -84,6 +89,7 @@ function handleTestApi(e) {
 
       case 'seed_enrollment':
         ensureTestPrefix(params.enrollment_id);
+        dbDelete('Enrollments', 'enrollment_id', params.enrollment_id);
         dbInsert('Enrollments', {
           enrollment_id: params.enrollment_id,
           class_id: params.class_id,
@@ -110,6 +116,7 @@ function handleTestApi(e) {
 
       case 'seed_indicator':
         ensureTestPrefix(params.indicator_id);
+        dbDelete('Indicators', 'indicator_id', params.indicator_id);
         dbInsert('Indicators', {
           indicator_id: params.indicator_id,
           subject_id: params.subject_id,
@@ -124,6 +131,7 @@ function handleTestApi(e) {
         // Seed a SummativeScores row directly (for report aggregate tests)
         // student_id must start with test_; id is auto-generated
         ensureTestPrefix(params.student_id);
+        dbDeleteWhere('SummativeScores', 'student_id', params.student_id);
         var sTotal = parseFloat(params.total) || 0;
         var sGrade = computeGrade(sTotal);
         var sMakeup = params.makeup_grade !== '' && params.makeup_grade !== undefined ? parseFloat(params.makeup_grade) : '';
@@ -163,8 +171,12 @@ function handleTestApi(e) {
           'DevActivity': 'id'
         };
         Object.keys(tabIdFields).forEach(function(tab) {
+          if (tab === 'Enrollments' || tab === 'AuditLog') return;
           try {
             count += dbDeleteWhere(tab, tabIdFields[tab], 'test_');
+            if (tab === 'Classes') {
+              count += dbDeleteWhere(tab, tabIdFields[tab], 'class_test_');
+            }
           } catch (err) {
             // Ignore missing tabs during cleanup
           }
@@ -176,6 +188,70 @@ function handleTestApi(e) {
         scoreTabs.forEach(function(tab) {
           try { count += dbDeleteWhere(tab, 'student_id', 'test_'); } catch (err) {}
         });
+
+        // Clean Enrollments where class_id, subject_id, teacher_user_id, or enrollment_id starts with 'test_'
+        try {
+          var enrSheet = getSheet('Enrollments');
+          var enrData = enrSheet.getDataRange().getValues();
+          var enrHeaders = enrData[0];
+          var classCol = enrHeaders.indexOf('class_id');
+          var subjCol = enrHeaders.indexOf('subject_id');
+          var teachCol = enrHeaders.indexOf('teacher_user_id');
+          var enrIdCol = enrHeaders.indexOf('enrollment_id');
+          
+          var lock = LockService.getDocumentLock();
+          if (lock.tryLock(30000)) {
+            try {
+              for (var i = enrData.length - 1; i >= 1; i--) {
+                var isTest = String(enrData[i][classCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][classCol]).indexOf('class_test_') === 0 ||
+                             String(enrData[i][subjCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][teachCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][enrIdCol]).indexOf('test_') === 0;
+                if (isTest) {
+                  enrSheet.deleteRow(i + 1);
+                  count++;
+                }
+              }
+            } finally {
+              lock.releaseLock();
+            }
+          }
+        } catch (err) {
+          // Ignore
+        }
+
+        // Clean AuditLog where user_id starts with test_ OR entity_id starts with test_ OR old_value/new_value contains 'test_'
+        try {
+          var auditSheet = getSheet('AuditLog');
+          var auditData = auditSheet.getDataRange().getValues();
+          var auditHeaders = auditData[0];
+          var uCol = auditHeaders.indexOf('user_id');
+          var eCol = auditHeaders.indexOf('entity_id');
+          var oCol = auditHeaders.indexOf('old_value');
+          var nCol = auditHeaders.indexOf('new_value');
+          
+          var lock = LockService.getDocumentLock();
+          if (lock.tryLock(30000)) {
+            try {
+              for (var i = auditData.length - 1; i >= 1; i--) {
+                var isTest = String(auditData[i][uCol]).indexOf('test_') === 0 ||
+                             String(auditData[i][eCol]).indexOf('test_') === 0 ||
+                             String(auditData[i][oCol]).indexOf('test_') !== -1 ||
+                             String(auditData[i][nCol]).indexOf('test_') !== -1;
+                if (isTest) {
+                  auditSheet.deleteRow(i + 1);
+                  count++;
+                }
+              }
+            } finally {
+              lock.releaseLock();
+            }
+          }
+        } catch (err) {
+          // Ignore
+        }
+
         return jsonOk({ deleted: count });
 
       case 'query_rows':

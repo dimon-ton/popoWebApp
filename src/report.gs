@@ -30,7 +30,7 @@ function getReportData(token, class_id, subject_id) {
   // Homeroom teacher
   var homeroom_teacher_name = '';
   if (cls.homeroom_teacher_user_id) {
-    var hroom = dbFindOne('Users', 'user_id', cls.homeroom_teacher_user_id);
+    var hroom = dbFindOne('Users', 'user_id', String(cls.homeroom_teacher_user_id).trim());
     if (hroom) homeroom_teacher_name = hroom.full_name || '';
   }
 

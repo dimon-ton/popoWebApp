@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/custom-test';
 import path from 'path';
 import fs from 'fs';
 import { cleanupTestData } from './helpers/seed';
@@ -31,7 +31,7 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#editRoleDisplay')).toBeDisabled();
   });
 
-  test('file input accepts image file and triggers upload', async ({ page }) => {
+  test('file input opens crop modal after selecting image', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=profile_edit`);
 
@@ -42,7 +42,11 @@ test.describe('Profile Edit — Avatar Upload', () => {
 
     await fileInput.setInputFiles(avatarPath);
 
-    await expect(page.locator('#avatarFileName')).toContainText('กำลังอัพโหลด', { timeout: 10_000 });
+    // Crop modal should open
+    await expect(page.locator('#cropOverlay')).toHaveClass(/open/, { timeout: 10_000 });
+    await expect(page.locator('#cropOkBtn')).toBeVisible();
+    await expect(page.locator('#cropCancelBtn')).toBeVisible();
+    await expect(page.locator('#cropCanvas')).toBeVisible();
   });
 
   test('uploading oversize file shows error toast', async ({ page }) => {
@@ -51,7 +55,7 @@ test.describe('Profile Edit — Avatar Upload', () => {
 
     await expect(page.locator('.page-title')).toBeVisible({ timeout: 30_000 });
 
-    const bigBuffer = Buffer.alloc(400_000, 'x');
+    const bigBuffer = Buffer.alloc(6_000_000, 'x');
     const bigFile = {
       name: 'oversize.png',
       mimeType: 'image/png',
@@ -67,7 +71,7 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#avatarFileName')).toContainText('ยังไม่ได้เลือก');
   });
 
-  test('successful upload updates avatar image element', async ({ page }) => {
+  test('successful upload via crop modal updates avatar image element', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=profile_edit`);
 
@@ -76,10 +80,15 @@ test.describe('Profile Edit — Avatar Upload', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(avatarPath);
 
+    // Wait for crop modal to appear and confirm
+    await expect(page.locator('#cropOverlay')).toHaveClass(/open/, { timeout: 10_000 });
+    await page.click('#cropOkBtn');
+
+    // After confirming crop, upload should proceed
     await expect(page.locator('#avatarFileName')).toContainText('test_avatar.png', { timeout: 30_000 });
     await expect(page.locator('#removeAvatarBtn')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('#profileAvatar')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('#profileAvatar')).toHaveAttribute('src', /drive\.google/, { timeout: 10_000 });
+    await expect(page.locator('#profileAvatar')).toHaveAttribute('src', /data:image/, { timeout: 10_000 });
 
     await expect(page.locator('#toast')).toContainText('อัพโหลดรูปภาพสำเร็จ');
   });
@@ -92,6 +101,10 @@ test.describe('Profile Edit — Avatar Upload', () => {
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(avatarPath);
+
+    // Confirm crop modal
+    await expect(page.locator('#cropOverlay')).toHaveClass(/open/, { timeout: 10_000 });
+    await page.click('#cropOkBtn');
 
     await expect(page.locator('#removeAvatarBtn')).toBeVisible({ timeout: 30_000 });
 
@@ -116,3 +129,4 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#toast')).toContainText('บันทึกสำเร็จ', { timeout: 20_000 });
   });
 });
+
