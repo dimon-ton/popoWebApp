@@ -71,7 +71,7 @@
       "passes": true,
       "labels": [],
       "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "completionNotes": "Completed by agent. Enhanced preseed subjects flow to support level-specific curriculums for Prathom 1-3, Prathom 4-6, and Mattayom 1-3, and added edit capabilities with description support (no weight-group split selection is needed in the UI)."
     },
     {
       "id": "US-005",
@@ -388,6 +388,23 @@
       "labels": [],
       "dependsOn": [],
       "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-023",
+      "title": "Import subjects and enrollments via CSV file",
+      "description": "As an admin, I want to upload a CSV containing subject details, hours, classes, and teachers so I can set up my school database and teacher assignments instantly.",
+      "acceptanceCriteria": [
+        "CSV must have headers: รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน.",
+        "Automatic parsing of level and section from the class string (e.g. ป.1/1).",
+        "Classes and subjects are automatically created if they do not exist.",
+        "Subject IDs include the class reference to keep them self-contained (e.g., subj_t11101_p1_1).",
+        "Enrollments are automatically mapped, updating teacher assignments if the combination exists."
+      ],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent. Implemented plain client-side JS RFC-4180 CSV parser and serverImportSubjectsCSV API endpoint on server."
     }
   ],
   "metadata": {

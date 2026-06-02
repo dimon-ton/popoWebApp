@@ -29,6 +29,11 @@
 
   <div class="card">
     <h3>เพิ่มวิชาใหม่</h3>
+    
+    <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #0d47a1; line-height: 1.5;">
+      <strong>💡 ข้อมูลสำคัญเกี่ยวกับระบบรายวิชา:</strong> รายวิชาจะถูกสร้างเป็นฐานข้อมูลกลางของโรงเรียน (เช่น รหัสวิชา ท11101 ภาษาไทย) โดย<strong>ยังไม่ต้องระบุห้องเรียนที่นี่</strong> เมื่อสร้างวิชาเสร็จแล้ว คุณสามารถนำรายวิชาไปจัดคู่มอบหมายให้กับชั้นเรียนและครูผู้สอนได้ที่หน้า <a href="#" onclick="navigate('admin_enrollments'); return false;" style="color: #1565c0; font-weight: bold; text-decoration: underline;">จัดการผู้สอน / มอบหมายรายวิชา</a>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label>รหัสวิชา (ไม่บังคับ)</label>
@@ -42,6 +47,10 @@
         <label>เวลาเรียน (ชม./ปี)</label>
         <input type="number" id="newHours" placeholder="80" min="0">
       </div>
+      <div class="form-group">
+        <label>คำอธิบายวิชา (ไม่บังคับ)</label>
+        <input type="text" id="newDescription" placeholder="เช่น รายวิชาพื้นฐาน">
+      </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
       </div>
@@ -49,15 +58,48 @@
   </div>
 
   <div class="card">
+    <h3>นำเข้าข้อมูลรายวิชาและผู้สอนจากไฟล์ CSV</h3>
+    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
+      <strong>⚠️ ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> หัวตารางต้องมีฟิลด์สะกดตรงตัวดังนี้: <code>รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน</code> (คั่นด้วยเครื่องหมายจุลภาค <code>,</code> และบันทึกไฟล์ด้วยการเข้ารหัส UTF-8)
+    </div>
+    
+    <div class="form-row" style="align-items: center;">
+      <div class="form-group" style="margin-bottom:0; flex:1; min-width: 240px;">
+        <input type="file" id="csvFileInput" accept=".csv" style="padding: 6px 11px; width: 100%;">
+      </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-primary" id="importCsvBtn" onclick="importCSVFile()">นำเข้าข้อมูล</button>
+      </div>
+    </div>
+    
+    <div id="importResults" style="display:none; margin-top: 18px; padding: 14px; background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px;">
+      <h4 style="font-size: 13.5px; font-weight: 600; margin-bottom: 8px; color: var(--brand);" id="importResultTitle">ผลการนำเข้าข้อมูล</h4>
+      <div id="importResultSummary" style="margin-bottom: 8px; font-weight: 500;"></div>
+      <ul id="importResultWarnings" style="padding-left: 20px; color: #b7791f; max-height: 150px; overflow-y: auto; line-height: 1.6; margin: 0;"></ul>
+    </div>
+  </div>
+
+  <div class="card">
     <h3>รายการวิชาทั้งหมด</h3>
-    <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedSubjects()">เพิ่มวิชาเริ่มต้น 11 วิชา</button>
+    
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 260px;">
+        <label style="margin-bottom: 4px;">เลือกกลุ่มรายวิชาเริ่มต้น</label>
+        <select id="preseedPreset" style="width: 100%;">
+          <option value="p1_3">ประถมศึกษาตอนต้น (ป.1 - ป.3)</option>
+          <option value="p4_6">ประถมศึกษาตอนปลาย (ป.4 - ป.6)</option>
+          <option value="m1_3">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
+          <option value="generic">วิชาแกนกลางทั่วไป (11 วิชาดั้งเดิม)</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="preseedBtn" onclick="preseedSubjects()" style="padding: 8px 16px; margin-top: 19px;">เพิ่มรายวิชาเริ่มต้น</button>
+    </div>
+
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
       </div>
     </div>
     <table id="subjectsTable" style="display:none">
@@ -67,11 +109,40 @@
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
           <th>เวลาเรียน</th>
-          <th></th>
+          <th>คำอธิบาย</th>
+          <th style="width: 200px">จัดการ</th>
         </tr>
       </thead>
       <tbody id="subjectsBody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- Edit Subject Modal Overlay -->
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal">
+    <h3>แก้ไขข้อมูลวิชา</h3>
+    <input type="hidden" id="editSubjectId">
+    <div class="form-group">
+      <label>รหัสวิชา</label>
+      <input type="text" id="editSubjectCode" placeholder="เช่น ท11101">
+    </div>
+    <div class="form-group">
+      <label>ชื่อวิชา</label>
+      <input type="text" id="editSubjectName" placeholder="ชื่อวิชา">
+    </div>
+    <div class="form-group">
+      <label>เวลาเรียน (ชม./ปี)</label>
+      <input type="number" id="editHours" placeholder="80" min="0">
+    </div>
+    <div class="form-group">
+      <label>คำอธิบายวิชา (ไม่บังคับ)</label>
+      <input type="text" id="editDescription" placeholder="เช่น รายวิชาพื้นฐาน">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="saveEditBtn" onclick="saveSubjectEdit()">บันทึก</button>
+      <button class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
+    </div>
   </div>
 </div>
 
@@ -118,11 +189,14 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+var allSubjects = [];
+
 function loadSubjects() {
   google.script.run
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
-      renderSubjects((result && result.subjects) ? result.subjects : []);
+      allSubjects = (result && result.subjects) ? result.subjects : [];
+      renderSubjects(allSubjects);
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSubjectsList(TOKEN);
@@ -135,13 +209,16 @@ function renderSubjects(subjects) {
   subjects.forEach(function(s) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-subject-id', s.subject_id);
+
     tr.innerHTML =
       '<td>' + escHtml(s.subject_id) + '</td>' +
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
+      '<td>' + escHtml(s.description || '—') + '</td>' +
       '<td>' +
         '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
+        '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px;background:#f59e0b" onclick="openEditModal(\'' + escHtml(s.subject_id) + '\')">แก้ไข</button>' +
         '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
       '</td>';
     tbody.appendChild(tr);
@@ -153,6 +230,7 @@ function addSubject() {
   var subject_name = document.getElementById('newSubjectName').value.trim();
   var subject_code = document.getElementById('newSubjectCode').value.trim();
   var hours = document.getElementById('newHours').value.trim();
+  var description = document.getElementById('newDescription').value.trim();
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
 
@@ -167,6 +245,7 @@ function addSubject() {
       document.getElementById('newSubjectName').value = '';
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
+      document.getElementById('newDescription').value = '';
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
       loadSubjects();
@@ -175,7 +254,214 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', '');
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description);
+}
+
+function openEditModal(subject_id) {
+  var s = allSubjects.find(function(item) { return item.subject_id === subject_id; });
+  if (!s) return;
+  
+  document.getElementById('editSubjectId').value = s.subject_id;
+  document.getElementById('editSubjectCode').value = s.subject_code || '';
+  document.getElementById('editSubjectName').value = s.subject_name || '';
+  document.getElementById('editHours').value = s.hours_per_year || '';
+  document.getElementById('editDescription').value = s.description || '';
+  
+  document.getElementById('editModalOverlay').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editModalOverlay').classList.remove('open');
+}
+
+function saveSubjectEdit() {
+  var subject_id = document.getElementById('editSubjectId').value;
+  var subject_name = document.getElementById('editSubjectName').value.trim();
+  var subject_code = document.getElementById('editSubjectCode').value.trim();
+  var hours = document.getElementById('editHours').value.trim();
+  var description = document.getElementById('editDescription').value.trim();
+
+  if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
+
+  var btn = document.getElementById('saveEditBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('แก้ไขวิชาสำเร็จ', 'success');
+      closeEditModal();
+      loadSubjects();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', description);
+}
+
+function parseCSV(text) {
+  var lines = [];
+  var row = [""];
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    var next = text[i+1];
+    if (c === '"') {
+      if (inQuotes && next === '"') {
+        row[row.length - 1] += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (c === ',' && !inQuotes) {
+      row.push("");
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') { i++; }
+      lines.push(row);
+      row = [""];
+    } else {
+      row[row.length - 1] += c;
+    }
+  }
+  if (row.length > 1 || row[0] !== "") {
+    lines.push(row);
+  }
+  return lines;
+}
+
+function importCSVFile() {
+  var fileInput = document.getElementById('csvFileInput');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('กรุณาเลือกไฟล์ CSV ก่อนกดปุ่มนำเข้าข้อมูล', 'error');
+    return;
+  }
+  
+  var file = fileInput.files[0];
+  var reader = new FileReader();
+  
+  var btn = document.getElementById('importCsvBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังนำเข้า...';
+  
+  reader.onload = function(e) {
+    try {
+      var text = e.target.result;
+      var lines = parseCSV(text);
+      if (lines.length < 2) {
+        showToast('ไฟล์ CSV ว่างหรือไม่มีข้อมูล', 'error');
+        btn.disabled = false;
+        btn.textContent = 'นำเข้าข้อมูล';
+        return;
+      }
+      
+      // Header matching
+      var headers = lines[0].map(function(h) { return h.trim(); });
+      var codeIdx = headers.indexOf('รหัสวิชา');
+      var nameIdx = headers.indexOf('ชื่อวิชา');
+      var classIdx = headers.indexOf('ชั้นเรียน');
+      var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
+      var teacherIdx = headers.indexOf('ชื่อครูผู้สอน');
+      
+      if (codeIdx === -1 || nameIdx === -1 || classIdx === -1 || hoursIdx === -1 || teacherIdx === -1) {
+        showToast('โครงสร้างหัวตาราง CSV ไม่ถูกต้อง กรุณาใช้: รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน', 'error');
+        btn.disabled = false;
+        btn.textContent = 'นำเข้าข้อมูล';
+        return;
+      }
+      
+      var rowsToImport = [];
+      for (var i = 1; i < lines.length; i++) {
+        var row = lines[i];
+        if (row.length < headers.length) continue; // Skip incomplete or empty lines
+        var code = row[codeIdx] ? row[codeIdx].trim() : '';
+        var name = row[nameIdx] ? row[nameIdx].trim() : '';
+        var className = row[classIdx] ? row[classIdx].trim() : '';
+        var hours = row[hoursIdx] ? row[hoursIdx].trim() : '';
+        var teacher = row[teacherIdx] ? row[teacherIdx].trim() : '';
+        
+        if (!code && !name && !className) continue; // Skip blank lines
+        
+        rowsToImport.push({
+          subject_code: code,
+          subject_name: name,
+          class_name: className,
+          hours: hours,
+          teacher_name: teacher
+        });
+      }
+      
+      if (rowsToImport.length === 0) {
+        showToast('ไม่พบข้อมูลที่จะนำเข้าในไฟล์ CSV', 'error');
+        btn.disabled = false;
+        btn.textContent = 'นำเข้าข้อมูล';
+        return;
+      }
+      
+      // Call Google Apps Script API
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          btn.textContent = 'นำเข้าข้อมูล';
+          if (result && result.error) {
+            showToast(result.error, 'error');
+            return;
+          }
+          
+          showToast('นำเข้าข้อมูลรายวิชาและจัดคู่สำเร็จ ' + result.success_count + ' รายการ', 'success');
+          
+          // Render results panel
+          var resPanel = document.getElementById('importResults');
+          var resSummary = document.getElementById('importResultSummary');
+          var resWarns = document.getElementById('importResultWarnings');
+          
+          resSummary.textContent = 'นำเข้าข้อมูลรายวิชาสำเร็จ ' + result.success_count + ' รายการ';
+          resSummary.style.color = '#2e7d32';
+          resWarns.innerHTML = '';
+          
+          if (result.warnings && result.warnings.length > 0) {
+            result.warnings.forEach(function(w) {
+              var li = document.createElement('li');
+              li.textContent = w;
+              resWarns.appendChild(li);
+            });
+            resSummary.textContent += ' (พบข้อควรระวัง ' + result.warnings.length + ' รายการ)';
+            resSummary.style.color = '#b7791f';
+          } else {
+            var li = document.createElement('li');
+            li.textContent = 'ไม่มีข้อควรระวังหรือข้อผิดพลาด ข้อมูลสมบูรณ์ 100%';
+            li.style.color = '#2e7d32';
+            li.style.listStyle = 'none';
+            resWarns.appendChild(li);
+          }
+          
+          resPanel.style.display = 'block';
+          
+          // Reload subjects list table
+          loadSubjects();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'นำเข้าข้อมูล';
+          showToast('เกิดข้อผิดพลาดในการประมวลผล: ' + err.message, 'error');
+        })
+        .serverImportSubjectsCSV(TOKEN, rowsToImport);
+        
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'นำเข้าข้อมูล';
+      showToast('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message, 'error');
+    }
+  };
+  
+  reader.onerror = function() {
+    btn.disabled = false;
+    btn.textContent = 'นำเข้าข้อมูล';
+    showToast('ไม่สามารถอ่านไฟล์ CSV ได้', 'error');
+  };
+  
+  reader.readAsText(file, 'UTF-8');
 }
 
 function viewIndicators(subject_id) {
@@ -198,6 +484,7 @@ function deleteSubject(subject_id) {
 }
 
 function preseedSubjects() {
+  var preset = document.getElementById('preseedPreset').value;
   var btn = document.getElementById('preseedBtn');
   btn.disabled = true;
   google.script.run
@@ -213,7 +500,7 @@ function preseedSubjects() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .preseedSubjects();
+    .preseedSubjects(preset);
 }
 
 loadSubjects();
