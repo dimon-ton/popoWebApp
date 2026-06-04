@@ -46,7 +46,8 @@ function getTeacherEnrollments(teacherUserId) {
       class_id: e.class_id,
       class_label: fmtClassLabel(cls.level, cls.section),
       subject_id: e.subject_id,
-      subject_name: sub.subject_name || e.subject_id
+      subject_name: sub.subject_name || e.subject_id,
+      subject_code: sub.subject_code || ''
     };
   });
 }
@@ -195,6 +196,7 @@ function getAllPairsMatrix() {
         class_label: fmtClassLabel(cls.level, cls.section),
         subject_id: sub.subject_id,
         subject_name: sub.subject_name,
+        subject_code: sub.subject_code || '',
         teacher_user_id: teacherId || '',
         teacher_name: teacherName
       });

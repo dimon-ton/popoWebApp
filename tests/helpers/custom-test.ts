@@ -36,7 +36,7 @@ export function wrapPage(page: any): any {
     const dropdown = frameLocator.locator('.navbar-dropdown');
     try {
       if (await trigger.isVisible({ timeout: 1000 })) {
-        const isOpen = await dropdown.evaluate((el) => el.classList.contains('open'));
+        const isOpen = await dropdown.evaluate((el: any) => el.classList.contains('open'));
         if (!isOpen) {
           await trigger.click();
           await page.waitForTimeout(250); // wait for dropdown open transition

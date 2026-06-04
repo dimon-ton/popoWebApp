@@ -458,6 +458,35 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator(`#badge-${teacherBId}`)).toContainText('0');
   });
 
+  test('US-018: teacher search filters the teacher list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.waitForSelector(`#ti-${teacherAId}`);
+
+    await page.fill('#teacherSearch', 'B');
+
+    await expect(page.locator(`#ti-${teacherBId}`)).toBeVisible();
+    await expect(page.locator(`#ti-${teacherAId}`)).toBeHidden();
+  });
+
+  test('US-018: mobile layout stacks assignment panel below teacher list', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.waitForSelector('.teacher-panel');
+
+    const layout = await page.evaluate(() => {
+      const browserWindow = globalThis as any;
+      const teacher = browserWindow.document.querySelector('.teacher-panel').getBoundingClientRect();
+      const right = browserWindow.document.querySelector('.right-panel').getBoundingClientRect();
+      return { teacherWidth: teacher.width, rightWidth: right.width, rightLeft: right.left, viewportWidth: browserWindow.innerWidth };
+    });
+
+    expect(layout.teacherWidth).toBeGreaterThan(layout.viewportWidth - 20);
+    expect(layout.rightWidth).toBeGreaterThan(layout.viewportWidth - 20);
+    expect(layout.rightLeft).toBeLessThan(5);
+  });
+
   test('US-018: clicking teacher opens right panel with add-pair form', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=admin_enrollments`);
@@ -572,6 +601,23 @@ test.describe('US-018: Teacher enrollment management', () => {
     const rows = page.locator('#allPairsContent tbody tr');
     // Look for the row with our subject Z name
     await expect(rows.filter({ hasText: 'วิชาทดสอบ Z' }).filter({ hasText: 'ครูทดสอบ B' })).toHaveCount(1, { timeout: 15_000 });
+  });
+
+  test('US-018: All pairs filters narrow by class, status, and subject code', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.waitForSelector('#tab-allpairs');
+    await page.click('#tab-allpairs');
+    await expect(page.locator('#allPairsContent table')).toBeVisible({ timeout: 15_000 });
+
+    await page.selectOption('#pairClassFilter', classXId);
+    await page.selectOption('#pairStatusFilter', 'assigned');
+    await page.fill('#pairSearch', 'TST018');
+
+    const rows = page.locator('#allPairsContent tbody tr');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('TST018');
+    await expect(rows.first()).toContainText('ครูทดสอบ B');
   });
 
   test('US-018: audit log has rows for subject Z changes', async () => {
