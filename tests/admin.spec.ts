@@ -561,6 +561,16 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator('#reassignDialog')).toHaveClass(/open/, { timeout: 15_000 });
     await expect(page.locator('#reassignMsg')).toContainText('ครูทดสอบ A');
     await expect(page.locator('#reassignMsg')).toContainText('ครูทดสอบ B');
+    await expect(page.locator('#reassignDialog .dialog')).toHaveAttribute('role', 'alertdialog');
+
+    const dialogLayout = await page.locator('#reassignDialog .dialog').evaluate((el: any) => {
+      const rect = el.getBoundingClientRect();
+      const styles = el.ownerDocument.defaultView.getComputedStyle(el);
+      return { width: rect.width, borderRadius: styles.borderRadius };
+    });
+    expect(dialogLayout.width).toBeGreaterThan(300);
+    expect(dialogLayout.width).toBeLessThanOrEqual(440);
+    expect(dialogLayout.borderRadius).not.toBe('0px');
 
     // Confirm reassign
     await page.click('#confirmReassignBtn');

@@ -68,6 +68,17 @@
     select[multiple] { min-height: 100px; }
     .multi-select-help { color: var(--text-muted); font-size: 11px; margin-top: 5px; }
 
+    /* Reassignment confirmation */
+    .dialog-overlay { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 32, 52, 0.52); backdrop-filter: blur(3px); }
+    .dialog-overlay.open { display: flex; }
+    .dialog { width: min(440px, 100%); overflow: hidden; background: white; border: 1px solid rgba(26, 86, 160, 0.14); border-radius: 18px; box-shadow: 0 24px 70px rgba(16, 32, 52, 0.28); }
+    .dialog-header { display: flex; gap: 12px; align-items: center; padding: 20px 22px 14px; }
+    .dialog-icon { display: grid; flex: 0 0 40px; height: 40px; place-items: center; border-radius: 50%; background: #fff4df; color: #a85d00; font-size: 20px; font-weight: 700; }
+    .dialog h3 { margin: 0; color: var(--text); font-size: 18px; line-height: 1.35; }
+    .dialog-message { margin: 0; padding: 0 22px 20px 74px; color: var(--text-muted); font-size: 14px; line-height: 1.7; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; background: var(--bg-table-head); border-top: 1px solid var(--border); }
+    .dialog-actions .btn { min-width: 92px; }
+
     @media (max-width: 760px) {
       .container { display: block; height: auto; min-height: calc(100vh - 52px); }
       .teacher-panel { width: 100%; min-width: 0; max-height: 310px; border-right: none; border-bottom: 1px solid var(--border); }
@@ -89,6 +100,12 @@
       .bulk-mode-tabs { flex-direction: column; }
       .bulk-mode-btn { width: 100%; }
       select[multiple] { min-height: 180px; }
+      .dialog-overlay { align-items: flex-end; padding: 12px; }
+      .dialog { border-radius: 18px 18px 12px 12px; }
+      .dialog-header { padding: 18px 18px 12px; }
+      .dialog-message { padding: 0 18px 18px; }
+      .dialog-actions { padding: 12px 18px; }
+      .dialog-actions .btn { flex: 1; }
     }
   </style>
 </head>
@@ -223,9 +240,12 @@
 
 <!-- Reassign confirmation dialog -->
 <div class="dialog-overlay" id="reassignDialog">
-  <div class="dialog">
-    <h3>ยืนยันการเปลี่ยนครูผู้สอน</h3>
-    <p id="reassignMsg"></p>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="reassignTitle" aria-describedby="reassignMsg">
+    <div class="dialog-header">
+      <span class="dialog-icon" aria-hidden="true">!</span>
+      <h3 id="reassignTitle">ยืนยันการเปลี่ยนครูผู้สอน</h3>
+    </div>
+    <p class="dialog-message" id="reassignMsg"></p>
     <div class="dialog-actions">
       <button class="btn" onclick="closeReassignDialog()">ยกเลิก</button>
       <button class="btn btn-primary" id="confirmReassignBtn">ยืนยัน</button>
