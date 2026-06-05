@@ -126,13 +126,13 @@
       <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
       <? if (data.session && data.session.role === 'admin') { ?>
       <div class="admin-setup-steps">
-        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--brand);border-bottom:2px solid var(--brand-light);padding-bottom:8px">ขั้นตอนการจัดการข้อมูลระบบ (System Setup Steps)</h3>
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--brand);border-bottom:2px solid var(--brand-light);padding-bottom:8px">ขั้นตอนการจัดการข้อมูลระบบ</h3>
         
         <!-- Step 1 -->
         <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
           <div class="step-badge">1</div>
           <div class="step-content">
-            <h4>เพิ่มและจัดการชั้นเรียน (Classroom Setup)</h4>
+            <h4>เพิ่มและจัดการชั้นเรียน</h4>
             <p>สร้างรายชื่อห้องเรียนทั้งหมด (เช่น ป.1/1, ม.3/2) เพื่อลงทะเบียนข้อมูลนักเรียนและผู้สอนในภายหลัง</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -142,7 +142,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_subjects'); return false;">
           <div class="step-badge">2</div>
           <div class="step-content">
-            <h4>สร้างและจัดการรายวิชา (Subject Catalog Setup)</h4>
+            <h4>สร้างและจัดการรายวิชา</h4>
             <p>กำหนดรหัสวิชา ชื่อวิชา และจัดกลุ่มสาระการเรียนรู้ตามหลักสูตรแกนกลางของโรงเรียน</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -152,7 +152,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_weights'); return false;">
           <div class="step-badge">3</div>
           <div class="step-content">
-            <h4>กำหนดสัดส่วนน้ำหนักคะแนน (Weights Configuration)</h4>
+            <h4>กำหนดสัดส่วนน้ำหนักคะแนน</h4>
             <p>แบ่งสัดส่วนน้ำหนักคะแนนรายวิชา (เช่น คะแนนเก็บ, สอบกลางภาค, สอบปลายภาค) ให้แต่ละวิชา</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -162,7 +162,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_indicators'); return false;">
           <div class="step-badge">4</div>
           <div class="step-content">
-            <h4>จัดเตรียมตัวชี้วัด/ผลการเรียนรู้ (Indicators Setup)</h4>
+            <h4>จัดเตรียมตัวชี้วัดและผลการเรียนรู้</h4>
             <p>ใส่รายการตัวชี้วัดรายวิชาที่จำเป็นต้องประเมิน สำหรับนำไปใช้ตัดเกรดในคะแนนเก็บและคะแนนคุณลักษณะ</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -172,7 +172,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
           <div class="step-badge">5</div>
           <div class="step-content">
-            <h4>ลงทะเบียนและอัปโหลดรายชื่อนักเรียน (Student Roster Setup)</h4>
+            <h4>ลงทะเบียนและอัปโหลดรายชื่อนักเรียน</h4>
             <p>เข้าไปในแต่ละห้องเรียนเพื่อกรอกชื่อสกุล เลขที่ และข้อมูลนักเรียนทั้งหมดในห้องเรียนนั้นๆ</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -182,7 +182,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_users'); return false;">
           <div class="step-badge">6</div>
           <div class="step-content">
-            <h4>สร้างบัญชีผู้ใช้สำหรับผู้สอน (Teacher Accounts)</h4>
+            <h4>สร้างบัญชีผู้ใช้สำหรับผู้สอน</h4>
             <p>สร้างชื่อผู้ใช้ รหัสผ่านเริ่มต้น และระดับสิทธิ์การทำงานให้กับคุณครูผู้ประเมินผลการเรียน</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -192,7 +192,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_enrollments'); return false;">
           <div class="step-badge">7</div>
           <div class="step-content">
-            <h4>มอบหมายครูผู้สอนประจำรายวิชา (Teacher Assignments)</h4>
+            <h4>มอบหมายครูผู้สอนประจำรายวิชา</h4>
             <p>ระบุว่าคุณครูท่านใดสอนรายวิชาใดในห้องเรียนใด (รองรับการมอบหมายแบบทีละวิชาและมอบหมายจำนวนมาก)</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -202,7 +202,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_workload'); return false;">
           <div class="step-badge">8</div>
           <div class="step-content">
-            <h4>ตรวจสอบและควบคุมภาระงานครู (Teacher Workload Monitor)</h4>
+            <h4>ตรวจสอบและควบคุมภาระงานครู</h4>
             <p>ดูสรุปภาระงานสอนของคุณครูแต่ละท่าน จำนวนวิชาที่สอน และจำนวนนักเรียนรวมเพื่อความสมดุล</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -212,7 +212,7 @@
         <a class="step-card" href="#" onclick="navigate('admin_audit'); return false;">
           <div class="step-badge">9</div>
           <div class="step-content">
-            <h4>ตรวจสอบประวัติการแก้ไขข้อมูล (Audit Trail Tracking)</h4>
+            <h4>ตรวจสอบประวัติการแก้ไขข้อมูล</h4>
             <p>ตรวจสอบและสืบค้นประวัติการแก้ไขคะแนนหรือข้อมูลสำคัญในฐานข้อมูลระบบ</p>
           </div>
           <div class="step-action-arrow">➔</div>
@@ -220,7 +220,7 @@
       </div>
       <? } ?>
 
-      <h3 style="font-size:15px;font-weight:600;margin-top:20px;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px">การจัดการทั่วไป (General Management)</h3>
+      <h3 style="font-size:15px;font-weight:600;margin-top:20px;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px">การจัดการทั่วไป</h3>
       <div class="menu-grid">
         <? if (data.session && data.session.role === 'admin') { ?>
         <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>

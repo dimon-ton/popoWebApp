@@ -132,7 +132,7 @@
     <div class="panel-header">รายชื่อครู</div>
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-teacher" onclick="switchTab('teacher')">ครูรายคน</button>
-      <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">ทุกคู่</button>
+      <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">รายการสอน</button>
       <button class="tab-btn" id="tab-bulk" onclick="switchTab('bulk')">กำหนดกลุ่ม</button>
     </div>
     <div class="teacher-search-wrap">
@@ -154,18 +154,18 @@
       <div id="teacherDetail" style="display:none"></div>
     </div>
     <div class="all-pairs-panel" id="allPairsTab" style="display:none">
-      <div class="section-title">ทุกคู่ (class, subject) ในโรงเรียน</div>
+      <div class="section-title">รายการชั้นเรียนและวิชาทั้งหมด</div>
       <div class="summary-grid" id="pairSummary">
-        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">คู่ทั้งหมด</span></div>
-        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">กำหนดแล้ว</span></div>
-        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">ยังไม่กำหนด</span></div>
+        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">รายการทั้งหมด</span></div>
+        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">มีครูผู้สอนแล้ว</span></div>
+        <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">ยังไม่มีครูผู้สอน</span></div>
       </div>
       <div class="pair-filters">
         <input type="search" id="pairSearch" placeholder="ค้นหาวิชา หรือชื่อครู..." oninput="applyPairFilters()">
         <select id="pairClassFilter" onchange="applyPairFilters()"><option value="">ทุกชั้นเรียน</option></select>
         <select id="pairStatusFilter" onchange="applyPairFilters()">
           <option value="">ทุกสถานะ</option>
-          <option value="assigned">กำหนดแล้ว</option>
+          <option value="assigned">มีครูผู้สอนแล้ว</option>
           <option value="unassigned">ยังไม่ได้กำหนด</option>
         </select>
       </div>
@@ -383,7 +383,7 @@ function renderDetailPanel(teacher, enrollments) {
   }).join('');
 
   var tableRows = enrollments.length === 0
-    ? '<tr><td colspan="3" class="no-data">ยังไม่มีคู่ที่กำหนด</td></tr>'
+    ? '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>'
     : enrollments.map(function(en) {
         return '<tr>' +
           '<td>' + escHtml(en.class_label) + '</td>' +
@@ -396,12 +396,12 @@ function renderDetailPanel(teacher, enrollments) {
     '<div class="teacher-detail-header">' +
       '<div>' +
         '<div class="teacher-name-big">' + escHtml(teacher.full_name) + '</div>' +
-        '<div class="pair-count" id="pairCountLabel">' + enrollments.length + ' คู่ที่กำหนด</div>' +
+        '<div class="pair-count" id="pairCountLabel">' + enrollments.length + ' รายการสอน</div>' +
       '</div>' +
     '</div>' +
 
     '<div class="add-pair-form">' +
-      '<h3>เพิ่มคู่ (ชั้น, วิชา)</h3>' +
+      '<h3>เพิ่มวิชาที่สอน</h3>' +
       '<div class="form-row">' +
         '<div class="form-group">' +
           '<label>ชั้นเรียน</label>' +
@@ -415,7 +415,7 @@ function renderDetailPanel(teacher, enrollments) {
       '</div>' +
     '</div>' +
 
-    '<div class="section-title">คู่ที่กำหนดให้ครู</div>' +
+    '<div class="section-title">รายการที่ครูสอน</div>' +
     '<table id="enrollmentTable">' +
       '<thead><tr><th>ชั้น</th><th>วิชา</th><th></th></tr></thead>' +
       '<tbody id="enrollmentBody">' + tableRows + '</tbody>' +
@@ -453,7 +453,7 @@ function addPair() {
       }
 
       if (data.status === 'unchanged') {
-        showToast('คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว', 'success');
+        showToast('รายการนี้ถูกกำหนดให้ครูนี้อยู่แล้ว', 'success');
         return;
       }
 
@@ -470,7 +470,7 @@ function addPair() {
 }
 
 function removeEnrollment(enrollmentId) {
-  if (!confirm('ต้องการลบคู่นี้ออกใช่ไหม?')) return;
+  if (!confirm('ต้องการลบรายการสอนนี้ออกใช่ไหม?')) return;
   google.script.run
     .withSuccessHandler(function(data) {
       if (data.error) { showToast(data.error, 'error'); return; }
@@ -488,7 +488,7 @@ function refreshEnrollments(enrollments) {
   var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
   if (!teacher) return;
   var tableRows = enrollments.length === 0
-    ? '<tr><td colspan="3" class="no-data">ยังไม่มีคู่ที่กำหนด</td></tr>'
+    ? '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>'
     : enrollments.map(function(en) {
         return '<tr>' +
           '<td>' + escHtml(en.class_label) + '</td>' +
@@ -499,7 +499,7 @@ function refreshEnrollments(enrollments) {
   var tbody = document.getElementById('enrollmentBody');
   if (tbody) tbody.innerHTML = tableRows;
   var label = document.getElementById('pairCountLabel');
-  if (label) label.textContent = enrollments.length + ' คู่ที่กำหนด';
+  if (label) label.textContent = enrollments.length + ' รายการสอน';
 }
 
 function updatePairCount(userId, count) {
@@ -603,7 +603,7 @@ function applyPairFilters() {
     return true;
   });
   if (rows.length === 0) {
-    el.innerHTML = '<div class="filter-empty">ไม่พบคู่ที่ตรงกับตัวกรอง</div>';
+    el.innerHTML = '<div class="filter-empty">ไม่พบรายการสอนที่ตรงกับตัวกรอง</div>';
     return;
   }
   el.innerHTML = '<div class="table-wrap"><table>' +
