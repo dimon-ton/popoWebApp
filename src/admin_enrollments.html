@@ -253,7 +253,7 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 var TOKEN = '<?= data.token ?>';
@@ -706,7 +706,10 @@ function submitBulkAssign(mode) {
       var resultEl = document.getElementById('bulkResult');
       resultEl.textContent = msg;
       resultEl.classList.add('show');
-      showToast('กำหนดครูแบบกลุ่มสำเร็จ', 'success');
+      var toastMsg = (data.created > 0 || data.reassigned > 0)
+        ? 'บันทึกการกำหนดครูสำเร็จ: ' + msg
+        : 'ไม่มีรายการเปลี่ยนแปลง: รายการที่เลือกถูกกำหนดไว้แล้ว';
+      showToast(toastMsg, 'success');
       loadData();
     })
     .withFailureHandler(function(err) {
@@ -722,9 +725,10 @@ var toastTimer = null;
 function showToast(msg, type) {
   var el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'show ' + (type || '');
+  el.className = 'toast ' + (type || 'success');
+  el.style.display = 'block';
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function() { el.className = ''; }, 3000);
+  toastTimer = setTimeout(function() { el.style.display = 'none'; }, 4000);
 }
 
 // ---- Helpers ----
