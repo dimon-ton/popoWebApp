@@ -78,6 +78,23 @@
         <button class="btn-primary" id="addStudentBtn" onclick="addStudent()">เพิ่มนักเรียน</button>
       </div>
     </div>
+    <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+      <h3 style="font-size:15px; margin-bottom:10px;">นำเข้ารายชื่อนักเรียนจาก CSV</h3>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
+        ใช้แม่แบบนี้สำหรับกรอกรายชื่อนักเรียนจำนวนมากในชั้นนี้ คอลัมน์ <code>student_id</code> ไม่บังคับ ถ้าเว้นว่างระบบจะสร้างให้ใหม่
+      </div>
+      <div class="form-row" style="align-items:center;">
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
+          <input type="file" id="studentsCsvInput" accept=".csv" style="padding:6px 11px; width:100%;">
+        </div>
+        <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+          <button class="btn-secondary" onclick="downloadStudentsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+        </div>
+        <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+          <button class="btn-primary" id="importStudentsCsvBtn" onclick="importStudentsCSV()">นำเข้า CSV</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -85,11 +102,11 @@
     <div id="readonlyNotice" class="readonly-notice" style="display:none">คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูประจำชั้นหรือผู้ดูแลระบบแก้ไขได้</div>
     <div class="loading-msg" id="studentsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:17%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:17%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:17%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:17%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:17%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
       </div>
     </div>
     <table id="studentsTable" style="display:none">
@@ -155,6 +172,151 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var rows = [];
+  var row = [''];
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    var next = text[i + 1];
+    if (c === '"') {
+      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      row.push('');
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      rows.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += c;
+    }
+  }
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+
+function csvEscape(value) {
+  var s = String(value == null ? '' : value);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function downloadCSVFile(filename, rows) {
+  var csv = rows.map(function(row) { return row.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function normalizeCSVHeader(header) {
+  return String(header || '').trim().replace(/\s*\*$/, '').trim();
+}
+
+function findCSVHeaderIndex(headers, names) {
+  for (var i = 0; i < names.length; i++) {
+    var idx = headers.indexOf(names[i]);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function downloadStudentsCSVTemplate() {
+  downloadCSVFile('students_import_template_' + CLASS_ID + '.csv', [
+    ['student_id', 'seq_no*', 'student_code', 'citizen_id', 'prefix', 'first_name*', 'last_name*', 'full_name', 'dob', 'note'],
+    ['', '1', '65001', '', 'เด็กชาย', 'ตัวอย่าง', 'นักเรียน', '', '01 ม.ค. 60', ''],
+    ['', '2', '65002', '', 'เด็กหญิง', 'ตัวอย่าง', 'เรียนดี', '', '02 ม.ค. 60', '']
+  ]);
+}
+
+function importStudentsCSV() {
+  var input = document.getElementById('studentsCsvInput');
+  if (!input.files || input.files.length === 0) {
+    showToast('กรุณาเลือกไฟล์ CSV', 'error');
+    return;
+  }
+  var btn = document.getElementById('importStudentsCsvBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังนำเข้า...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var csvRows = parseCSV(e.target.result);
+      var headers = (csvRows[0] || []).map(normalizeCSVHeader);
+      var idIdx = findCSVHeaderIndex(headers, ['student_id']);
+      var seqIdx = findCSVHeaderIndex(headers, ['seq_no', 'เลขที่']);
+      var codeIdx = findCSVHeaderIndex(headers, ['student_code', 'เลขประจำตัว']);
+      var citizenIdx = findCSVHeaderIndex(headers, ['citizen_id', 'เลขประจำตัวประชาชน']);
+      var prefixIdx = findCSVHeaderIndex(headers, ['prefix']);
+      var firstNameIdx = findCSVHeaderIndex(headers, ['first_name']);
+      var lastNameIdx = findCSVHeaderIndex(headers, ['last_name']);
+      var nameIdx = findCSVHeaderIndex(headers, ['full_name', 'ชื่อ-สกุล']);
+      var dobIdx = findCSVHeaderIndex(headers, ['dob', 'วันเกิด']);
+      var noteIdx = findCSVHeaderIndex(headers, ['note', 'หมายเหตุ']);
+      if (seqIdx === -1 || ((firstNameIdx === -1 || lastNameIdx === -1) && nameIdx === -1)) {
+        showToast('หัวตาราง CSV ไม่ถูกต้อง กรุณาใช้แม่แบบ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      var rows = [];
+      for (var i = 1; i < csvRows.length; i++) {
+        var r = csvRows[i];
+        var prefix = prefixIdx !== -1 && r[prefixIdx] ? r[prefixIdx].trim() : '';
+        var firstName = firstNameIdx !== -1 && r[firstNameIdx] ? r[firstNameIdx].trim() : '';
+        var lastName = lastNameIdx !== -1 && r[lastNameIdx] ? r[lastNameIdx].trim() : '';
+        var composedName = firstName || lastName ? (prefix + firstName + (lastName ? ' ' + lastName : '')).trim() : '';
+        var name = nameIdx !== -1 && r[nameIdx] ? r[nameIdx].trim() : composedName;
+        var code = r[codeIdx] ? r[codeIdx].trim() : '';
+        var seqNo = r[seqIdx] ? r[seqIdx].trim() : '';
+        if (!name && !code && !seqNo) continue;
+        rows.push({
+          student_id: idIdx !== -1 && r[idIdx] ? r[idIdx].trim() : '',
+          seq_no: seqNo,
+          student_code: code,
+          citizen_id: citizenIdx !== -1 && r[citizenIdx] ? r[citizenIdx].trim() : '',
+          full_name: name,
+          dob: dobIdx !== -1 && r[dobIdx] ? r[dobIdx].trim() : '',
+          note: noteIdx !== -1 && r[noteIdx] ? r[noteIdx].trim() : ''
+        });
+      }
+      if (rows.length === 0) {
+        showToast('ไม่พบข้อมูลนักเรียนในไฟล์ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          if (result && result.error) { showToast(result.error, 'error'); return; }
+          var msg = 'นำเข้า ' + result.success_count + ' รายการ (เพิ่มใหม่ ' + (result.created_count || 0) + ', อัปเดต ' + (result.updated_count || 0) + ')';
+          if (result.warnings && result.warnings.length) msg += ' พบข้อควรระวัง ' + result.warnings.length + ' รายการ';
+          showToast(msg, result.warnings && result.warnings.length ? 'error' : 'success');
+          input.value = '';
+          loadStudents();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .serverImportStudentsCSV(TOKEN, CLASS_ID, rows);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+      showToast('อ่านไฟล์ CSV ไม่สำเร็จ: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = function() {
+    btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+    showToast('ไม่สามารถอ่านไฟล์ CSV ได้', 'error');
+  };
+  reader.readAsText(input.files[0], 'UTF-8');
+}
+
 function loadStudents() {
   if (!CLASS_ID) {
     document.getElementById('studentsLoading').textContent = 'ไม่พบรหัสชั้นเรียน — กรุณาเข้าผ่านเมนูชั้นเรียน';
@@ -172,7 +334,7 @@ function loadStudents() {
       CAN_EDIT = result.can_edit === true;
       var info = result.class_info || {};
       document.getElementById('pageHeading').textContent =
-        'ทะเบียนนักเรียน — ' + escHtml(fmtCls(info.level, info.section)) +
+        'ทะเบียนนักเรียน — ' + escHtml(info.class_label || fmtCls(info.level, info.section)) +
         ' (' + escHtml(CLASS_ID) + ')';
       document.getElementById('tableHeading').textContent =
         'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';

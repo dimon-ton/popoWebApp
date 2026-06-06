@@ -47,7 +47,7 @@ function getFormativeData(token, class_id, subject_id) {
     indicators: indicators,
     scores: scoreMap,
     subject_info: subj,
-    class_info: cls,
+    class_info: withClassLabel(cls),
     can_edit: can_edit
   };
 }

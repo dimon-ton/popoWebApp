@@ -44,9 +44,11 @@ function handleTestApi(e) {
 
       case 'seed_subject':
         ensureTestPrefix(params.subject_id);
+        ensureColumns('Subjects', ['class_id']);
         dbDelete('Subjects', 'subject_id', params.subject_id);
         dbInsert('Subjects', {
           subject_id: params.subject_id,
+          class_id: params.class_id || '',
           subject_name: params.name || params.subject_id,
           subject_code: params.code || 'TST0000',
           hours_per_year: params.hours || 40,

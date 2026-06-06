@@ -230,12 +230,13 @@
       </div>
     </div>
     <div class="card" id="dashSkeleton">
-      <div class="skeleton-block" style="width:40%;height:20px;background:#e2e5e9;border-radius:4px;animation:skeleton-pulse 1.5s ease-in-out infinite;margin-bottom:20px"></div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
-        <div style="height:64px;background:#e2e5e9;border-radius:8px;animation:skeleton-pulse 1.5s ease-in-out infinite"></div>
+      <div class="skeleton-line w50" style="height:22px;margin-bottom:18px"></div>
+      <div class="admin-setup-steps">
+        <div class="skeleton-line w40" style="height:18px;margin-bottom:4px"></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w40"></div><div class="skeleton-line w70" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w60"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w45"></div><div class="skeleton-line w75" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
       </div>
     </div>
 
@@ -244,10 +245,10 @@
       <div class="card">
         <h3>รายวิชาที่สอน</h3>
         <div id="teacherLoading" class="loading-msg">
-          <div class="skeleton-block" style="width:80%"></div>
-          <div class="skeleton-block" style="width:60%"></div>
-          <div class="skeleton-block" style="width:70%"></div>
-          <div class="skeleton-block" style="width:50%"></div>
+          <div class="skeleton-list">
+            <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-action-grid"><div class="skeleton-action"></div><div class="skeleton-action"></div><div class="skeleton-action"></div></div></div><div class="skeleton-line" style="width:48px"></div></div></div>
+            <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w45"></div><div class="skeleton-action-grid"><div class="skeleton-action"></div><div class="skeleton-action"></div><div class="skeleton-action"></div></div></div><div class="skeleton-line" style="width:48px"></div></div></div>
+          </div>
         </div>
         <div id="teacherPairs"></div>
       </div>
@@ -336,7 +337,7 @@ function showNavLoading() {
   var el = document.createElement('div');
   el.className = 'nav-loading';
   el.id = 'navLoading';
-  el.innerHTML = '<div class="skeleton-block"></div><div class="skeleton-block" style="width:80%"></div><div class="skeleton-menu"><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div></div>';
+  el.innerHTML = '<div class="skeleton-line w50" style="height:22px;width:260px"></div><div class="skeleton-line w40" style="width:190px;margin-top:10px"></div><div class="skeleton-menu"><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div></div>';
   document.body.appendChild(el);
 }
 

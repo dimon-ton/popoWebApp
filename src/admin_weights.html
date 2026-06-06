@@ -37,13 +37,18 @@
 
   <div class="card">
     <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+      <button class="btn-secondary" onclick="downloadWeightsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+      <input type="file" id="weightsCsvInput" accept=".csv" style="padding:6px 11px;">
+      <button class="btn-primary" id="importWeightsCsvBtn" onclick="importWeightsCSV()">นำเข้า CSV</button>
+    </div>
     <div class="loading-msg" id="weightsLoading">
-      <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:14%"></div></div>
+      <div class="skeleton-table two-tier">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:48%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
       </div>
     </div>
     <div id="weightsTableWrap" style="display:none">
@@ -115,7 +120,145 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var rows = [], row = [''], inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i], next = text[i + 1];
+    if (c === '"') {
+      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) row.push('');
+    else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      rows.push(row); row = [''];
+    } else row[row.length - 1] += c;
+  }
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+
+function csvEscape(value) {
+  var s = String(value == null ? '' : value);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function normalizeCSVHeader(header) {
+  return String(header || '').trim().replace(/\s*\*$/, '').trim();
+}
+
+function downloadCSVFile(filename, rows) {
+  var csv = rows.map(function(row) { return row.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
 var weightsData = [];
+
+function downloadWeightsCSVTemplate() {
+  var rows = [['subject_id*', 'subject_code', 'subject_name', 'pre_mid_max*', 'mid_max*', 'post_mid_max*', 'coursework_max', 'final_exam_max*', 'final_max', 'total']];
+  (weightsData || []).forEach(function(w) {
+    var pre = Number(w.pre_mid_max) || 0;
+    var mid = Number(w.mid_max) || 0;
+    var post = Number(w.post_mid_max) || 0;
+    var finalExam = Number(w.final_exam_max) || 0;
+    var coursework = pre + mid + post;
+    rows.push([w.subject_id, w.subject_code || '', w.subject_name || '', pre, mid, post, coursework, finalExam, 100 - coursework, pre + mid + post + finalExam]);
+  });
+  downloadCSVFile('subject_weights_template.csv', rows);
+}
+
+function importWeightsCSV() {
+  var input = document.getElementById('weightsCsvInput');
+  if (!input.files || input.files.length === 0) { showToast('กรุณาเลือกไฟล์ CSV', 'error'); return; }
+  var btn = document.getElementById('importWeightsCsvBtn');
+  btn.disabled = true; btn.textContent = 'กำลังนำเข้า...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var csvRows = parseCSV(e.target.result);
+      var headers = (csvRows[0] || []).map(normalizeCSVHeader);
+      var sidIdx = headers.indexOf('subject_id');
+      var preIdx = headers.indexOf('pre_mid_max');
+      var midIdx = headers.indexOf('mid_max');
+      var postIdx = headers.indexOf('post_mid_max');
+      var finalIdx = headers.indexOf('final_exam_max');
+      if (sidIdx === -1 || preIdx === -1 || midIdx === -1 || postIdx === -1 || finalIdx === -1) {
+        showToast('หัวตาราง CSV ไม่ถูกต้อง กรุณาใช้แม่แบบ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      var known = {};
+      (weightsData || []).forEach(function(w) { known[w.subject_id] = true; });
+      var rows = [];
+      var errors = [];
+      for (var i = 1; i < csvRows.length; i++) {
+        var r = csvRows[i];
+        var sid = r[sidIdx] ? r[sidIdx].trim() : '';
+        if (!sid) continue;
+        if (!known[sid]) { errors.push(sid); continue; }
+        var pre = parseInt(r[preIdx], 10) || 0;
+        var mid = parseInt(r[midIdx], 10) || 0;
+        var post = parseInt(r[postIdx], 10) || 0;
+        var finalExam = parseInt(r[finalIdx], 10) || 0;
+        if (pre + mid + post + finalExam !== 100) {
+          errors.push(sid + ' รวมไม่เท่ากับ 100');
+          continue;
+        }
+        var coursework = pre + mid + post;
+        rows.push({
+          subject_id: sid,
+          pre_mid_max: pre,
+          mid_max: mid,
+          post_mid_max: post,
+          final_exam_max: finalExam,
+          coursework_max: coursework,
+          final_max: 100 - coursework
+        });
+      }
+      if (errors.length) {
+        showToast('พบข้อมูลไม่ถูกต้อง: ' + errors.slice(0, 5).join(', '), 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      if (rows.length === 0) {
+        showToast('ไม่พบข้อมูลน้ำหนักคะแนนในไฟล์ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          if (result && result.error) { showToast(result.error, 'error'); return; }
+          showToast('นำเข้าน้ำหนักคะแนนสำเร็จ ' + rows.length + ' รายการ', 'success');
+          input.value = '';
+          document.getElementById('weightsLoading').style.display = 'block';
+          document.getElementById('weightsTableWrap').style.display = 'none';
+          loadWeights();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .serverSaveWeights(TOKEN, rows);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+      showToast('อ่านไฟล์ CSV ไม่สำเร็จ: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = function() {
+    btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+    showToast('ไม่สามารถอ่านไฟล์ CSV ได้', 'error');
+  };
+  reader.readAsText(input.files[0], 'UTF-8');
+}
 
 function loadWeights() {
   google.script.run

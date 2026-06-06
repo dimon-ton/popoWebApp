@@ -237,6 +237,93 @@ function getUsersListForPage(token) {
   return { users: getUsersList() };
 }
 
+function serverImportUsersCSV(token, rows) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureUserAuthColumns();
+
+  var users = dbGetAll('Users');
+  var byId = {};
+  var byUsername = {};
+  users.forEach(function(u) {
+    if (u.user_id) byId[String(u.user_id).trim()] = u;
+    if (u.username) byUsername[String(u.username).trim()] = u;
+  });
+
+  var created = 0;
+  var updated = 0;
+  var warnings = [];
+
+  (rows || []).forEach(function(row, idx) {
+    var lineNum = idx + 1;
+    var userId = String(row.user_id || '').trim();
+    var username = String(row.username || '').trim();
+    var fullName = String(row.full_name || '').trim();
+    var role = String(row.role || 'teacher').trim();
+    var password = String(row.initial_password || '');
+    var mustChange = String(row.must_change_pwd || '').trim();
+
+    if (!username || !fullName) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุ username หรือชื่อ-สกุล');
+      return;
+    }
+    if (role !== 'teacher' && role !== 'admin') {
+      warnings.push('แถวที่ ' + lineNum + ': บทบาทไม่ถูกต้อง จึงใช้ teacher');
+      role = 'teacher';
+    }
+
+    var target = null;
+    if (userId && byId[userId]) {
+      target = byId[userId];
+    } else if (!userId && byUsername[username]) {
+      target = byUsername[username];
+      userId = target.user_id;
+    }
+
+    if (target) {
+      var oldVal = { username: target.username, full_name: target.full_name, role: target.role };
+      var updates = { full_name: fullName, role: role };
+      if (password) {
+        var salt = Utilities.getUuid();
+        updates.password_hash = computeHash(password, salt);
+        updates.salt = salt;
+        updates.must_change_pwd = mustChange || (role === 'teacher' ? 'true' : '');
+      } else if (mustChange) {
+        updates.must_change_pwd = mustChange;
+      }
+      dbUpdate('Users', 'user_id', target.user_id, updates);
+      target.full_name = fullName;
+      target.role = role;
+      appendAuditLog(session.user_id, 'Users', target.user_id, oldVal, { imported: true, action: 'update', username: username, password_changed: !!password });
+      updated++;
+    } else {
+      if (!password) {
+        warnings.push('แถวที่ ' + lineNum + ': ข้ามผู้ใช้ใหม่ "' + username + '" เพราะไม่ได้ระบุรหัสผ่านเริ่มต้น');
+        return;
+      }
+      var newUserId = userId || generateId('user');
+      var newSalt = Utilities.getUuid();
+      var newUser = {
+        user_id: newUserId,
+        username: username,
+        password_hash: computeHash(password, newSalt),
+        salt: newSalt,
+        full_name: fullName,
+        role: role,
+        must_change_pwd: mustChange || (role === 'teacher' ? 'true' : ''),
+        created_at: new Date().toISOString()
+      };
+      dbInsert('Users', newUser);
+      byId[newUserId] = newUser;
+      byUsername[username] = newUser;
+      appendAuditLog(session.user_id, 'Users', newUserId, null, { imported: true, action: 'create', username: username, role: role });
+      created++;
+    }
+  });
+
+  return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+}
+
 function serverLogin(username, password) {
   try {
     ensureUserAuthColumns();

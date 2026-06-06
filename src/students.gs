@@ -19,7 +19,7 @@ function getStudentsList(token, class_id) {
 
   return {
     students: sanitizeRows(students),
-    class_info: sanitizeRow(cls),
+    class_info: sanitizeRow(withClassLabel(cls)),
     can_edit: isAdmin || isHomeroom
   };
 }
@@ -155,4 +155,104 @@ function serverDeleteStudent(token, student_id) {
   appendAuditLog(session.user_id, 'Students', student_id, student, null);
   dbDelete('Students', 'student_id', student_id);
   return { ok: true };
+}
+
+function serverImportStudentsCSV(token, class_id, rows) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+
+  var cls = dbFindOne('Classes', 'class_id', class_id);
+  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
+
+  if (session.role !== 'admin' && String(cls.homeroom_teacher_user_id || '').trim() !== session.user_id) {
+    throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
+  }
+
+  var existing = dbFind('Students', 'class_id', class_id);
+  var byId = {};
+  var byCode = {};
+  var byCitizenId = {};
+  existing.forEach(function(s) {
+    if (s.student_id) byId[String(s.student_id)] = s;
+    if (s.student_code) byCode[String(s.student_code).trim()] = s;
+    if (s.citizen_id) byCitizenId[String(s.citizen_id).trim()] = s;
+  });
+
+  var created = 0;
+  var updated = 0;
+  var warnings = [];
+
+  (rows || []).forEach(function(row, idx) {
+    var lineNum = idx + 1;
+    var studentId = String(row.student_id || '').trim();
+    var seqNo = parseInt(row.seq_no, 10) || 0;
+    var studentCode = String(row.student_code || '').trim();
+    var citizenId = String(row.citizen_id || '').trim();
+    var fullName = String(row.full_name || '').trim();
+    var dob = String(row.dob || '').trim();
+    var note = String(row.note || '').trim();
+
+    if (!fullName) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุชื่อ-สกุล');
+      return;
+    }
+
+    var target = null;
+    if (studentId && byId[studentId]) {
+      target = byId[studentId];
+    } else if (!studentId && studentCode && byCode[studentCode]) {
+      target = byCode[studentCode];
+      studentId = target.student_id;
+    }
+
+    if (citizenId) {
+      var duplicate = byCitizenId[citizenId];
+      if (duplicate && (!target || duplicate.student_id !== target.student_id)) {
+        warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะเลขประจำตัวประชาชนซ้ำในชั้นเรียนนี้');
+        return;
+      }
+    }
+
+    if (target) {
+      var oldVal = JSON.parse(JSON.stringify(target));
+      dbUpdate('Students', 'student_id', target.student_id, {
+        seq_no: seqNo,
+        student_code: studentCode,
+        citizen_id: citizenId,
+        full_name: fullName,
+        dob: dob,
+        note: note
+      });
+      target.seq_no = seqNo;
+      target.student_code = studentCode;
+      target.citizen_id = citizenId;
+      target.full_name = fullName;
+      target.dob = dob;
+      target.note = note;
+      if (studentCode) byCode[studentCode] = target;
+      if (citizenId) byCitizenId[citizenId] = target;
+      appendAuditLog(session.user_id, 'Students', target.student_id, oldVal, { imported: true, action: 'update' });
+      updated++;
+    } else {
+      var newId = studentId || generateId('student');
+      var newStudent = {
+        student_id: newId,
+        class_id: class_id,
+        seq_no: seqNo,
+        student_code: studentCode,
+        citizen_id: citizenId,
+        full_name: fullName,
+        dob: dob,
+        note: note
+      };
+      dbInsert('Students', newStudent);
+      byId[newId] = newStudent;
+      if (studentCode) byCode[studentCode] = newStudent;
+      if (citizenId) byCitizenId[citizenId] = newStudent;
+      appendAuditLog(session.user_id, 'Students', newId, null, { imported: true, action: 'create', class_id: class_id });
+      created++;
+    }
+  });
+
+  return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
 }

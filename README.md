@@ -83,9 +83,9 @@ The Playwright MCP browser also uses `tests/.auth/auth.json` for session reuse. 
    ```sh
    clasp push
    ```
-5. Deploy the web app (set execution as "User accessing the app", access "Anyone"):
+5. Redeploy the existing web app deployment (set execution as "User accessing the app", access "Anyone"):
    ```sh
-   clasp deploy --deploymentId <PROD_DEPLOY_ID>
+   npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"
    ```
 6. Visit the `/exec` URL in your browser. If `DB_SHEET_ID` is not yet set, the **first-run setup wizard** appears automatically — follow the three steps to create the database, enter school info, and confirm the default admin account.
 7. Log in as `admin` with the temporary password `admin1234` and **change it immediately** via Admin → จัดการผู้ใช้.
@@ -93,8 +93,8 @@ The Playwright MCP browser also uses `tests/.auth/auth.json` for session reuse. 
 ### Redeploying after code changes
 
 ```sh
-clasp push
-clasp deploy --deploymentId <PROD_DEPLOY_ID>
+npx clasp push
+npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"
 ```
 
 ## Test data isolation

@@ -26,6 +26,7 @@ interface SeedSubjectOpts {
   name?: string;
   code?: string;
   group?: number;
+  class_id?: string;
 }
 
 interface SeedStudentOpts {
@@ -94,6 +95,7 @@ export async function seedTestSubject(opts: SeedSubjectOpts): Promise<string> {
     name: opts.name ?? subjectId,
     code: opts.code ?? 'TST0000',
     group: opts.group ?? 1,
+    class_id: opts.class_id ?? '',
   });
   return subjectId;
 }

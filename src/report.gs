@@ -127,7 +127,7 @@ function getReportData(token, class_id, subject_id) {
 
   return {
     school_info: school_info,
-    class_info: cls,
+    class_info: withClassLabel(cls),
     subject_info: subj,
     teacher_name: teacher_name,
     homeroom_teacher_name: homeroom_teacher_name,

@@ -157,12 +157,13 @@ test.describe('US-004: School info, classes, and subjects', () => {
     await page.fill('#newSubjectName', 'ภาษาอังกฤษทดสอบ');
     await page.fill('#newSubjectCode', 'test_001');
     await page.fill('#newHours', '80');
+    await page.selectOption('#newClassIds', ['class_test_class_p1_1']);
     await page.click('#addSubjectBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มวิชาสำเร็จ', { timeout: 15_000 });
 
     // Assert row appears with data-subject-id attribute (generated from code)
-    await expect(page.locator('tr[data-subject-id="subj_test_001"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('tr[data-subject-id*="subj_test_001"]')).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -427,14 +428,16 @@ test.describe('US-018: Teacher enrollment management', () => {
   let teacherBId: string;
   let classXId: string;
   let classYId: string;
-  let subjectZId: string;
+  let subjectZXId: string;
+  let subjectZYId: string;
 
   test.beforeAll(async () => {
     teacherAId = await seedTestUser({ suffix: 'us018_ta', role: 'teacher', full_name: 'ครูทดสอบ A' });
     teacherBId = await seedTestUser({ suffix: 'us018_tb', role: 'teacher', full_name: 'ครูทดสอบ B' });
     classXId = await seedTestClass({ suffix: 'us018_cx', level: 'ป.1', section: '1' });
     classYId = await seedTestClass({ suffix: 'us018_cy', level: 'ป.1', section: '2' });
-    subjectZId = await seedTestSubject({ suffix: 'us018_sz', name: 'วิชาทดสอบ Z', code: 'TST018' });
+    subjectZXId = await seedTestSubject({ suffix: 'us018_sz_x', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classXId });
+    subjectZYId = await seedTestSubject({ suffix: 'us018_sz_y', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classYId });
   });
 
   test.afterAll(async () => {
@@ -502,7 +505,6 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator('.teacher-name-big')).toContainText('ครูทดสอบ A');
 
     // Add pair form should exist
-    await expect(page.locator('#addClassId')).toBeVisible();
     await expect(page.locator('#addSubjectId')).toBeVisible();
     await expect(page.locator('#addPairBtn')).toBeVisible();
   });
@@ -512,11 +514,10 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherAId}`);
     await page.click(`#ti-${teacherAId}`);
-    await page.waitForSelector('#addClassId');
+    await page.waitForSelector('#addSubjectId');
 
-    // Select class X and subject Z
-    await page.selectOption('#addClassId', classXId);
-    await page.selectOption('#addSubjectId', subjectZId);
+    // Select class X + subject Z
+    await page.selectOption('#addSubjectId', `${classXId}|${subjectZXId}`);
     await page.click('#addPairBtn');
 
     // Toast success
@@ -534,11 +535,10 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherAId}`);
     await page.click(`#ti-${teacherAId}`);
-    await page.waitForSelector('#addClassId');
+    await page.waitForSelector('#addSubjectId');
 
     // Add class Y + subject Z
-    await page.selectOption('#addClassId', classYId);
-    await page.selectOption('#addSubjectId', subjectZId);
+    await page.selectOption('#addSubjectId', `${classYId}|${subjectZYId}`);
     await page.click('#addPairBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มสำเร็จ', { timeout: 15_000 });
@@ -550,11 +550,10 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherBId}`);
     await page.click(`#ti-${teacherBId}`);
-    await page.waitForSelector('#addClassId');
+    await page.waitForSelector('#addSubjectId');
 
     // Try to add (class X, subject Z) which is owned by teacher A
-    await page.selectOption('#addClassId', classXId);
-    await page.selectOption('#addSubjectId', subjectZId);
+    await page.selectOption('#addSubjectId', `${classXId}|${subjectZXId}`);
     await page.click('#addPairBtn');
 
     // Confirmation dialog should appear
@@ -639,7 +638,7 @@ test.describe('US-018: Teacher enrollment management', () => {
     const enrollments = await queryTestRows('Enrollments', 'subject_id');
     // After reassign: class X -> teacher B, class Y -> teacher A
     const classXEnrollment = enrollments.find(
-      (e) => (e as Record<string, string>).class_id === classXId && (e as Record<string, string>).subject_id === subjectZId
+      (e) => (e as Record<string, string>).class_id === classXId && (e as Record<string, string>).subject_id === subjectZXId
     );
     expect(classXEnrollment).toBeTruthy();
     expect((classXEnrollment as Record<string, string>).teacher_user_id).toBe(teacherBId);

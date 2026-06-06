@@ -110,14 +110,14 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 
 Deployment settings are configured in `.clasp.json`:
 - `rootDir` is configured to `src/` to push files inside it directly to the root of the Google Apps Script project.
-- Redepolyments should always target the **Production Deployment ID** to keep the application URL constant.
+- Redeployments should always target the **Production Deployment ID** to keep the application URL constant.
 
 ```sh
 # Push code files to Google Apps Script
 npx clasp push
 
 # Redeploy production using the stable ID
-npx clasp deploy --deploymentId AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA --description "Release Description"
+npx clasp redeploy AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA --description "Release Description"
 ```
 
 **Production URL**: `https://script.google.com/macros/s/AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA/exec`

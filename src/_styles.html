@@ -578,21 +578,47 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   100% { opacity: 0.6; }
 }
 .skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; background: #e2e5e9; border-radius: 4px; }
+.skeleton-fill { background: #e2e5e9; border-radius: 4px; animation: skeleton-pulse 1.5s ease-in-out infinite; }
 .skeleton-row { display: flex; gap: 12px; margin-bottom: 10px; }
 .skeleton-line { height: 14px; background: #e2e5e9; border-radius: 4px; animation: skeleton-pulse 1.5s ease-in-out infinite; }
 .skeleton-line.w20 { width: 20%; }
 .skeleton-line.w30 { width: 30%; }
 .skeleton-line.w40 { width: 40%; }
+.skeleton-line.w45 { width: 45%; }
 .skeleton-line.w50 { width: 50%; }
 .skeleton-line.w60 { width: 60%; }
 .skeleton-line.w70 { width: 70%; }
+.skeleton-line.w75 { width: 75%; }
 .skeleton-line.w80 { width: 80%; }
 .skeleton-line.w100 { width: 100%; }
 .skeleton-block { height: 38px; background: #e2e5e9; border-radius: 4px; animation: skeleton-pulse 1.5s ease-in-out infinite; margin-bottom: 10px; }
-.skeleton-table { width: 100%; }
-.skeleton-table-row { display: flex; gap: 1px; margin-bottom: 1px; }
-.skeleton-table-cell { height: 32px; background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: 2px; }
-.skeleton-table-head .skeleton-table-cell { height: 36px; background: #d5dae0; }
+.skeleton-table { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: white; }
+.skeleton-table-row { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid var(--border); }
+.skeleton-table-row:last-child { border-bottom: 0; }
+.skeleton-table-cell { height: 38px; background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; border-radius: 0; border-right: 1px solid var(--border); }
+.skeleton-table-cell:last-child { border-right: 0; }
+.skeleton-table-head .skeleton-table-cell { height: 42px; background: #d5dae0; }
+.skeleton-table.compact .skeleton-table-cell { height: 32px; }
+.skeleton-table.compact .skeleton-table-head .skeleton-table-cell { height: 36px; }
+.skeleton-table.tall .skeleton-table-cell { height: 46px; }
+.skeleton-table.two-tier .skeleton-table-head .skeleton-table-cell { height: 34px; }
+.skeleton-table.two-tier .skeleton-table-row:nth-child(2) .skeleton-table-cell { height: 42px; background: #d5dae0; }
+
+.skeleton-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.skeleton-card { min-height: 76px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); padding: 14px; }
+.skeleton-card .skeleton-line { margin-bottom: 8px; }
+.skeleton-list { display: flex; flex-direction: column; gap: 10px; }
+.skeleton-list-item { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); padding: 12px; }
+.skeleton-list-item .skeleton-row { align-items: center; margin: 0; }
+.skeleton-badge { width: 30px; height: 30px; border-radius: 999px; background: #d5dae0; animation: skeleton-pulse 1.5s ease-in-out infinite; flex: 0 0 auto; }
+.skeleton-action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px; margin-top: 12px; }
+.skeleton-action { height: 39px; border-radius: var(--radius-sm); background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; border: 1px solid rgba(26,86,160,0.08); }
+.skeleton-form { display: grid; gap: 12px; }
+.skeleton-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+.skeleton-field { display: flex; flex-direction: column; gap: 6px; }
+.skeleton-field .skeleton-label { width: 36%; height: 13px; border-radius: 3px; background: #d5dae0; animation: skeleton-pulse 1.5s ease-in-out infinite; }
+.skeleton-field .skeleton-input { height: 38px; border-radius: var(--radius-sm); background: #e2e5e9; animation: skeleton-pulse 1.5s ease-in-out infinite; }
+.skeleton-button { width: 120px; height: 38px; border-radius: var(--radius-sm); background: #d5dae0; animation: skeleton-pulse 1.5s ease-in-out infinite; }
 
 /* ===== NAVBAR SKELETONS ===== */
 .navbar-title-skeleton {
@@ -640,10 +666,10 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   font-size: 13.5px;
   padding: 16px 0;
 }
-.nav-loading { position: fixed; inset: 0; background: #fff; z-index: 10000; display: flex; flex-direction: column; align-items: center; padding-top: 120px; }
+.nav-loading { position: fixed; inset: 0; background: var(--bg-page); z-index: 10000; display: flex; flex-direction: column; align-items: center; padding-top: 120px; }
 .nav-loading .skeleton-block { width: 260px; }
 .nav-loading .skeleton-menu { display: grid; grid-template-columns: repeat(3, 140px); gap: 10px; margin-top: 18px; }
-.nav-loading .skeleton-menu-item { height: 44px; background: #e2e5e9; border-radius: 6px; animation: skeleton-pulse 1.5s ease-in-out infinite; }
+.nav-loading .skeleton-menu-item { height: 44px; background: #e2e5e9; border-radius: var(--radius-sm); animation: skeleton-pulse 1.5s ease-in-out infinite; border: 1px solid var(--border); }
 
 .readonly-notice {
   font-size: 13px;
@@ -877,20 +903,13 @@ function showNavLoading() {
   if (document.getElementById('navOverlay')) return;
   var d = document.createElement('div');
   d.id = 'navOverlay';
-  d.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:10000;display:flex;flex-direction:column;align-items:center;padding-top:80px;';
-  d.innerHTML = '<div style="width:260px;height:20px;background:#e2e5e9;border-radius:4px;animation:navPulse 1.5s ease-in-out infinite;margin-bottom:12px"></div>' +
-    '<div style="width:180px;height:20px;background:#e2e5e9;border-radius:4px;animation:navPulse 1.5s ease-in-out infinite;margin-bottom:24px"></div>' +
-    '<div style="display:grid;grid-template-columns:repeat(3,140px);gap:10px">' +
-      '<div style="height:44px;background:#e2e5e9;border-radius:6px;animation:navPulse 1.5s ease-in-out infinite"></div>'.repeat(3) +
-      '<div style="height:44px;background:#e2e5e9;border-radius:6px;animation:navPulse 1.5s ease-in-out infinite"></div>'.repeat(3) +
+  d.className = 'nav-loading';
+  d.innerHTML = '<div class="skeleton-line" style="width:260px;height:22px"></div>' +
+    '<div class="skeleton-line" style="width:180px;height:14px;margin-top:10px"></div>' +
+    '<div class="skeleton-menu">' +
+      '<div class="skeleton-menu-item"></div>'.repeat(6) +
     '</div>';
   document.body.appendChild(d);
-  if (!document.getElementById('navPulseStyle')) {
-    var s = document.createElement('style');
-    s.id = 'navPulseStyle';
-    s.textContent = '@keyframes navPulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}';
-    document.head.appendChild(s);
-  }
 }
 function hideNavLoading() {
   var el = document.getElementById('navOverlay');

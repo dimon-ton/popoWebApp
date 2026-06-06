@@ -82,7 +82,7 @@ function getAttendanceData(token, class_id, subject_id, week) {
     attendance: attMap,
     yearly: yearlyMap,
     subject_info: subj,
-    class_info: cls,
+    class_info: withClassLabel(cls),
     can_edit: can_edit
   };
 }

@@ -199,17 +199,21 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
 
 // ── Classes ───────────────────────────────────────────────────────────────────
 
+function generateClassId(level, section) {
+  return 'class_' + String(level || '').replace(/[\.\s]/g, '') + '_' + String(section || '').replace(/[\.\s]/g, '');
+}
+
 function getClassesList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  return { classes: dbGetAll('Classes') };
+  return { classes: withClassLabels(dbGetAll('Classes')) };
 }
 
 function serverAddClass(token, class_id, level, section, homeroom_teacher_user_id) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   if (!level || !section) throw new Error('กรุณาระบุระดับชั้นและห้อง');
-  var autoId = 'class_' + level.replace(/[\.\s]/g, '') + '_' + section.replace(/[\.\s]/g, '');
+  var autoId = generateClassId(level, section);
   var existing = dbFindOne('Classes', 'class_id', autoId);
   if (existing) throw new Error('ชั้นเรียน ' + fmtClassLabel(level, section) + ' มีอยู่แล้ว');
   dbInsert('Classes', {
@@ -239,12 +243,95 @@ function serverDeleteClass(token, class_id) {
   return { ok: true };
 }
 
+function serverImportClassesCSV(token, rows) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+
+  var users = dbGetAll('Users');
+  var usersById = {};
+  var usersByUsername = {};
+  users.forEach(function(u) {
+    if (u.user_id) usersById[String(u.user_id).trim()] = u;
+    if (u.username) usersByUsername[String(u.username).trim()] = u;
+  });
+
+  var classes = dbGetAll('Classes');
+  var byId = {};
+  classes.forEach(function(c) { if (c.class_id) byId[String(c.class_id).trim()] = c; });
+
+  var created = 0;
+  var updated = 0;
+  var warnings = [];
+
+  (rows || []).forEach(function(row, idx) {
+    var lineNum = idx + 1;
+    var level = String(row.level || '').trim();
+    var section = String(row.section || '').trim();
+    var classId = String(row.class_id || '').trim();
+    var teacherId = String(row.homeroom_teacher_user_id || '').trim();
+    var teacherUsername = String(row.homeroom_teacher_username || '').trim();
+
+    if (!level || !section) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุระดับชั้นหรือห้อง');
+      return;
+    }
+    if (!classId) classId = generateClassId(level, section);
+
+    if (!teacherId && teacherUsername && usersByUsername[teacherUsername]) {
+      teacherId = usersByUsername[teacherUsername].user_id;
+    }
+    if (teacherId && !usersById[teacherId]) {
+      warnings.push('แถวที่ ' + lineNum + ': ไม่พบครูประจำชั้น "' + teacherId + '" จึงเว้นว่าง');
+      teacherId = '';
+    }
+
+    if (byId[classId]) {
+      var oldVal = JSON.parse(JSON.stringify(byId[classId]));
+      dbUpdate('Classes', 'class_id', classId, {
+        level: level,
+        section: section,
+        homeroom_teacher_user_id: teacherId
+      });
+      byId[classId].level = level;
+      byId[classId].section = section;
+      byId[classId].homeroom_teacher_user_id = teacherId;
+      appendAuditLog(session.user_id, 'Classes', classId, oldVal, { imported: true, action: 'update' });
+      updated++;
+    } else {
+      var newClass = {
+        class_id: classId,
+        level: level,
+        section: section,
+        homeroom_teacher_user_id: teacherId
+      };
+      dbInsert('Classes', newClass);
+      byId[classId] = newClass;
+      appendAuditLog(session.user_id, 'Classes', classId, null, { imported: true, action: 'create' });
+      created++;
+    }
+  });
+
+  return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+}
+
 // ── Subjects ──────────────────────────────────────────────────────────────────
 
 function getSubjectsList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  return { subjects: dbGetAll('Subjects') };
+  ensureColumns('Subjects', ['class_id']);
+  var classes = dbGetAll('Classes');
+  var levelCounts = buildClassLevelCounts(classes);
+  var classesById = {};
+  classes.forEach(function(c) {
+    classesById[c.class_id] = c;
+  });
+  var subjects = dbGetAll('Subjects').map(function(s) {
+    var cls = classesById[s.class_id] || null;
+    s.class_label = cls ? fmtClassLabelWithCounts(cls.level, cls.section, levelCounts) : '';
+    return s;
+  });
+  return { subjects: subjects };
 }
 
 function generateSubjectId(subject_code, subject_name) {
@@ -277,45 +364,69 @@ function generateSubjectId(subject_code, subject_name) {
   return 'subj_' + mapped;
 }
 
-function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description) {
+function normalizeClassIdSuffix(class_id) {
+  return String(class_id || '').trim().toLowerCase().replace(/^class_/, '').replace(/^test_class_/, 'test_').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function generateClassSubjectId(subject_code, subject_name, class_id) {
+  var base = generateSubjectId(subject_code, subject_name);
+  var suffix = normalizeClassIdSuffix(class_id);
+  return suffix ? base + '_' + suffix : base;
+}
+
+function insertSubjectWeightsIfMissing(subject_id, group) {
+  var existingWeight = dbFindOne('SubjectWeights', 'subject_id', subject_id);
+  if (existingWeight) return;
+  var w = DEFAULT_WEIGHTS[String(group)] || DEFAULT_WEIGHTS['1'];
+  dbInsert('SubjectWeights', {
+    subject_id: subject_id,
+    coursework_max: w.coursework_max,
+    final_max: w.final_max,
+    pre_mid_max: w.pre_mid_max,
+    mid_max: w.mid_max,
+    post_mid_max: w.post_mid_max,
+    final_exam_max: w.final_exam_max
+  });
+}
+
+function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description, class_ids) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  
-  if (!subject_id) {
-    subject_id = generateSubjectId(subject_code, subject_name);
-  }
-  
-  var existing = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (existing) {
-    subject_id += '_' + Math.random().toString(36).substring(2, 5);
-    existing = dbFindOne('Subjects', 'subject_id', subject_id);
-    if (existing) throw new Error('เกิดข้อผิดพลาดในการสร้าง subject_id กรุณาลองใหม่');
-  }
-  if (existing) throw new Error('subject_id นี้มีอยู่แล้ว');
+  ensureColumns('Subjects', ['class_id']);
+
+  var classIdList = String(class_ids || '').split(',').map(function(id) { return id.trim(); }).filter(Boolean);
+  if (!subject_name) throw new Error('Missing subject_name');
+  if (classIdList.length === 0 && !subject_id) throw new Error('กรุณาเลือกชั้นเรียนอย่างน้อย 1 รายการ');
+
   var grp = parseInt(weight_group) || 1;
-  dbInsert('Subjects', {
-    subject_id: subject_id,
-    subject_name: subject_name || '',
-    subject_code: subject_code || '',
-    hours_per_year: parseInt(hours_per_year) || 0,
-    weight_group: grp,
-    description: description || ''
-  });
-  // Auto-seed SubjectWeights for this subject
-  var existingWeight = dbFindOne('SubjectWeights', 'subject_id', subject_id);
-  if (!existingWeight) {
-    var w = DEFAULT_WEIGHTS[String(grp)] || DEFAULT_WEIGHTS['1'];
-    dbInsert('SubjectWeights', {
-      subject_id: subject_id,
-      coursework_max: w.coursework_max,
-      final_max: w.final_max,
-      pre_mid_max: w.pre_mid_max,
-      mid_max: w.mid_max,
-      post_mid_max: w.post_mid_max,
-      final_exam_max: w.final_exam_max
-    });
+
+  if (classIdList.length === 0) {
+    classIdList = [''];
   }
-  return { ok: true, subject_id: subject_id };
+
+  var createdIds = [];
+  classIdList.forEach(function(classId, index) {
+    var newSubjectId = subject_id && index === 0 ? subject_id : generateClassSubjectId(subject_code, subject_name, classId);
+    var existing = dbFindOne('Subjects', 'subject_id', newSubjectId);
+    if (existing) {
+      newSubjectId += '_' + Math.random().toString(36).substring(2, 5);
+      existing = dbFindOne('Subjects', 'subject_id', newSubjectId);
+      if (existing) throw new Error('เกิดข้อผิดพลาดในการสร้าง subject_id กรุณาลองใหม่');
+    }
+    dbInsert('Subjects', {
+      subject_id: newSubjectId,
+      class_id: classId,
+      subject_name: subject_name || '',
+      subject_code: subject_code || '',
+      hours_per_year: parseInt(hours_per_year) || 0,
+      weight_group: grp,
+      description: description || ''
+    });
+    insertSubjectWeightsIfMissing(newSubjectId, grp);
+    createdIds.push(newSubjectId);
+  });
+
+  return { ok: true, subject_id: createdIds[0], subject_ids: createdIds };
 }
 
 function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description) {
@@ -518,60 +629,143 @@ function getSubjectIndicatorsRef(token, subject_id) {
 function serverImportSubjectsCSV(token, rows) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-
-  var users = dbGetAll('Users');
-  var classes = dbGetAll('Classes');
-  var subjects = dbGetAll('Subjects');
-  var enrollments = dbGetAll('Enrollments');
+  ensureColumns('Subjects', ['class_id']);
 
   var successCount = 0;
+  var createdCount = 0;
+  var updatedCount = 0;
   var warningMessages = [];
-
-  // Helper to find teacher by name
-  function findTeacherByName(name) {
-    if (!name) return null;
-    var normName = name.trim().replace(/\s+/g, ' '); // normalize spaces
-    for (var i = 0; i < users.length; i++) {
-      var uName = (users[i].full_name || '').trim().replace(/\s+/g, ' ');
-      if (uName === normName) {
-        return users[i];
-      }
-    }
-    return null;
-  }
+  var auditRows = [];
 
   // Process rows inside a transaction/lock
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถล็อกระบบฐานข้อมูลได้ กรุณาลองใหม่ภายหลัง');
 
   try {
-    rows.forEach(function(row, idx) {
-      var lineNum = idx + 1;
-      var code = (row.subject_code || '').trim();
-      var name = (row.subject_name || '').trim();
-      var className = (row.class_name || '').trim();
-      var hoursStr = (row.hours || '').trim();
-      var hours = parseInt(hoursStr) || 0;
-      var teacherName = (row.teacher_name || '').trim();
+    var subjectSheet = getSheet('Subjects');
+    var subjectData = subjectSheet.getDataRange().getValues();
+    var subjectHeaders = subjectData[0];
+    var subjectIdCol = subjectHeaders.indexOf('subject_id');
+    var classIdCol = subjectHeaders.indexOf('class_id');
+    var subjectNameCol = subjectHeaders.indexOf('subject_name');
+    var subjectCodeCol = subjectHeaders.indexOf('subject_code');
+    var hoursCol = subjectHeaders.indexOf('hours_per_year');
+    var groupCol = subjectHeaders.indexOf('weight_group');
+    var descriptionCol = subjectHeaders.indexOf('description');
 
-      if (!code || !name || !className) {
-        warningMessages.push('แถวที่ ' + lineNum + ': ข้อมูลไม่ครบถ้วน (รหัสวิชา, ชื่อวิชา, ชั้นเรียน เป็นฟิลด์บังคับ)');
+    var weightsSheet = getSheet('SubjectWeights');
+    var weightsData = weightsSheet.getDataRange().getValues();
+    var weightsHeaders = weightsData[0];
+    var weightsSubjectIdCol = weightsHeaders.indexOf('subject_id');
+    var courseworkCol = weightsHeaders.indexOf('coursework_max');
+    var finalMaxCol = weightsHeaders.indexOf('final_max');
+    var preMidCol = weightsHeaders.indexOf('pre_mid_max');
+    var midMaxCol = weightsHeaders.indexOf('mid_max');
+    var postMidCol = weightsHeaders.indexOf('post_mid_max');
+    var finalExamCol = weightsHeaders.indexOf('final_exam_max');
+
+    var subjectsById = {};
+    var subjectsByCodeAndClass = {};
+    for (var s = 1; s < subjectData.length; s++) {
+      var existingId = String(subjectData[s][subjectIdCol] || '');
+      var existingCode = String(subjectData[s][subjectCodeCol] || '').trim();
+      var existingClassId = classIdCol !== -1 ? String(subjectData[s][classIdCol] || '').trim() : '';
+      if (existingId) subjectsById[existingId] = { rowIndex: s + 1, row: subjectData[s] };
+      if (existingCode && existingClassId) subjectsByCodeAndClass[existingCode + '|' + existingClassId] = { rowIndex: s + 1, row: subjectData[s] };
+    }
+
+    var weightsBySubjectId = {};
+    for (var wIdx = 1; wIdx < weightsData.length; wIdx++) {
+      var weightSubjectId = String(weightsData[wIdx][weightsSubjectIdCol] || '');
+      if (weightSubjectId) weightsBySubjectId[weightSubjectId] = { rowIndex: wIdx + 1, row: weightsData[wIdx] };
+    }
+
+    var classesById = {};
+    var classesByLevelSection = {};
+    dbGetAll('Classes').forEach(function(c) {
+      if (c.class_id) classesById[String(c.class_id).trim()] = c;
+      classesByLevelSection[String(c.level || '').trim() + '|' + String(c.section || '').trim()] = c;
+    });
+
+    function makeSubjectRow(subjectId, classId, name, code, hours, group, description) {
+      var row = subjectHeaders.map(function() { return ''; });
+      row[subjectIdCol] = subjectId;
+      if (classIdCol !== -1) row[classIdCol] = classId;
+      row[subjectNameCol] = name;
+      row[subjectCodeCol] = code;
+      row[hoursCol] = hours;
+      row[groupCol] = group;
+      row[descriptionCol] = description;
+      return row;
+    }
+
+    function getImportWeights(row, group, lineNum) {
+      var hasAny = row.pre_mid_max !== '' || row.mid_max !== '' || row.post_mid_max !== '' || row.final_exam_max !== '';
+      if (!hasAny) return null;
+      var pre = parseInt(row.pre_mid_max, 10) || 0;
+      var mid = parseInt(row.mid_max, 10) || 0;
+      var post = parseInt(row.post_mid_max, 10) || 0;
+      var finalExam = parseInt(row.final_exam_max, 10) || 0;
+      if (pre + mid + post + finalExam !== 100) {
+        warningMessages.push('แถวที่ ' + lineNum + ': ข้ามค่าน้ำหนักคะแนนเพราะรวมไม่เท่ากับ 100');
+        return null;
+      }
+      return {
+        coursework_max: pre + mid + post,
+        final_max: finalExam,
+        pre_mid_max: pre,
+        mid_max: mid,
+        post_mid_max: post,
+        final_exam_max: finalExam
+      };
+    }
+
+    function ensureSubjectWeights(subjectId, group, importWeights) {
+      var values = importWeights || (DEFAULT_WEIGHTS[String(group)] || DEFAULT_WEIGHTS['1']);
+      var existingWeight = weightsBySubjectId[subjectId];
+      if (existingWeight) {
+        if (!importWeights) return;
+        weightsSheet.getRange(existingWeight.rowIndex, courseworkCol + 1).setValue(values.coursework_max);
+        weightsSheet.getRange(existingWeight.rowIndex, finalMaxCol + 1).setValue(values.final_max);
+        weightsSheet.getRange(existingWeight.rowIndex, preMidCol + 1).setValue(values.pre_mid_max);
+        weightsSheet.getRange(existingWeight.rowIndex, midMaxCol + 1).setValue(values.mid_max);
+        weightsSheet.getRange(existingWeight.rowIndex, postMidCol + 1).setValue(values.post_mid_max);
+        weightsSheet.getRange(existingWeight.rowIndex, finalExamCol + 1).setValue(values.final_exam_max);
         return;
       }
+      var weightRow = weightsHeaders.map(function() { return ''; });
+      weightRow[weightsSubjectIdCol] = subjectId;
+      weightRow[courseworkCol] = values.coursework_max;
+      weightRow[finalMaxCol] = values.final_max;
+      weightRow[preMidCol] = values.pre_mid_max;
+      weightRow[midMaxCol] = values.mid_max;
+      weightRow[postMidCol] = values.post_mid_max;
+      weightRow[finalExamCol] = values.final_exam_max;
+      weightsSheet.appendRow(weightRow);
+      weightsBySubjectId[subjectId] = { rowIndex: weightsSheet.getLastRow(), row: weightRow };
+    }
 
-      // 1. Parse Class (e.g. ป.1/1)
-      var level = className;
-      var section = '1';
-      var slashIdx = className.indexOf('/');
-      if (slashIdx !== -1) {
-        level = className.substring(0, slashIdx).trim();
-        section = className.substring(slashIdx + 1).trim();
+    function ensureImportClass(classId, level, section, lineNum) {
+      classId = String(classId || '').trim();
+      level = String(level || '').trim();
+      section = String(section || '').trim();
+      if (!classId && (!level || !section)) {
+        warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุชั้นเรียนหรือห้อง');
+        return '';
       }
-
-      var classId = 'class_' + level.replace(/[\.\s]/g, '') + '_' + section.replace(/[\.\s]/g, '');
-      var existingClass = classes.find(function(c) { return c.class_id === classId; });
-      if (!existingClass) {
-        // Create Class
+      if (!classId) {
+        classId = generateClassId(level, section);
+      }
+      if (!classesById[classId]) {
+        if (!level || !section) {
+          warningMessages.push('แถวที่ ' + lineNum + ': ไม่พบ class_id และไม่มีระดับชั้น/ห้องให้สร้างอัตโนมัติ');
+          return '';
+        }
+        var existingByLabel = classesByLevelSection[level + '|' + section];
+        if (existingByLabel) {
+          classesById[existingByLabel.class_id] = existingByLabel;
+          return existingByLabel.class_id;
+        }
         var newClass = {
           class_id: classId,
           level: level,
@@ -579,91 +773,88 @@ function serverImportSubjectsCSV(token, rows) {
           homeroom_teacher_user_id: ''
         };
         dbInsert('Classes', newClass);
-        classes.push(newClass); // Cache update
+        classesById[classId] = newClass;
+        classesByLevelSection[level + '|' + section] = newClass;
+        appendAuditLog(session.user_id, 'Classes', classId, null, { imported: true, action: 'create_from_subject_import' });
+      }
+      return classId;
+    }
+
+    rows.forEach(function(row, idx) {
+      var lineNum = idx + 1;
+      var subjectId = (row.subject_id || '').trim();
+      var classId = (row.class_id || '').trim();
+      var classLevel = (row.class_level || row.level || '').trim();
+      var classSection = (row.class_section || row.section || '').trim();
+      var code = (row.subject_code || '').trim();
+      var name = (row.subject_name || '').trim();
+      var hoursStr = (row.hours || '').trim();
+      var hours = parseInt(hoursStr) || 0;
+      var group = parseInt(row.weight_group, 10) || 1;
+      var description = (row.description || '').trim();
+      var importWeights = getImportWeights(row, group, lineNum);
+
+      if (!name) {
+        warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุชื่อวิชา');
+        return;
+      }
+      classId = ensureImportClass(classId, classLevel, classSection, lineNum);
+      if (!classId) {
+        return;
       }
 
-      // 2. Find Teacher
-      var teacher = findTeacherByName(teacherName);
-      var teacherId = '';
-      if (teacher) {
-        teacherId = teacher.user_id;
-      } else if (teacherName) {
-        warningMessages.push('แถวที่ ' + lineNum + ': ไม่พบครูชื่อ "' + teacherName + '" ในระบบ (รายวิชาจะยังไม่มีผู้สอน)');
+      if (group < 1) {
+        group = 1;
       }
 
-      // 3. Create/Find Subject
-      var codeSlug = generateSubjectId(code, '').replace('subj_', '');
-      var classSlug = classId.replace('class_', '');
-      var subjectId = 'subj_' + codeSlug + '_' + classSlug;
+      var existing = null;
+      if (subjectId && subjectsById[subjectId]) {
+        existing = subjectsById[subjectId];
+      } else if (!subjectId && code && subjectsByCodeAndClass[code + '|' + classId]) {
+        existing = subjectsByCodeAndClass[code + '|' + classId];
+        subjectId = String(existing.row[subjectIdCol] || '');
+      }
 
-      var existingSub = subjects.find(function(s) { return s.subject_id === subjectId; });
-      if (!existingSub) {
-        var newSub = {
-          subject_id: subjectId,
-          subject_name: name,
-          subject_code: code,
-          hours_per_year: hours,
-          weight_group: 1,
-          description: 'นำเข้าจาก CSV'
+      if (!subjectId) {
+        subjectId = generateClassSubjectId(code, name, classId);
+      }
+
+      if (!existing && subjectsById[subjectId]) {
+        existing = subjectsById[subjectId];
+      }
+
+      if (existing) {
+        var oldValue = {
+          subject_name: existing.row[subjectNameCol],
+          class_id: classIdCol !== -1 ? existing.row[classIdCol] : '',
+          subject_code: existing.row[subjectCodeCol],
+          hours_per_year: existing.row[hoursCol],
+          weight_group: existing.row[groupCol],
+          description: existing.row[descriptionCol]
         };
-        dbInsert('Subjects', newSub);
-        subjects.push(newSub); // Cache update
-
-        // SubjectWeights
-        var w = DEFAULT_WEIGHTS['1'];
-        dbInsert('SubjectWeights', {
-          subject_id: subjectId,
-          coursework_max: w.coursework_max,
-          final_max: w.final_max,
-          pre_mid_max: w.pre_mid_max,
-          mid_max: w.mid_max,
-          post_mid_max: w.post_mid_max,
-          final_exam_max: w.final_exam_max
-        });
+        if (classIdCol !== -1) subjectSheet.getRange(existing.rowIndex, classIdCol + 1).setValue(classId);
+        subjectSheet.getRange(existing.rowIndex, subjectNameCol + 1).setValue(name);
+        subjectSheet.getRange(existing.rowIndex, subjectCodeCol + 1).setValue(code);
+        subjectSheet.getRange(existing.rowIndex, hoursCol + 1).setValue(hours);
+        subjectSheet.getRange(existing.rowIndex, groupCol + 1).setValue(group);
+        subjectSheet.getRange(existing.rowIndex, descriptionCol + 1).setValue(description);
+        if (classIdCol !== -1) existing.row[classIdCol] = classId;
+        existing.row[subjectNameCol] = name;
+        existing.row[subjectCodeCol] = code;
+        existing.row[hoursCol] = hours;
+        existing.row[groupCol] = group;
+        existing.row[descriptionCol] = description;
+        ensureSubjectWeights(subjectId, group, importWeights);
+        updatedCount++;
+        auditRows.push({ entity_id: subjectId, old_value: oldValue, new_value: { imported: true, action: 'update' } });
       } else {
-        // Update hours if needed or keep existing
-        dbUpdate('Subjects', 'subject_id', subjectId, {
-          subject_name: name,
-          subject_code: code,
-          hours_per_year: hours
-        });
-      }
-
-      // 4. Enrollments
-      var existingEnr = enrollments.find(function(e) { return e.class_id === classId && e.subject_id === subjectId; });
-      if (!existingEnr) {
-        var enrollmentId = generateId('enr');
-        dbInsert('Enrollments', {
-          enrollment_id: enrollmentId,
-          class_id: classId,
-          subject_id: subjectId,
-          teacher_user_id: teacherId,
-          dev_activity_result: ''
-        });
-        enrollments.push({
-          enrollment_id: enrollmentId,
-          class_id: classId,
-          subject_id: subjectId,
-          teacher_user_id: teacherId
-        });
-        appendAuditLog(session.user_id, 'Enrollments', enrollmentId, null, {
-          class_id: classId,
-          subject_id: subjectId,
-          teacher_user_id: teacherId
-        });
-      } else {
-        if (existingEnr.teacher_user_id !== teacherId) {
-          var oldTeacherId = existingEnr.teacher_user_id;
-          dbUpdate('Enrollments', 'enrollment_id', existingEnr.enrollment_id, {
-            teacher_user_id: teacherId
-          });
-          existingEnr.teacher_user_id = teacherId; // Cache update
-          appendAuditLog(session.user_id, 'Enrollments', existingEnr.enrollment_id, {
-            teacher_user_id: oldTeacherId
-          }, {
-            teacher_user_id: teacherId
-          });
-        }
+        var newRow = makeSubjectRow(subjectId, classId, name, code, hours, group, description);
+        subjectSheet.appendRow(newRow);
+        subjectsById[subjectId] = { rowIndex: subjectSheet.getLastRow(), row: newRow };
+        if (code) subjectsByCodeAndClass[code + '|' + classId] = subjectsById[subjectId];
+        ensureSubjectWeights(subjectId, group, importWeights);
+        createdCount++;
+        auditRows.push({ entity_id: subjectId, old_value: null, new_value: { imported: true, action: 'create' } });
       }
 
       successCount++;
@@ -672,5 +863,20 @@ function serverImportSubjectsCSV(token, rows) {
     lock.releaseLock();
   }
 
-  return { ok: true, success_count: successCount, warnings: warningMessages };
+  if (auditRows.length > 0) {
+    appendAuditLog(session.user_id, 'SubjectsCSVImport', 'bulk', null, {
+      rows_imported: successCount,
+      created: createdCount,
+      updated: updatedCount,
+      subjects: auditRows
+    });
+  }
+
+  return {
+    ok: true,
+    success_count: successCount,
+    created_count: createdCount,
+    updated_count: updatedCount,
+    warnings: warningMessages
+  };
 }

@@ -74,3 +74,81 @@ function preseedIndicators(token, subject_id) {
   });
   return { ok: true, added: added };
 }
+
+function serverImportIndicatorsCSV(token, subject_id, rows) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!subject_id) throw new Error('subject_id is required');
+
+  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  if (!subject) throw new Error('ไม่พบวิชา: ' + subject_id);
+
+  var existing = dbFind('Indicators', 'subject_id', subject_id);
+  var byId = {};
+  var byCode = {};
+  existing.forEach(function(ind) {
+    if (ind.indicator_id) byId[String(ind.indicator_id)] = ind;
+    if (ind.code) byCode[String(ind.code).trim()] = ind;
+  });
+
+  var created = 0;
+  var updated = 0;
+  var warnings = [];
+
+  (rows || []).forEach(function(row, idx) {
+    var lineNum = idx + 1;
+    var indicatorId = String(row.indicator_id || '').trim();
+    var code = String(row.code || '').trim();
+    var description = String(row.description || '').trim();
+    var maxScore = parseInt(row.max_score, 10) || 3;
+    var displayOrder = parseInt(row.display_order, 10) || 0;
+
+    if (!code) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุรหัสตัวชี้วัด');
+      return;
+    }
+    if (maxScore < 1) maxScore = 1;
+
+    var target = null;
+    if (indicatorId && byId[indicatorId]) {
+      target = byId[indicatorId];
+    } else if (!indicatorId && byCode[code]) {
+      target = byCode[code];
+      indicatorId = target.indicator_id;
+    }
+
+    if (target) {
+      var oldVal = JSON.parse(JSON.stringify(target));
+      dbUpdate('Indicators', 'indicator_id', target.indicator_id, {
+        code: code,
+        description: description,
+        max_score: maxScore,
+        display_order: displayOrder
+      });
+      target.code = code;
+      target.description = description;
+      target.max_score = maxScore;
+      target.display_order = displayOrder;
+      byCode[code] = target;
+      appendAuditLog(session.user_id, 'Indicators', target.indicator_id, oldVal, { imported: true, action: 'update' });
+      updated++;
+    } else {
+      var newId = indicatorId || generateId('ind');
+      var newIndicator = {
+        indicator_id: newId,
+        subject_id: subject_id,
+        code: code,
+        description: description,
+        max_score: maxScore,
+        display_order: displayOrder
+      };
+      dbInsert('Indicators', newIndicator);
+      byId[newId] = newIndicator;
+      byCode[code] = newIndicator;
+      appendAuditLog(session.user_id, 'Indicators', newId, null, { imported: true, action: 'create', subject_id: subject_id });
+      created++;
+    }
+  });
+
+  return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+}

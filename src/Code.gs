@@ -208,9 +208,46 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function fmtClassLabel(level, section) {
-  if (!section || section === '1') return level || '';
+function buildClassLevelCounts(classes) {
+  var counts = {};
+  (classes || []).forEach(function(c) {
+    var level = String(c.level || '');
+    counts[level] = (counts[level] || 0) + 1;
+  });
+  return counts;
+}
+
+function fmtClassLabelWithCounts(level, section, levelCounts) {
+  if (!section) return level || '';
+  var count = levelCounts ? levelCounts[String(level || '')] : null;
+  if (count <= 1) return level || '';
   return (level || '') + '/' + section;
+}
+
+function fmtClassLabel(level, section) {
+  if (!section) return level || '';
+  try {
+    var rows = dbGetAll('Classes');
+    return fmtClassLabelWithCounts(level, section, buildClassLevelCounts(rows));
+  } catch (err) {
+    if (String(section) === '1') return level || '';
+  }
+  return (level || '') + '/' + section;
+}
+
+function withClassLabel(cls, levelCounts) {
+  if (!cls) return cls;
+  cls.class_label = levelCounts
+    ? fmtClassLabelWithCounts(cls.level, cls.section, levelCounts)
+    : fmtClassLabel(cls.level, cls.section);
+  return cls;
+}
+
+function withClassLabels(classes) {
+  var levelCounts = buildClassLevelCounts(classes);
+  return (classes || []).map(function(cls) {
+    return withClassLabel(cls, levelCounts);
+  });
 }
 
 function getDashboardHtml(token) {

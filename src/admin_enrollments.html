@@ -139,11 +139,11 @@
       <input type="search" id="teacherSearch" placeholder="ค้นหาชื่อครู..." oninput="renderTeacherList()">
     </div>
       <div id="teacherList" class="teacher-list loading-msg">
-        <div class="skeleton-block" style="width:80%"></div>
-        <div class="skeleton-block" style="width:60%"></div>
-        <div class="skeleton-block" style="width:70%"></div>
-        <div class="skeleton-block" style="width:50%"></div>
-        <div class="skeleton-block" style="width:65%"></div>
+        <div class="skeleton-list">
+          <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w60"></div><div class="skeleton-line w30" style="margin-top:8px"></div></div><div class="skeleton-badge"></div></div></div>
+          <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-line w40" style="margin-top:8px"></div></div><div class="skeleton-badge"></div></div></div>
+          <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w70"></div><div class="skeleton-line w30" style="margin-top:8px"></div></div><div class="skeleton-badge"></div></div></div>
+        </div>
       </div>
   </div>
 
@@ -354,7 +354,20 @@ function selectTeacher(userId) {
   document.getElementById('emptyState').style.display = 'none';
   var detail = document.getElementById('teacherDetail');
   detail.style.display = '';
-  detail.innerHTML = '<div class="detail-loading">กำลังโหลดข้อมูลครู...</div>';
+  detail.innerHTML =
+    '<div class="detail-card">' +
+      '<div class="skeleton-line w40" style="height:20px;margin-bottom:8px"></div>' +
+      '<div class="skeleton-line w30" style="margin-bottom:18px"></div>' +
+      '<div class="skeleton-form-row" style="margin-bottom:16px">' +
+        '<div class="skeleton-field"><div class="skeleton-label"></div><div class="skeleton-input"></div></div>' +
+        '<div class="skeleton-button"></div>' +
+      '</div>' +
+      '<div class="skeleton-table compact">' +
+        '<div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:55%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>' +
+        '<div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:55%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>' +
+        '<div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:55%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>' +
+      '</div>' +
+    '</div>';
   renderTeacherDetail(userId);
 }
 
@@ -374,13 +387,16 @@ function renderTeacherDetail(userId) {
 function renderDetailPanel(teacher, enrollments) {
   var detail = document.getElementById('teacherDetail');
 
-  // Build class & subject dropdowns from allData
-  var classOptions = (allData.classes || []).map(function(c) {
-    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(fmtCls(c.level, c.section)) + '</option>';
+  var classMap = {};
+  (allData.classes || []).forEach(function(c) { classMap[c.class_id] = c; });
+  var subjectOptions = (allData.subjects || []).filter(function(s) {
+    return !!s.class_id && !!classMap[s.class_id];
+  }).map(function(s) {
+    var cls = classMap[s.class_id];
+    var value = s.class_id + '|' + s.subject_id;
+    return '<option value="' + escAttr(value) + '">' + escHtml((cls.class_label || fmtCls(cls.level, cls.section)) + ' - ' + subjectLabel(s)) + '</option>';
   }).join('');
-  var subjectOptions = (allData.subjects || []).map(function(s) {
-    return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(subjectLabel(s)) + '</option>';
-  }).join('');
+  if (!subjectOptions) subjectOptions = '<option value="">ยังไม่มีวิชาที่ผูกกับชั้นเรียน</option>';
 
   var tableRows = enrollments.length === 0
     ? '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>'
@@ -404,11 +420,7 @@ function renderDetailPanel(teacher, enrollments) {
       '<h3>เพิ่มวิชาที่สอน</h3>' +
       '<div class="form-row">' +
         '<div class="form-group">' +
-          '<label>ชั้นเรียน</label>' +
-          '<select id="addClassId">' + classOptions + '</select>' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label>วิชา</label>' +
+          '<label>ชั้นเรียน / วิชา</label>' +
           '<select id="addSubjectId">' + subjectOptions + '</select>' +
         '</div>' +
         '<button class="btn btn-primary" id="addPairBtn" onclick="addPair()">เพิ่ม</button>' +
@@ -424,8 +436,14 @@ function renderDetailPanel(teacher, enrollments) {
 
 function addPair() {
   if (!selectedTeacherId) return;
-  var classId = document.getElementById('addClassId').value;
-  var subjectId = document.getElementById('addSubjectId').value;
+  var selectedPair = document.getElementById('addSubjectId').value;
+  if (!selectedPair || selectedPair.indexOf('|') === -1) {
+    showToast('กรุณาเลือกวิชาที่ผูกกับชั้นเรียน', 'error');
+    return;
+  }
+  var pairParts = selectedPair.split('|');
+  var classId = pairParts[0];
+  var subjectId = pairParts[1];
   var btn = document.getElementById('addPairBtn');
   btn.disabled = true;
   btn.textContent = 'กำลังบันทึก...';
@@ -627,7 +645,7 @@ var bulkMode = 'A';
 function populateBulkDropdowns() {
   if (!allData) return;
   var classOptions = (allData.classes || []).map(function(c) {
-    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(fmtCls(c.level, c.section)) + '</option>';
+    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.class_label || fmtCls(c.level, c.section)) + '</option>';
   }).join('');
   var subjectOptions = (allData.subjects || []).map(function(s) {
     return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(subjectLabel(s)) + '</option>';

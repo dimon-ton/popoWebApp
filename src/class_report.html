@@ -41,12 +41,29 @@
     <span id="pdfStatus" style="font-size:13px;color:#888"></span>
   </div>
   <div class="loading-msg" id="loadingMsg">
-      <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+      <div class="card">
+        <div class="skeleton-line w30" style="height:16px;margin-bottom:14px"></div>
+        <div class="info-grid">
+          <div class="skeleton-line w70"></div><div class="skeleton-line w60"></div>
+          <div class="skeleton-line w50"></div><div class="skeleton-line w80"></div>
+          <div class="skeleton-line w60"></div><div class="skeleton-line w50"></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="skeleton-line w40" style="margin-bottom:12px"></div><div class="skeleton-table compact"><div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div></div></div>
+        <div class="card"><div class="skeleton-line w50" style="margin-bottom:12px"></div><div class="skeleton-table compact"><div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:60%"></div><div class="skeleton-table-cell" style="width:40%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:60%"></div><div class="skeleton-table-cell" style="width:40%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:60%"></div><div class="skeleton-table-cell" style="width:40%"></div></div></div></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="skeleton-line w60" style="margin-bottom:12px"></div><div class="skeleton-table compact"><div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div></div></div>
+        <div class="card"><div class="skeleton-line w70" style="margin-bottom:12px"></div><div class="skeleton-table compact"><div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div><div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:34%"></div><div class="skeleton-table-cell" style="width:33%"></div><div class="skeleton-table-cell" style="width:33%"></div></div></div></div>
+      </div>
+      <div class="card">
+        <div class="skeleton-line w50" style="margin-bottom:12px"></div>
+        <div class="skeleton-table compact">
+          <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:58%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:58%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:58%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+        </div>
       </div>
     </div>
 
@@ -220,7 +237,7 @@ function renderReport(d) {
   var school = d.school_info || {};
 
   document.getElementById('pageHeading').textContent =
-    'รายงานผลการเรียน (ปก) — ' + fmtCls(cls.level, cls.section) + ' — ' + (subj.subject_name || '');
+    'รายงานผลการเรียน (ปก) — ' + (cls.class_label || fmtCls(cls.level, cls.section)) + ' — ' + (subj.subject_name || '');
 
   // Info grid
   var info = [
@@ -228,7 +245,7 @@ function renderReport(d) {
     { label: 'อำเภอ', value: school.district || '-' },
     { label: 'จังหวัด', value: school.province || '-' },
     { label: 'ปีการศึกษา', value: school.academic_year || '-' },
-    { label: 'ชั้น', value: fmtCls(cls.level, cls.section) },
+    { label: 'ชั้น', value: cls.class_label || fmtCls(cls.level, cls.section) },
     { label: 'รหัสวิชา', value: subj.subject_code || '-' },
     { label: 'เวลาเรียน (ชม./ปี)', value: subj.hours_per_year || '-' },
     { label: 'ครูผู้สอน', value: d.teacher_name || '-' },

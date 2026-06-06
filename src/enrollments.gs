@@ -5,8 +5,9 @@
 
 function getEnrollmentsData() {
   // Returns all data needed for the /admin/enrollments page
+  ensureColumns('Subjects', ['class_id']);
   var teachers = dbGetAll('Users').filter(function(u) { return u.role === 'teacher'; });
-  var classes = dbGetAll('Classes');
+  var classes = withClassLabels(dbGetAll('Classes'));
   var subjects = dbGetAll('Subjects');
   var enrollments = dbGetAll('Enrollments');
 
@@ -33,8 +34,10 @@ function getTeacherEnrollments(teacherUserId) {
   var enrollments = dbGetAll('Enrollments').filter(function(e) {
     return e.teacher_user_id === teacherUserId;
   });
+  var classRows = dbGetAll('Classes');
+  var levelCounts = buildClassLevelCounts(classRows);
   var classes = {};
-  dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
+  classRows.forEach(function(c) { classes[c.class_id] = c; });
   var subjects = {};
   dbGetAll('Subjects').forEach(function(s) { subjects[s.subject_id] = s; });
 
@@ -44,7 +47,7 @@ function getTeacherEnrollments(teacherUserId) {
     return {
       enrollment_id: e.enrollment_id,
       class_id: e.class_id,
-      class_label: fmtClassLabel(cls.level, cls.section),
+      class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
       subject_id: e.subject_id,
       subject_name: sub.subject_name || e.subject_id,
       subject_code: sub.subject_code || ''
@@ -171,11 +174,14 @@ function handleRemoveEnrollment(e, session) {
 }
 
 function getAllPairsMatrix() {
-  // Returns full school matrix for the "All pairs" tab
+  // Returns assignment-ready class-specific subject rows for the "All pairs" tab
   var classes = dbGetAll('Classes');
+  var levelCounts = buildClassLevelCounts(classes);
   var subjects = dbGetAll('Subjects');
   var enrollments = dbGetAll('Enrollments');
   var users = {};
+  var classMap = {};
+  classes.forEach(function(cls) { classMap[cls.class_id] = cls; });
   dbGetAll('Users').forEach(function(u) { users[u.user_id] = u; });
 
   // Build lookup
@@ -186,20 +192,21 @@ function getAllPairsMatrix() {
   });
 
   var rows = [];
-  classes.forEach(function(cls) {
-    subjects.forEach(function(sub) {
-      var key = cls.class_id + '|' + sub.subject_id;
-      var teacherId = pairMap[key];
-      var teacherName = teacherId && users[teacherId] ? users[teacherId].full_name : 'ยังไม่ได้กำหนด';
-      rows.push({
-        class_id: cls.class_id,
-        class_label: fmtClassLabel(cls.level, cls.section),
-        subject_id: sub.subject_id,
-        subject_name: sub.subject_name,
-        subject_code: sub.subject_code || '',
-        teacher_user_id: teacherId || '',
-        teacher_name: teacherName
-      });
+  subjects.forEach(function(sub) {
+    if (!sub.class_id) return;
+    var cls = classMap[sub.class_id];
+    if (!cls) return;
+    var key = sub.class_id + '|' + sub.subject_id;
+    var teacherId = pairMap[key];
+    var teacherName = teacherId && users[teacherId] ? users[teacherId].full_name : 'ยังไม่ได้กำหนด';
+    rows.push({
+      class_id: sub.class_id,
+      class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
+      subject_id: sub.subject_id,
+      subject_name: sub.subject_name,
+      subject_code: sub.subject_code || '',
+      teacher_user_id: teacherId || '',
+      teacher_name: teacherName
     });
   });
   return rows;

@@ -25,7 +25,14 @@
   <div class="container">
     <div class="card">
       <h2 id="pageHeading">สถานะฐานข้อมูล</h2>
-      <p class="loading" id="loading">กำลังโหลด...</p>
+      <div class="loading-msg" id="loading">
+        <div class="skeleton-table compact">
+          <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:70%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:70%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:70%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+          <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:70%"></div><div class="skeleton-table-cell" style="width:30%"></div></div>
+        </div>
+      </div>
       <table id="statusTable" style="display:none">
         <thead>
           <tr><th>ชื่อ Tab</th><th>จำนวนแถว (รวม Header)</th></tr>

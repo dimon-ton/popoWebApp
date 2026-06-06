@@ -48,7 +48,7 @@ school-wide web application used by all teachers and one admin at โรงเ�
 These must pass for every user story before it is marked done:
 
 1. `clasp push` — deploys source to Apps Script; must succeed with no syntax errors.
-2. `clasp deploy --deploymentId <PROD_DEPLOY_ID>` — redeploys live `/exec` URL.
+2. `npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"` — redeploys live `/exec` URL.
 3. `pnpm playwright test tests/<area>.spec.ts -g "<US-ID>"` — the story's Playwright spec must
    finish green against the production URL using `tests/.auth/auth.json`.
 

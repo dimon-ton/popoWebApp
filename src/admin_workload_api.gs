@@ -15,8 +15,10 @@ function getWorkloadData() {
   var enrollments = dbGetAll('Enrollments');
   var subjects = {};
   dbGetAll('Subjects').forEach(function(s) { subjects[s.subject_id] = s; });
+  var classRows = dbGetAll('Classes');
+  var levelCounts = buildClassLevelCounts(classRows);
   var classes = {};
-  dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
+  classRows.forEach(function(c) { classes[c.class_id] = c; });
   var students = dbGetAll('Students');
 
   // Build student count per class (distinct)
@@ -62,7 +64,7 @@ function getWorkloadData() {
         var sub = subjects[e.subject_id] || {};
         return {
           class_id: e.class_id,
-          class_label: fmtClassLabel(cls.level, cls.section),
+          class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
           subject_id: e.subject_id,
           subject_name: sub.subject_name || e.subject_id
         };
@@ -103,8 +105,10 @@ function clientGetTeacherOwnClasses(token) {
 
     var subjects = {};
     dbGetAll('Subjects').forEach(function(s) { subjects[s.subject_id] = s; });
+    var classRows = dbGetAll('Classes');
+    var levelCounts = buildClassLevelCounts(classRows);
     var classes = {};
-    dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
+    classRows.forEach(function(c) { classes[c.class_id] = c; });
     var students = dbGetAll('Students');
     var studentsPerClass = {};
     students.forEach(function(s) {
@@ -117,7 +121,7 @@ function clientGetTeacherOwnClasses(token) {
       var sub = subjects[e.subject_id] || {};
       return {
         class_id: e.class_id,
-        class_label: fmtClassLabel(cls.level, cls.section),
+        class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
         subject_id: e.subject_id,
         subject_name: sub.subject_name || e.subject_id,
         student_count: studentsPerClass[e.class_id] || 0

@@ -48,6 +48,10 @@
         <input type="number" id="newHours" placeholder="80" min="0">
       </div>
       <div class="form-group">
+        <label>ชั้นเรียน</label>
+        <select id="newClassIds" multiple style="min-height:96px; min-width:180px"></select>
+      </div>
+      <div class="form-group">
         <label>คำอธิบายวิชา (ไม่บังคับ)</label>
         <input type="text" id="newDescription" placeholder="เช่น รายวิชาพื้นฐาน">
       </div>
@@ -58,14 +62,17 @@
   </div>
 
   <div class="card">
-    <h3>นำเข้าข้อมูลรายวิชาและผู้สอนจากไฟล์ CSV</h3>
+    <h3>นำเข้าข้อมูลรายวิชาจากไฟล์ CSV</h3>
     <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>⚠️ ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> หัวตารางต้องมีฟิลด์สะกดตรงตัวดังนี้: <code>รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน</code> (คั่นด้วยเครื่องหมายจุลภาค <code>,</code> และบันทึกไฟล์ด้วยการเข้ารหัส UTF-8)
+      <strong>⚠️ ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบก่อนกรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ หัวตารางต้องมีฟิลด์ <code>ระดับชั้น, ห้อง, รหัสระบบ, รหัสวิชา, ชื่อวิชา, จำนวนชั่วโมง, กลุ่มน้ำหนัก, คำอธิบาย</code> และสามารถระบุน้ำหนักคะแนน <code>ก่อนกลางภาค, กลางภาค, หลังกลางภาค, ปลายภาค</code> ได้ โดย <code>class_id</code> และ <code>รหัสระบบ</code> ไม่บังคับ หากเว้นว่างระบบจะสร้างให้อัตโนมัติ
     </div>
     
     <div class="form-row" style="align-items: center;">
       <div class="form-group" style="margin-bottom:0; flex:1; min-width: 240px;">
         <input type="file" id="csvFileInput" accept=".csv" style="padding: 6px 11px; width: 100%;">
+      </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-secondary" id="downloadCsvTemplateBtn" onclick="downloadCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       </div>
       <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
         <button class="btn-primary" id="importCsvBtn" onclick="importCSVFile()">นำเข้าข้อมูล</button>
@@ -97,15 +104,16 @@
 
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
       </div>
     </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
           <th>รหัสระบบ</th>
+          <th>ชั้นเรียน</th>
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
           <th>เวลาเรียน</th>
@@ -190,6 +198,25 @@ function escHtml(s) {
 }
 
 var allSubjects = [];
+var allClasses = [];
+
+function fmtCls(level, section) {
+  return String(level || '') + (section ? '/' + section : '');
+}
+
+function loadClassesForSubjects() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      allClasses = (result && result.classes) ? result.classes : [];
+      var options = allClasses.map(function(c) {
+        return '<option value="' + escHtml(c.class_id) + '">' + escHtml(c.class_label || fmtCls(c.level, c.section)) + '</option>';
+      }).join('');
+      var select = document.getElementById('newClassIds');
+      if (select) select.innerHTML = options;
+    })
+    .withFailureHandler(function(err) { showToast('โหลดชั้นเรียนไม่สำเร็จ: ' + err.message, 'error'); })
+    .getClassesList(TOKEN);
+}
 
 function loadSubjects() {
   google.script.run
@@ -212,6 +239,7 @@ function renderSubjects(subjects) {
 
     tr.innerHTML =
       '<td>' + escHtml(s.subject_id) + '</td>' +
+      '<td>' + escHtml(s.class_label || (s.class_id ? s.class_id : 'Legacy')) + '</td>' +
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
@@ -231,8 +259,11 @@ function addSubject() {
   var subject_code = document.getElementById('newSubjectCode').value.trim();
   var hours = document.getElementById('newHours').value.trim();
   var description = document.getElementById('newDescription').value.trim();
+  var classSelect = document.getElementById('newClassIds');
+  var classIds = Array.from(classSelect.selectedOptions).map(function(o) { return o.value; });
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
+  if (classIds.length === 0) { showToast('กรุณาเลือกชั้นเรียนอย่างน้อย 1 รายการ', 'error'); return; }
 
   var btn = document.getElementById('addSubjectBtn');
   btn.disabled = true;
@@ -246,6 +277,7 @@ function addSubject() {
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
       document.getElementById('newDescription').value = '';
+      Array.from(document.getElementById('newClassIds').options).forEach(function(o) { o.selected = false; });
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
       loadSubjects();
@@ -254,7 +286,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description);
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description, classIds.join(','));
 }
 
 function openEditModal(subject_id) {
@@ -305,6 +337,9 @@ function parseCSV(text) {
   var lines = [];
   var row = [""];
   var inQuotes = false;
+  if (text.charCodeAt(0) === 0xFEFF) {
+    text = text.slice(1);
+  }
   for (var i = 0; i < text.length; i++) {
     var c = text[i];
     var next = text[i+1];
@@ -329,6 +364,38 @@ function parseCSV(text) {
     lines.push(row);
   }
   return lines;
+}
+
+function csvEscape(value) {
+  var s = String(value == null ? '' : value);
+  if (/[",\r\n]/.test(s)) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function normalizeCSVHeader(header) {
+  return String(header || '').trim().replace(/\s*\*$/, '').trim();
+}
+
+function downloadCSVTemplate() {
+  var headers = ['class_id', 'ระดับชั้น*', 'ห้อง*', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'คำอธิบาย', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
+  var rows = [
+    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', '200', '1', 'รายวิชาพื้นฐาน', '30', '20', '20', '30'],
+    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', '200', '1', 'รายวิชาพื้นฐาน', '30', '20', '20', '30']
+  ];
+  var csv = [headers].concat(rows).map(function(row) {
+    return row.map(csvEscape).join(',');
+  }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'subjects_import_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 
 function importCSVFile() {
@@ -356,16 +423,23 @@ function importCSVFile() {
         return;
       }
       
-      // Header matching
-      var headers = lines[0].map(function(h) { return h.trim(); });
+      var headers = lines[0].map(normalizeCSVHeader);
+      var classIdx = headers.indexOf('class_id');
+      var levelIdx = headers.indexOf('ระดับชั้น');
+      var sectionIdx = headers.indexOf('ห้อง');
+      var idIdx = headers.indexOf('รหัสระบบ');
       var codeIdx = headers.indexOf('รหัสวิชา');
       var nameIdx = headers.indexOf('ชื่อวิชา');
-      var classIdx = headers.indexOf('ชั้นเรียน');
       var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
-      var teacherIdx = headers.indexOf('ชื่อครูผู้สอน');
+      var groupIdx = headers.indexOf('กลุ่มน้ำหนัก');
+      var descIdx = headers.indexOf('คำอธิบาย');
+      var preMidIdx = headers.indexOf('ก่อนกลางภาค');
+      var midIdx = headers.indexOf('กลางภาค');
+      var postMidIdx = headers.indexOf('หลังกลางภาค');
+      var finalExamIdx = headers.indexOf('ปลายภาค');
       
-      if (codeIdx === -1 || nameIdx === -1 || classIdx === -1 || hoursIdx === -1 || teacherIdx === -1) {
-        showToast('โครงสร้างหัวตาราง CSV ไม่ถูกต้อง กรุณาใช้: รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน', 'error');
+      if (nameIdx === -1 || ((classIdx === -1) && (levelIdx === -1 || sectionIdx === -1))) {
+        showToast('โครงสร้างหัวตาราง CSV ไม่ถูกต้อง กรุณาใช้แม่แบบ CSV จากปุ่มดาวน์โหลด', 'error');
         btn.disabled = false;
         btn.textContent = 'นำเข้าข้อมูล';
         return;
@@ -374,21 +448,32 @@ function importCSVFile() {
       var rowsToImport = [];
       for (var i = 1; i < lines.length; i++) {
         var row = lines[i];
-        if (row.length < headers.length) continue; // Skip incomplete or empty lines
-        var code = row[codeIdx] ? row[codeIdx].trim() : '';
+        var classId = classIdx !== -1 && row[classIdx] ? row[classIdx].trim() : '';
+        var classLevel = levelIdx !== -1 && row[levelIdx] ? row[levelIdx].trim() : '';
+        var classSection = sectionIdx !== -1 && row[sectionIdx] ? row[sectionIdx].trim() : '';
+        var subjectId = idIdx !== -1 && row[idIdx] ? row[idIdx].trim() : '';
+        var code = codeIdx !== -1 && row[codeIdx] ? row[codeIdx].trim() : '';
         var name = row[nameIdx] ? row[nameIdx].trim() : '';
-        var className = row[classIdx] ? row[classIdx].trim() : '';
-        var hours = row[hoursIdx] ? row[hoursIdx].trim() : '';
-        var teacher = row[teacherIdx] ? row[teacherIdx].trim() : '';
+        var hours = hoursIdx !== -1 && row[hoursIdx] ? row[hoursIdx].trim() : '';
+        var group = groupIdx !== -1 && row[groupIdx] ? row[groupIdx].trim() : '1';
+        var description = descIdx !== -1 && row[descIdx] ? row[descIdx].trim() : '';
         
-        if (!code && !name && !className) continue; // Skip blank lines
+        if (!classId && !classLevel && !classSection && !subjectId && !code && !name && !hours && !description) continue;
         
         rowsToImport.push({
+          class_id: classId,
+          class_level: classLevel,
+          class_section: classSection,
+          subject_id: subjectId,
           subject_code: code,
           subject_name: name,
-          class_name: className,
           hours: hours,
-          teacher_name: teacher
+          weight_group: group,
+          description: description,
+          pre_mid_max: preMidIdx !== -1 && row[preMidIdx] ? row[preMidIdx].trim() : '',
+          mid_max: midIdx !== -1 && row[midIdx] ? row[midIdx].trim() : '',
+          post_mid_max: postMidIdx !== -1 && row[postMidIdx] ? row[postMidIdx].trim() : '',
+          final_exam_max: finalExamIdx !== -1 && row[finalExamIdx] ? row[finalExamIdx].trim() : ''
         });
       }
       
@@ -409,14 +494,14 @@ function importCSVFile() {
             return;
           }
           
-          showToast('นำเข้าข้อมูลรายวิชาและจัดคู่สำเร็จ ' + result.success_count + ' รายการ', 'success');
+          showToast('นำเข้าข้อมูลรายวิชาสำเร็จ ' + result.success_count + ' รายการ', 'success');
           
           // Render results panel
           var resPanel = document.getElementById('importResults');
           var resSummary = document.getElementById('importResultSummary');
           var resWarns = document.getElementById('importResultWarnings');
           
-          resSummary.textContent = 'นำเข้าข้อมูลรายวิชาสำเร็จ ' + result.success_count + ' รายการ';
+          resSummary.textContent = 'นำเข้า ' + result.success_count + ' รายการ (เพิ่มใหม่ ' + (result.created_count || 0) + ', อัปเดต ' + (result.updated_count || 0) + ')';
           resSummary.style.color = '#2e7d32';
           resWarns.innerHTML = '';
           
@@ -503,6 +588,7 @@ function preseedSubjects() {
     .preseedSubjects(preset);
 }
 
+loadClassesForSubjects();
 loadSubjects();
 </script>
 </body>

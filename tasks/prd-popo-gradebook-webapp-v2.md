@@ -20,7 +20,7 @@ The application remains: Google Apps Script web app + one master Google Sheet as
 
 These commands must pass for every user story:
 - `clasp push` — pushes the latest Apps Script source; succeeds iff no syntax errors.
-- `clasp deploy --deploymentId <PROD_DEPLOY_ID>` — redeploys the existing production deployment so the live `/exec` URL serves the new code.
+- `npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"` — redeploys the existing production deployment so the live `/exec` URL serves the new code.
 - `pnpm playwright test tests/<area>.spec.ts -g "<US-ID>"` — runs the Playwright spec(s) tagged with this story's US-ID against the production URL using the saved `auth.json` storage state. Must finish green.
 
 For UI stories, the Playwright spec must include at least one visible-assertion (text content or DOM state) in addition to action clicks, so the test fails on a rendering regression.
