@@ -66,12 +66,21 @@
     </div>
 
     <div class="card">
-      <h3>รายการตัวชี้วัด</h3>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
-        <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedIndicators()">เพิ่มตัวชี้วัดเริ่มต้น (ภาษาอังกฤษ ป.1)</button>
+      <h3>นำเข้าตัวชี้วัดด้วย CSV</h3>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+        ใช้สำหรับเพิ่มหรืออัปเดตตัวชี้วัดของวิชาที่เลือกอยู่ คอลัมน์ <code>code*</code> ต้องกรอก ระบบจะใช้วิชาที่เลือกอยู่และอัปเดตจาก <code>indicator_id</code> หรือรหัสตัวชี้วัดเดิม หากไม่ระบุคะแนนเต็มจะใช้ 3 คะแนน
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <button class="btn-secondary" onclick="downloadIndicatorsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
         <input type="file" id="indicatorsCsvInput" accept=".csv" style="padding:6px 11px;">
         <button class="btn-primary" id="importIndicatorsCsvBtn" onclick="importIndicatorsCSV()">นำเข้า CSV</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>รายการตัวชี้วัด</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+        <button class="btn-primary preseed-btn" id="preseedBtn" onclick="preseedIndicators()">เพิ่มตัวชี้วัดเริ่มต้น (ภาษาอังกฤษ ป.1)</button>
       </div>
       <div class="loading-msg" id="indicatorsLoading">
         <div class="skeleton-table">
@@ -187,7 +196,7 @@ function normalizeCSVHeader(header) {
 function downloadIndicatorsCSVTemplate() {
   if (!SUBJECT_ID) { showToast('กรุณาเลือกวิชาก่อน', 'error'); return; }
   downloadCSVFile('indicators_import_template_' + SUBJECT_ID + '.csv', [
-    ['indicator_id', 'subject_id*', 'code*', 'description', 'max_score*', 'display_order*'],
+    ['indicator_id', 'subject_id', 'code*', 'description', 'max_score', 'display_order'],
     ['', SUBJECT_ID, 'ต 1.1 ป.1/1', 'ปฏิบัติตามคำสั่งง่ายๆ ที่ฟัง', '3', '1'],
     ['', SUBJECT_ID, 'ต 1.1 ป.1/2', 'ระบุตัวอักษรและเสียง', '3', '2']
   ]);

@@ -62,12 +62,19 @@
   </div>
 
   <div class="card">
-    <h3>รายการชั้นเรียน</h3>
+    <h3>นำเข้าชั้นเรียนด้วย CSV</h3>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+      ใช้สำหรับเพิ่มหรืออัปเดตชั้นเรียนหลายรายการ คอลัมน์ <code>level*</code> และ <code>section*</code> ต้องกรอก หากเว้น <code>class_id</code> ระบบจะสร้างจากระดับชั้นและห้อง สามารถระบุครูประจำชั้นด้วย <code>user_id</code> หรือ <code>username</code> ได้
+    </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <button class="btn-secondary" onclick="downloadClassesCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       <input type="file" id="classesCsvInput" accept=".csv" style="padding:6px 11px;">
       <button class="btn-primary" id="importClassesCsvBtn" onclick="importClassesCSV()">นำเข้า CSV</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>รายการชั้นเรียน</h3>
     <div class="loading-msg" id="classesLoading">
       <div class="skeleton-table">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>

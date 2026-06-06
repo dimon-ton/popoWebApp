@@ -78,21 +78,22 @@
         <button class="btn-primary" id="addStudentBtn" onclick="addStudent()">เพิ่มนักเรียน</button>
       </div>
     </div>
-    <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
-      <h3 style="font-size:15px; margin-bottom:10px;">นำเข้ารายชื่อนักเรียนจาก CSV</h3>
-      <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
-        ใช้แม่แบบนี้สำหรับกรอกรายชื่อนักเรียนจำนวนมากในชั้นนี้ คอลัมน์ <code>student_id</code> ไม่บังคับ ถ้าเว้นว่างระบบจะสร้างให้ใหม่
+  </div>
+
+  <div id="csvCard" class="card" style="display:none">
+    <h3>นำเข้ารายชื่อนักเรียนด้วย CSV</h3>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+      ใช้สำหรับเพิ่มหรืออัปเดตรายชื่อนักเรียนในชั้นเรียนนี้ คอลัมน์ <code>first_name*</code> และ <code>last_name*</code> ต้องกรอก ระบบจะรวมคำนำหน้า ชื่อ และนามสกุลให้ คอลัมน์ <code>student_id</code> ไม่บังคับ หากเว้นว่างระบบจะสร้างให้ใหม่
+    </div>
+    <div class="form-row" style="align-items:center;">
+      <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
+        <input type="file" id="studentsCsvInput" accept=".csv" style="padding:6px 11px; width:100%;">
       </div>
-      <div class="form-row" style="align-items:center;">
-        <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
-          <input type="file" id="studentsCsvInput" accept=".csv" style="padding:6px 11px; width:100%;">
-        </div>
-        <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
-          <button class="btn-secondary" onclick="downloadStudentsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
-        </div>
-        <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
-          <button class="btn-primary" id="importStudentsCsvBtn" onclick="importStudentsCSV()">นำเข้า CSV</button>
-        </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-secondary" onclick="downloadStudentsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+      </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-primary" id="importStudentsCsvBtn" onclick="importStudentsCSV()">นำเข้า CSV</button>
       </div>
     </div>
   </div>
@@ -229,7 +230,7 @@ function findCSVHeaderIndex(headers, names) {
 
 function downloadStudentsCSVTemplate() {
   downloadCSVFile('students_import_template_' + CLASS_ID + '.csv', [
-    ['student_id', 'seq_no*', 'student_code', 'citizen_id', 'prefix', 'first_name*', 'last_name*', 'full_name', 'dob', 'note'],
+    ['student_id', 'seq_no', 'student_code', 'citizen_id', 'prefix', 'first_name*', 'last_name*', 'full_name', 'dob', 'note'],
     ['', '1', '65001', '', 'เด็กชาย', 'ตัวอย่าง', 'นักเรียน', '', '01 ม.ค. 60', ''],
     ['', '2', '65002', '', 'เด็กหญิง', 'ตัวอย่าง', 'เรียนดี', '', '02 ม.ค. 60', '']
   ]);
@@ -340,10 +341,12 @@ function loadStudents() {
         'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';
       if (CAN_EDIT) {
         document.getElementById('addCard').style.display = 'block';
+        document.getElementById('csvCard').style.display = 'block';
         document.getElementById('actionHeader').textContent = 'จัดการ';
         document.getElementById('readonlyNotice').style.display = 'none';
       } else {
         document.getElementById('addCard').style.display = 'none';
+        document.getElementById('csvCard').style.display = 'none';
         document.getElementById('actionHeader').textContent = '';
         document.getElementById('readonlyNotice').style.display = 'block';
       }

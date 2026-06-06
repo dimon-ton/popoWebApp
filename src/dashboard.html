@@ -229,8 +229,12 @@
         <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
       </div>
     </div>
+    <div class="card" id="welcomeSkeleton">
+      <div class="skeleton-line w50" style="height:24px;margin-bottom:12px"></div>
+      <div class="skeleton-line w40" style="height:14px"></div>
+    </div>
+    <? if (data.session && data.session.role === 'admin') { ?>
     <div class="card" id="dashSkeleton">
-      <div class="skeleton-line w50" style="height:22px;margin-bottom:18px"></div>
       <div class="admin-setup-steps">
         <div class="skeleton-line w40" style="height:18px;margin-bottom:4px"></div>
         <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
@@ -239,6 +243,7 @@
         <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w45"></div><div class="skeleton-line w75" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
       </div>
     </div>
+    <? } ?>
 
     <? if (data.session && data.session.role !== 'admin') { ?>
     <div id="teacherSection" class="teacher-section">
@@ -261,8 +266,10 @@ var ROLE = '<?= data.session ? data.session.role : "" ?>';
 if (TOKEN) localStorage.setItem('popo_token', TOKEN);
 
 setTimeout(function() {
+  var welcomeSk = document.getElementById('welcomeSkeleton');
   var sk = document.getElementById('dashSkeleton');
   var ct = document.getElementById('dashContent');
+  if (welcomeSk) welcomeSk.style.display = 'none';
   if (sk) sk.style.display = 'none';
   if (ct) ct.style.display = 'block';
 }, 300);

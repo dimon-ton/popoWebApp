@@ -36,12 +36,19 @@
   <h2 class="page-title" id="pageHeading">กำหนดน้ำหนักคะแนนวิชา</h2>
 
   <div class="card">
-    <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
+    <h3>นำเข้าน้ำหนักคะแนนด้วย CSV</h3>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+      ดาวน์โหลดแม่แบบจากข้อมูลรายวิชาปัจจุบัน แก้ไขคะแนน แล้วอัปโหลดกลับ ระบบจะอัปเดตเฉพาะ <code>subject_id</code> ที่มีอยู่แล้ว และ <code>pre_mid_max + mid_max + post_mid_max + final_exam_max</code> ต้องรวมเป็น 100
+    </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <button class="btn-secondary" onclick="downloadWeightsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       <input type="file" id="weightsCsvInput" accept=".csv" style="padding:6px 11px;">
       <button class="btn-primary" id="importWeightsCsvBtn" onclick="importWeightsCSV()">นำเข้า CSV</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
     <div class="loading-msg" id="weightsLoading">
       <div class="skeleton-table two-tier">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:48%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>

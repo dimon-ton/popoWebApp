@@ -68,14 +68,21 @@
     </div>
   </div>
 
-  <!-- User list -->
   <div class="card">
-    <h3>รายชื่อผู้ใช้ทั้งหมด</h3>
+    <h3>นำเข้าผู้ใช้ด้วย CSV</h3>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+      ใช้สำหรับเพิ่มหรืออัปเดตบัญชีครูและผู้ดูแลระบบ คอลัมน์ <code>username*</code>, <code>first_name*</code>, <code>last_name*</code>, <code>role*</code> ต้องกรอก และ <code>initial_password</code> ต้องกรอกสำหรับผู้ใช้ใหม่ หรือกรอกเมื่อต้องการเปลี่ยนรหัสผ่านของผู้ใช้เดิม
+    </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <button class="btn-secondary" onclick="downloadUsersCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       <input type="file" id="usersCsvInput" accept=".csv" style="padding:6px 11px;">
       <button class="btn-primary" id="importUsersCsvBtn" onclick="importUsersCSV()">นำเข้า CSV</button>
     </div>
+  </div>
+
+  <!-- User list -->
+  <div class="card">
+    <h3>รายชื่อผู้ใช้ทั้งหมด</h3>
     <div class="loading-msg" id="usersLoading">
       <div class="skeleton-table">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
@@ -236,7 +243,7 @@ function downloadCSVFile(filename, rows) {
 
 function downloadUsersCSVTemplate() {
   downloadCSVFile('users_import_template.csv', [
-    ['user_id', 'username*', 'prefix', 'first_name*', 'last_name*', 'full_name', 'role*', 'initial_password*', 'must_change_pwd'],
+    ['user_id', 'username*', 'prefix', 'first_name*', 'last_name*', 'full_name', 'role*', 'initial_password', 'must_change_pwd'],
     ['', 'teacher01', 'นาย', 'สมชาย', 'ใจดี', '', 'teacher', 'ChangeMe123', 'true'],
     ['', 'admin02', 'นางสาว', 'สมหญิง', 'ดูแลระบบ', '', 'admin', 'ChangeMe123', '']
   ]);
