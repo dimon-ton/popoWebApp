@@ -222,9 +222,9 @@ function downloadCSVFile(filename, rows) {
 
 function downloadClassesCSVTemplate() {
   downloadCSVFile('classes_import_template.csv', [
-    ['class_id', 'level*', 'section*', 'homeroom_teacher_user_id', 'homeroom_teacher_username'],
-    ['', 'ป.1', '1', '', ''],
-    ['', 'ป.2', '1', '', '']
+    ['class_id', 'level*', 'section*', 'homeroom_teacher_fullname'],
+    ['', 'ป.1', '1', 'นายสมชาย ใจดี'],
+    ['', 'ป.2', '1', '']
   ]);
 }
 
@@ -238,11 +238,10 @@ function importClassesCSV() {
     try {
       var csvRows = parseCSV(e.target.result);
       var headers = (csvRows[0] || []).map(normalizeCSVHeader);
-      var idIdx = headers.indexOf('class_id');
+var idIdx = headers.indexOf('class_id');
       var levelIdx = headers.indexOf('level');
       var sectionIdx = headers.indexOf('section');
-      var teacherIdx = headers.indexOf('homeroom_teacher_user_id');
-      var usernameIdx = headers.indexOf('homeroom_teacher_username');
+      var fullnameIdx = headers.indexOf('homeroom_teacher_fullname');
       if (levelIdx === -1 || sectionIdx === -1) {
         showToast('หัวตาราง CSV ไม่ถูกต้อง กรุณาใช้แม่แบบ CSV', 'error');
         btn.disabled = false; btn.textContent = 'นำเข้า CSV';
@@ -258,8 +257,7 @@ function importClassesCSV() {
           class_id: idIdx !== -1 && r[idIdx] ? r[idIdx].trim() : '',
           level: level,
           section: section,
-          homeroom_teacher_user_id: teacherIdx !== -1 && r[teacherIdx] ? r[teacherIdx].trim() : '',
-          homeroom_teacher_username: usernameIdx !== -1 && r[usernameIdx] ? r[usernameIdx].trim() : ''
+          homeroom_teacher_fullname: fullnameIdx !== -1 && r[fullnameIdx] ? r[fullnameIdx].trim() : ''
         });
       }
       google.script.run

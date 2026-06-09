@@ -249,10 +249,17 @@ function serverImportClassesCSV(token, rows) {
 
   var users = dbGetAll('Users');
   var usersById = {};
-  var usersByUsername = {};
+  var usersByFullname = {};
   users.forEach(function(u) {
     if (u.user_id) usersById[String(u.user_id).trim()] = u;
-    if (u.username) usersByUsername[String(u.username).trim()] = u;
+    var fname = String(u.full_name || '').trim();
+    if (fname) {
+      if (!usersByFullname[fname]) {
+        usersByFullname[fname] = u;
+      } else {
+        usersByFullname[fname] = '__DUPLICATE__';
+      }
+    }
   });
 
   var classes = dbGetAll('Classes');
@@ -268,8 +275,7 @@ function serverImportClassesCSV(token, rows) {
     var level = String(row.level || '').trim();
     var section = String(row.section || '').trim();
     var classId = String(row.class_id || '').trim();
-    var teacherId = String(row.homeroom_teacher_user_id || '').trim();
-    var teacherUsername = String(row.homeroom_teacher_username || '').trim();
+    var teacherFullname = String(row.homeroom_teacher_fullname || '').trim();
 
     if (!level || !section) {
       warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุระดับชั้นหรือห้อง');
@@ -277,12 +283,16 @@ function serverImportClassesCSV(token, rows) {
     }
     if (!classId) classId = generateClassId(level, section);
 
-    if (!teacherId && teacherUsername && usersByUsername[teacherUsername]) {
-      teacherId = usersByUsername[teacherUsername].user_id;
-    }
-    if (teacherId && !usersById[teacherId]) {
-      warnings.push('แถวที่ ' + lineNum + ': ไม่พบครูประจำชั้น "' + teacherId + '" จึงเว้นว่าง');
-      teacherId = '';
+    var teacherId = '';
+    if (teacherFullname) {
+      var matched = usersByFullname[teacherFullname];
+      if (!matched) {
+        warnings.push('แถวที่ ' + lineNum + ': ไม่พบชื่อครู "' + teacherFullname + '" ในระบบ จึงเว้นว่าง');
+      } else if (matched === '__DUPLICATE__') {
+        warnings.push('แถวที่ ' + lineNum + ': พบชื่อครู "' + teacherFullname + '" ซ้ำหลายคน กรุณาระบุให้ชัดเจน จึงเว้นว่าง');
+      } else {
+        teacherId = matched.user_id;
+      }
     }
 
     if (byId[classId]) {

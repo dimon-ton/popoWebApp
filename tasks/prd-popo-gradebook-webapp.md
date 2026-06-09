@@ -73,7 +73,7 @@ These checks must pass for every user story:
 
 **Acceptance Criteria:**
 - [ ] `SchoolInfo` tab holds one row: school name, อำเภอ, จังหวัด, ปีการศึกษา. Editable on an admin form.
-- [ ] `Classes` tab CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`.
+- [ ] `Classes` tab CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`. CSV import accepts `homeroom_teacher_fullname` (resolved to `user_id` server-side).
 - [ ] `Subjects` tab CRUD: `subject_id`, `subject_name` (e.g. ภาษาอังกฤษ), `subject_code` (e.g. อ 11101), `hours_per_year` (e.g. 160), `weight_group` (1 or 2 — see FR-7).
 - [ ] Pre-seed `Subjects` with the 11 subjects from the `คะแนนวิชา` sheet (ภาษาไทย, คณิตศาสตร์, วิทยาศาสตร์, สังคมศึกษา, ประวัติศาสตร์, ศิลปะ, สุขศึกษาพลศึกษา, การงานอาชีพ, ภาษาอังกฤษ, วิทยาการคำนวณ, การป้องกัน) with the correct group-1/group-2 assignment from the source Excel.
 - [ ] Admin can assign one or more teachers to a (class, subject) tuple via `Enrollments` tab.

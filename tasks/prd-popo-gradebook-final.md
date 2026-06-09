@@ -117,7 +117,7 @@ classes, and the list of subjects so everything else has reference data to build
 
 **Acceptance Criteria:**
 - [ ] `/admin/school` form: school name, อำเภอ, จังหวัด, ปีการศึกษา — saved to `SchoolInfo` tab.
-- [ ] `/admin/classes` CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`.
+- [ ] `/admin/classes` CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`. CSV import accepts `homeroom_teacher_fullname` (resolved to `user_id` server-side).
 - [ ] `/admin/subjects` CRUD: `subject_id`, `subject_name`, `subject_code`, `hours_per_year`,
   `weight_group` (1 or 2), `description`.
 - [ ] Pre-seed all 11 subjects from the source Excel on first run (see FR-7 for the list and

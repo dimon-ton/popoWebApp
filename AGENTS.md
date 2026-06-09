@@ -91,7 +91,7 @@ The application is divided into server-side controllers (`.gs`) and client-side 
 The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` property) contains the following tables:
 - **`Users`**: `user_id`, `username`, `password_hash`, `salt`, `full_name`, `role`, `avatar`, `created_at`
 - **`SchoolInfo`**: `school_name`, `district`, `province`, `academic_year`
-- **`Classes`**: `class_id`, `level`, `section`, `homeroom_teacher_user_id`
+- **`Classes`**: `class_id`, `level`, `section`, `homeroom_teacher_user_id` (CSV import uses `homeroom_teacher_fullname` field, resolved to `user_id` server-side)
 - **`Subjects`**: `subject_id`, `subject_name`, `subject_code`, `hours_per_year`, `weight_group`, `description`
 - **`Enrollments`**: `enrollment_id`, `class_id`, `subject_id`, `teacher_user_id`, `dev_activity_result`
 - **`Students`**: `student_id`, `class_id`, `seq_no`, `student_code`, `citizen_id`, `full_name`, `dob`, `note`

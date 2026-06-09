@@ -1,6 +1,6 @@
-{
-  "name": "ระบบจัดการ ป.พ.5 ออนไลน์",
-  "description": "Convert the Thai elementary-school grade-book Excel (`ภาษาอังกฤษ ป.1.xlsx`, 18 sheets) into a school-wide web application used by all teachers and one admin at โรงเรียนบ้านโพนแท่น.",
+﻿{
+  "name": "เธฃเธฐเธเธเธเธฑเธ”เธเธฒเธฃ เธ.เธ.5 เธญเธญเธเนเธฅเธเน",
+  "description": "Convert the Thai elementary-school grade-book Excel (`เธ เธฒเธฉเธฒเธญเธฑเธเธเธคเธฉ เธ.1.xlsx`, 18 sheets) into a school-wide web application used by all teachers and one admin at เนเธฃเธเน€เธฃเธตเธขเธเธเนเธฒเธเนเธเธเนเธ—เนเธ.",
   "branchName": "feature/popowebapp-school-grade-book-web-app-final-single-source-of-truth",
   "userStories": [
     {
@@ -22,7 +22,7 @@
     },
     {
       "id": "US-002",
-      "title": "Auth — login form and session",
+      "title": "Auth โ€” login form and session",
       "description": "As a teacher or admin, I want to log in with username and password so my edits are attributed to me and I only see what I am allowed to see.",
       "acceptanceCriteria": [
         "`doGet` shows a login page when no valid session token is in `localStorage`.",
@@ -41,7 +41,7 @@
     },
     {
       "id": "US-003",
-      "title": "Auth — user management and password reset",
+      "title": "Auth โ€” user management and password reset",
       "description": "As an admin, I want to create teacher accounts and reset passwords so I can onboard and support staff.",
       "acceptanceCriteria": [
         "Admin-only `/admin/users` page lists all rows in `Users` tab (username, full name, role).",
@@ -61,8 +61,8 @@
       "title": "School info, classes, and subjects setup",
       "description": "As an admin, I want to record the school identity, academic year, the list of classes, and the list of subjects so everything else has reference data to build on.",
       "acceptanceCriteria": [
-        "`/admin/school` form: school name, อำเภอ, จังหวัด, ปีการศึกษา — saved to `SchoolInfo` tab.",
-        "`/admin/classes` CRUD: `class_id`, `level` (e.g. ป.1), `section`, `homeroom_teacher_user_id`.",
+        "`/admin/school` form: school name, เธญเธณเน€เธ เธญ, เธเธฑเธเธซเธงเธฑเธ”, เธเธตเธเธฒเธฃเธจเธถเธเธฉเธฒ โ€” saved to `SchoolInfo` tab.",
+        "`/admin/classes` CRUD: `class_id`, `level` (e.g. เธ.1), `section`, `homeroom_teacher_user_id`. CSV import accepts `homeroom_teacher_fullname` (resolved to `user_id` server-side).",
         "`/admin/subjects` CRUD: `subject_id`, `subject_name`, `subject_code`, `hours_per_year`,",
         "Pre-seed all 11 subjects from the source Excel on first run (see FR-7 for the list and",
         "Playwright (`tests/admin.spec.ts -g US-004`): log in as admin; edit school name to"
@@ -75,11 +75,11 @@
     },
     {
       "id": "US-005",
-      "title": "Student roster — CRUD",
+      "title": "Student roster โ€” CRUD",
       "description": "As a homeroom teacher, I want to add and edit the student list for my class so all subjects share one roster.",
       "acceptanceCriteria": [
         "`/class/:class_id/students` list view filtered by `class_id`, ordered by `seq_no`.",
-        "Columns: `seq_no` (เลขที่), `student_code` (เลขประจำตัว), `citizen_id`",
+        "Columns: `seq_no` (เน€เธฅเธเธ—เธตเน), `student_code` (เน€เธฅเธเธเธฃเธฐเธเธณเธ•เธฑเธง), `citizen_id`",
         "Add/edit/delete forms with citizen-ID uniqueness validation within the class.",
         "Only the homeroom teacher of that class or an admin can edit; other teachers see read-only.",
         "Playwright (`tests/admin.spec.ts -g US-005`): log in as admin; open `test_class_p1_1`;"
@@ -92,11 +92,11 @@
     },
     {
       "id": "US-006",
-      "title": "Indicator catalog (ตัวชี้วัด)",
+      "title": "Indicator catalog (เธ•เธฑเธงเธเธตเนเธงเธฑเธ”)",
       "description": "As an admin, I want a per-subject catalog of learning indicator codes so teachers can score against them.",
       "acceptanceCriteria": [
         "`/admin/indicators/:subject_id` CRUD: `indicator_id`, `subject_id`, `code`",
-        "Pre-seed the 16 English Grade-1 indicator codes from source `คะแนน1` on first run:",
+        "Pre-seed the 16 English Grade-1 indicator codes from source `เธเธฐเนเธเธ1` on first run:",
         "Playwright (`tests/admin.spec.ts -g US-006`): log in as admin; open indicators for"
       ],
       "priority": 4,
@@ -110,13 +110,13 @@
       "title": "Attendance grid view and edit",
       "description": "As a teacher, I want to mark daily attendance per period on a weekly grid so I can track each student's presence over the whole year.",
       "acceptanceCriteria": [
-        "Page `/class/:class_id/subject/:subject_id/attendance?week=N` (N = 1–40).",
+        "Page `/class/:class_id/subject/:subject_id/attendance?week=N` (N = 1โ€“40).",
         "Grid: rows = students ordered by `seq_no`, columns = the 7 calendar days of week N with",
-        "Each cell is a single-character input accepting `/` (present), `ล` (leave), `ข` (absent),",
+        "Each cell is a single-character input accepting `/` (present), `เธฅ` (leave), `เธ` (absent),",
         "\"Save week\" writes/upserts rows to `Attendance`: `attendance_id`, `student_id`,",
         "`LockService.getDocumentLock().tryLock(30000)` wraps every write; released in `finally`.",
         "Previous / Next week navigation buttons; \"Jump to week\" dropdown.",
-        "Footer row: per-student totals — `present`, `leave`, `absent`, `total hours so far`.",
+        "Footer row: per-student totals โ€” `present`, `leave`, `absent`, `total hours so far`.",
         "Playwright (`tests/attendance.spec.ts -g US-007`): log in as teacher assigned to"
       ],
       "priority": 4,
@@ -127,8 +127,8 @@
     },
     {
       "id": "US-008",
-      "title": "Formative indicator scoring (คะแนน1)",
-      "description": "As a teacher, I want to enter a 0–3 score per student per indicator so the formative part of the grade is recorded.",
+      "title": "Formative indicator scoring (เธเธฐเนเธเธ1)",
+      "description": "As a teacher, I want to enter a 0โ€“3 score per student per indicator so the formative part of the grade is recorded.",
       "acceptanceCriteria": [
         "Page `/class/:class_id/subject/:subject_id/formative`.",
         "Grid: rows = students, columns = indicators ordered by `display_order`, each cell numeric",
@@ -145,13 +145,13 @@
     },
     {
       "id": "US-009",
-      "title": "Summative scoring and grade computation (คะแนน2)",
-      "description": "As a teacher, I want to enter coursework, midterm, and final scores and have the system auto-compute the 0–4 grade exactly as the Excel does.",
+      "title": "Summative scoring and grade computation (เธเธฐเนเธเธ2)",
+      "description": "As a teacher, I want to enter coursework, midterm, and final scores and have the system auto-compute the 0โ€“4 grade exactly as the Excel does.",
       "acceptanceCriteria": [
         "Page `/class/:class_id/subject/:subject_id/summative`.",
-        "Columns per student: `ระหว่างเรียน` (max from `SubjectWeights.coursework_max`),",
-        "Grade ladder applied to `รวมทั้งหมด`:",
-        "`สอบแก้ตัว` overrides the displayed `final_grade` without changing `computed_grade`.",
+        "Columns per student: `เธฃเธฐเธซเธงเนเธฒเธเน€เธฃเธตเธขเธ` (max from `SubjectWeights.coursework_max`),",
+        "Grade ladder applied to `เธฃเธงเธกเธ—เธฑเนเธเธซเธกเธ”`:",
+        "`เธชเธญเธเนเธเนเธ•เธฑเธง` overrides the displayed `final_grade` without changing `computed_grade`.",
         "Write to `SummativeScores`: `id`, `student_id`, `subject_id`, `coursework`, `midterm`,",
         "Playwright (`tests/scoring.spec.ts -g US-009`):"
       ],
@@ -163,12 +163,12 @@
     },
     {
       "id": "US-010",
-      "title": "Subject weights configuration (คะแนนวิชา)",
+      "title": "Subject weights configuration (เธเธฐเนเธเธเธงเธดเธเธฒ)",
       "description": "As an admin, I want to configure how each subject's 100 points is split across assessment periods so the summative form shows correct column maxima.",
       "acceptanceCriteria": [
         "`/admin/weights` shows one row per subject with editable fields: `coursework_max`,",
         "Save validates that `pre_mid_max + mid_max + post_mid_max + final_exam_max = 100`; shows",
-        "Default values: group-1 → 25/20/25/30=100; group-2 → 30/20/30/20=100.",
+        "Default values: group-1 โ’ 25/20/25/30=100; group-2 โ’ 30/20/30/20=100.",
         "Summative scoring page (US-009) reads max values from this tab at render time; changing",
         "Playwright (`tests/admin.spec.ts -g US-010`): log in as admin; change `test_subject_eng`"
       ],
@@ -180,11 +180,11 @@
     },
     {
       "id": "US-011",
-      "title": "Characteristics scoring (คุณลักษณะ)",
+      "title": "Characteristics scoring (เธเธธเธ“เธฅเธฑเธเธฉเธ“เธฐ)",
       "description": "As a teacher, I want to score each student on 8 affective traits and see the auto-computed label.",
       "acceptanceCriteria": [
         "Page `/class/:class_id/subject/:subject_id/characteristics`.",
-        "Grid: rows = students, 8 trait columns (0–10 each):",
+        "Grid: rows = students, 8 trait columns (0โ€“10 each):",
         "Computed total (max 80) shown live. Label by ladder:",
         "Write to `Characteristics`: `id`, `student_id`, `subject_id`, `t1..t8`, `total`, `label`,",
         "Playwright (`tests/scoring.spec.ts -g US-011`):"
@@ -197,11 +197,11 @@
     },
     {
       "id": "US-012",
-      "title": "Read-Think-Write scoring (อ่านคิด)",
+      "title": "Read-Think-Write scoring (เธญเนเธฒเธเธเธดเธ”)",
       "description": "As a teacher, I want to score each student on 10 read-think-write sub-items and see the auto-label.",
       "acceptanceCriteria": [
         "Page `/class/:class_id/subject/:subject_id/readthinkwrite`.",
-        "Grid: rows = students, 10 columns (0–10 each) grouped visually:",
+        "Grid: rows = students, 10 columns (0โ€“10 each) grouped visually:",
         "Computed total (max 100) and label:",
         "Write to `ReadThinkWrite`: `id`, `student_id`, `subject_id`, `r1..r3`, `t1..t4`,",
         "Playwright (`tests/scoring.spec.ts -g US-012`):"
@@ -214,14 +214,14 @@
     },
     {
       "id": "US-013",
-      "title": "Cover report aggregates (ปก)",
-      "description": "As a teacher, I want a one-page summary showing grade distributions and class headers — the digital twin of the `ปก` Excel sheet.",
+      "title": "Cover report aggregates (เธเธ)",
+      "description": "As a teacher, I want a one-page summary showing grade distributions and class headers โ€” the digital twin of the `เธเธ` Excel sheet.",
       "acceptanceCriteria": [
         "Page `/class/:class_id/subject/:subject_id/report`.",
-        "Header: school name, อำเภอ, จังหวัด, ปีการศึกษา, ชั้น, รหัสวิชา, เวลาเรียน,",
+        "Header: school name, เธญเธณเน€เธ เธญ, เธเธฑเธเธซเธงเธฑเธ”, เธเธตเธเธฒเธฃเธจเธถเธเธฉเธฒ, เธเธฑเนเธ, เธฃเธซเธฑเธชเธงเธดเธเธฒ, เน€เธงเธฅเธฒเน€เธฃเธตเธขเธ,",
         "Grade distribution table: count of students at each grade level 4, 3.5, 3, 2.5, 2, 1.5,",
-        "กิจกรรมพัฒนาผู้เรียน: ผ่าน / ไม่ผ่าน / ร / มส counts. Per-student result set via a",
-        "Characteristics distribution: counts at ดีเยี่ยม / ดี / ผ่านเกณฑ์ / ไม่ผ่าน + percentages.",
+        "เธเธดเธเธเธฃเธฃเธกเธเธฑเธ’เธเธฒเธเธนเนเน€เธฃเธตเธขเธ: เธเนเธฒเธ / เนเธกเนเธเนเธฒเธ / เธฃ / เธกเธช counts. Per-student result set via a",
+        "Characteristics distribution: counts at เธ”เธตเน€เธขเธตเนเธขเธก / เธ”เธต / เธเนเธฒเธเน€เธเธ“เธ‘เน / เนเธกเนเธเนเธฒเธ + percentages.",
         "Read-Think-Write distribution: same four-bucket counts + percentages.",
         "Playwright (`tests/scoring.spec.ts -g US-013`): using the English-Grade-1 sample data"
       ],
@@ -234,9 +234,9 @@
     {
       "id": "US-014",
       "title": "PDF export of cover report",
-      "description": "As a teacher, I want to download the cover report as a PDF that visually matches the original Excel `ปก` page so I can print and obtain signatures.",
+      "description": "As a teacher, I want to download the cover report as a PDF that visually matches the original Excel `เธเธ` page so I can print and obtain signatures.",
       "acceptanceCriteria": [
-        "A hidden Google Sheet template mirrors the `ปก` layout: merged cells, school header,",
+        "A hidden Google Sheet template mirrors the `เธเธ` layout: merged cells, school header,",
         "\"Export PDF\" button on `/report` page: server copies the template, fills values from",
         "PDF is A4 portrait; Thai fonts render without mojibake.",
         "Playwright (`tests/scoring.spec.ts -g US-014`): click \"Export PDF\"; assert a download"
@@ -252,7 +252,7 @@
       "title": "Static reference pages",
       "description": "As a teacher, I want read-only reference pages for instructions and score scales so I don't have to open the original Excel.",
       "acceptanceCriteria": [
-        "`/help` renders static Thai text from `วิธีทำ1` / `วิธีทำ2` content.",
+        "`/help` renders static Thai text from `เธงเธดเธเธตเธ—เธณ1` / `เธงเธดเธเธตเธ—เธณ2` content.",
         "`/subjects/:subject_id/description` renders the `description` field from `Subjects`.",
         "`/subjects/:subject_id/indicators` lists all indicators for that subject (read-only).",
         "`/weights` renders the `SubjectWeights` table for all subjects (read-only).",
@@ -304,7 +304,7 @@
         "Clicking a teacher opens a **right panel** with:",
         "If the chosen (class, subject) is already owned by a **different** teacher, the server",
         "\"Remove\" button detaches the pair from the teacher; an `AuditLog` row is written.",
-        "Each (class, subject) can have at most one teacher at any time — unique composite key",
+        "Each (class, subject) can have at most one teacher at any time โ€” unique composite key",
         "Save/remove toast success and refresh the right panel inline (no full-page reload).",
         "Non-admin users hitting `/admin/enrollments` get a 403 block screen.",
         "A secondary read-only **\"All pairs\" tab** on the same page shows every (class, subject)",
@@ -381,7 +381,7 @@
         "`cleanupTestData()` deletes every row across all tabs where any ID column starts `test_`.",
         "Each spec file wraps its seeds in `beforeAll` / cleanup in `afterAll`.",
         "`tests/helpers/seed.spec.ts` self-test: seed one of each entity; assert they exist;",
-        "After a full test suite run, query the master Sheet for `test_` rows — none should remain."
+        "After a full test suite run, query the master Sheet for `test_` rows โ€” none should remain."
       ],
       "priority": 4,
       "passes": true,
@@ -394,8 +394,8 @@
       "title": "Import subjects and enrollments via CSV file",
       "description": "As an admin, I want to upload a CSV containing subject details, hours, classes, and teachers so I can set up my school database and teacher assignments instantly.",
       "acceptanceCriteria": [
-        "CSV must have headers: รหัสวิชา, ชื่อวิชา, ชั้นเรียน, จำนวนชั่วโมง, ชื่อครูผู้สอน.",
-        "Automatic parsing of level and section from the class string (e.g. ป.1/1).",
+        "CSV must have headers: เธฃเธซเธฑเธชเธงเธดเธเธฒ, เธเธทเนเธญเธงเธดเธเธฒ, เธเธฑเนเธเน€เธฃเธตเธขเธ, เธเธณเธเธงเธเธเธฑเนเธงเนเธกเธ, เธเธทเนเธญเธเธฃเธนเธเธนเนเธชเธญเธ.",
+        "Automatic parsing of level and section from the class string (e.g. เธ.1/1).",
         "Classes and subjects are automatically created if they do not exist.",
         "Subject IDs include the class reference to keep them self-contained (e.g., subj_t11101_p1_1).",
         "Enrollments are automatically mapped, updating teacher assignments if the combination exists."
