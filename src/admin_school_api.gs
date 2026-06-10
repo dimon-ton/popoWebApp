@@ -328,7 +328,7 @@ function serverImportClassesCSV(token, rows) {
 
 function getSubjectsList(token) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('ไม่มีสิทธิ์');
   ensureColumns('Subjects', ['class_id']);
   var classes = dbGetAll('Classes');
   var levelCounts = buildClassLevelCounts(classes);
@@ -336,7 +336,17 @@ function getSubjectsList(token) {
   classes.forEach(function(c) {
     classesById[c.class_id] = c;
   });
-  var subjects = dbGetAll('Subjects').map(function(s) {
+  var subjects = dbGetAll('Subjects');
+  if (session.role !== 'admin') {
+    var enrollments = dbGetAll('Enrollments').filter(function(e) {
+      return e.teacher_user_id === session.user_id;
+    });
+    var enrolledSubjectIds = enrollments.map(function(e) { return e.subject_id; });
+    subjects = subjects.filter(function(s) {
+      return enrolledSubjectIds.indexOf(s.subject_id) !== -1;
+    });
+  }
+  subjects = subjects.map(function(s) {
     var cls = classesById[s.class_id] || null;
     s.class_label = cls ? fmtClassLabelWithCounts(cls.level, cls.section, levelCounts) : '';
     return s;

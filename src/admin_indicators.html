@@ -13,8 +13,7 @@
 <div class="navbar">
   <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
-  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
-  <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
+  <?!= data.session && data.session.role === 'admin' ? '<a href="#" onclick="navigate(\'admin_school\')">ข้อมูลโรงเรียน</a><a href="#" onclick="navigate(\'admin_subjects\')">วิชา</a>' : '' ?>
   <div class="navbar-user">
   <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
   <div class="navbar-dropdown">

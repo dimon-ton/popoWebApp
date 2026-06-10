@@ -428,7 +428,12 @@ function getIndicatorsPageHtml(token, subject_id) {
       return HtmlService.createTemplateFromFile('login').evaluate().getContent();
     }
     if (session.role !== 'admin') {
-      return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
+      var enrollment = dbGetAll('Enrollments').filter(function(e) {
+        return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+      });
+      if (enrollment.length === 0) {
+        return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
+      }
     }
     var subj = dbFindOne('Subjects', 'subject_id', subject_id);
     var subject_name = subj ? subj.subject_name : subject_id;

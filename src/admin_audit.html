@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -75,7 +75,6 @@
               <th>เวลา</th>
               <th>ผู้ใช้</th>
               <th>ตาราง</th>
-              <th>Entity ID</th>
               <th>ค่าเดิม (old)</th>
               <th>ค่าใหม่ (new)</th>
             </tr>
@@ -180,11 +179,11 @@ function renderRows(rows) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-entity', r.entity || '');
     tr.setAttribute('data-user-id', r.user_id || '');
+    tr.setAttribute('data-entity-id', r.entity_id || '');
     tr.innerHTML =
       '<td>' + escHtml(ts) + '</td>' +
       '<td>' + escHtml(r.user_name || r.user_id || '') + '</td>' +
       '<td><span class="entity-badge">' + escHtml(r.entity || '') + '</span></td>' +
-      '<td>' + escHtml(String(r.entity_id || '')) + '</td>' +
       '<td><div class="json-val">' + escHtml(formatJson(r.old_value)) + '</div></td>' +
       '<td><div class="json-val">' + escHtml(formatJson(r.new_value)) + '</div></td>';
     tbody.appendChild(tr);

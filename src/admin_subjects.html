@@ -104,15 +104,14 @@
 
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:18%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:16%"></div><div class="skeleton-table-cell" style="width:16%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:13%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:13%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:13%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
       </div>
     </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
-          <th>รหัสระบบ</th>
           <th>ชั้นเรียน</th>
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
@@ -238,7 +237,6 @@ function renderSubjects(subjects) {
     tr.setAttribute('data-subject-id', s.subject_id);
 
     tr.innerHTML =
-      '<td>' + escHtml(s.subject_id) + '</td>' +
       '<td>' + escHtml(s.class_label || (s.class_id ? s.class_id : 'Legacy')) + '</td>' +
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +

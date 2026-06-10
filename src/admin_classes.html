@@ -77,17 +77,16 @@
     <h3>รายการชั้นเรียน</h3>
     <div class="loading-msg" id="classesLoading">
       <div class="skeleton-table">
-        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
-        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
       </div>
     </div>
     <table id="classesTable" style="display:none">
       <thead>
         <tr>
-          <th>รหัสชั้น</th>
           <th>ระดับชั้น</th>
           <th>ห้อง</th>
           <th>ครูประจำชั้น</th>
@@ -332,7 +331,6 @@ function renderClasses(classes) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-class-id', c.class_id);
     tr.innerHTML =
-      '<td>' + escHtml(c.class_id) + '</td>' +
       '<td>' + escHtml(c.level) + '</td>' +
       '<td>' + escHtml(c.section) + '</td>' +
       '<td>' + escHtml(teacherName) + '</td>' +

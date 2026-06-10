@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -32,7 +32,10 @@
 </div>
 
 <div class="container wide">
-  <h2 class="page-title" id="pageHeading">คะแนนตัวชี้วัด (คะแนน1)</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="page-title" id="pageHeading" style="margin-bottom:0">คะแนนตัวชี้วัด (คะแนน1)</h2>
+    <button class="btn-primary" onclick="openIndicatorsManagement()" id="manageIndicatorsBtn" style="display:none;background:#1a56a0;padding:8px 16px;font-size:13px;border-radius:var(--radius-sm)">จัดการตัวชี้วัด</button>
+  </div>
 
   <div id="readonlyNotice" class="readonly-notice" style="display:none">
     คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้
@@ -143,9 +146,13 @@ function renderGrid(data) {
   if (data.can_edit) {
     readonlyNotice.style.display = 'none';
     saveBar.style.display = 'flex';
+    var btn = document.getElementById('manageIndicatorsBtn');
+    if (btn) btn.style.display = 'inline-block';
   } else {
     readonlyNotice.style.display = 'block';
     saveBar.style.display = 'none';
+    var btn = document.getElementById('manageIndicatorsBtn');
+    if (btn) btn.style.display = 'none';
   }
 
   if (!data.indicators || data.indicators.length === 0) {
@@ -304,6 +311,14 @@ function saveFormative() {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverSaveFormative(TOKEN, CLASS_ID, SUBJECT_ID, rows);
+}
+
+function openIndicatorsManagement() {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getIndicatorsPageHtml(TOKEN, SUBJECT_ID);
 }
 
 // Init

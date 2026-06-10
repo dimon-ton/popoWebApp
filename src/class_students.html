@@ -335,8 +335,7 @@ function loadStudents() {
       CAN_EDIT = result.can_edit === true;
       var info = result.class_info || {};
       document.getElementById('pageHeading').textContent =
-        'ทะเบียนนักเรียน — ' + escHtml(info.class_label || fmtCls(info.level, info.section)) +
-        ' (' + escHtml(CLASS_ID) + ')';
+        'ทะเบียนนักเรียน — ' + escHtml(info.class_label || fmtCls(info.level, info.section));
       document.getElementById('tableHeading').textContent =
         'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';
       if (CAN_EDIT) {

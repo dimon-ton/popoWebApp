@@ -22,7 +22,13 @@ var PRESEED_INDICATORS = [
 
 function getIndicatorsList(token, subject_id) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์เข้าถึงตัวชี้วัดของวิชานี้');
+  }
   var indicators = dbFind('Indicators', 'subject_id', subject_id);
   indicators.sort(function(a, b) { return Number(a.display_order) - Number(b.display_order); });
   return { indicators: indicators };
@@ -30,7 +36,13 @@ function getIndicatorsList(token, subject_id) {
 
 function serverAddIndicator(token, subject_id, code, description, max_score, display_order) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์เพิ่มตัวชี้วัดของวิชานี้');
+  }
   if (!subject_id) throw new Error('subject_id is required');
   if (!code) throw new Error('code is required');
   var indicator_id = generateId('ind');
@@ -47,14 +59,29 @@ function serverAddIndicator(token, subject_id, code, description, max_score, dis
 
 function serverDeleteIndicator(token, indicator_id) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var ind = dbFindOne('Indicators', 'indicator_id', indicator_id);
+  if (!ind) throw new Error('ไม่พบตัวชี้วัด');
+  var subject_id = ind.subject_id;
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์ลบตัวชี้วัดของวิชานี้');
+  }
   dbDelete('Indicators', 'indicator_id', indicator_id);
   return { ok: true };
 }
 
 function preseedIndicators(token, subject_id) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์จัดการตัวชี้วัดของวิชานี้');
+  }
   if (!subject_id) throw new Error('subject_id is required');
   var existing = dbFind('Indicators', 'subject_id', subject_id);
   var existingCodes = existing.map(function(i) { return i.code; });
@@ -77,7 +104,13 @@ function preseedIndicators(token, subject_id) {
 
 function serverImportIndicatorsCSV(token, subject_id, rows) {
   var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return e.subject_id === subject_id && e.teacher_user_id === session.user_id;
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์นำเข้าตัวชี้วัดของวิชานี้');
+  }
   if (!subject_id) throw new Error('subject_id is required');
 
   var subject = dbFindOne('Subjects', 'subject_id', subject_id);
