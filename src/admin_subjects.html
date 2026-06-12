@@ -49,7 +49,9 @@
       </div>
       <div class="form-group">
         <label>ชั้นเรียน</label>
-        <select id="newClassIds" multiple style="min-height:96px; min-width:180px"></select>
+        <select id="newClassIds" style="min-width:180px">
+          <option value="">เลือกชั้นเรียน</option>
+        </select>
       </div>
       <div class="form-group">
         <label>คำอธิบายวิชา (ไม่บังคับ)</label>
@@ -207,7 +209,7 @@ function loadClassesForSubjects() {
   google.script.run
     .withSuccessHandler(function(result) {
       allClasses = (result && result.classes) ? result.classes : [];
-      var options = allClasses.map(function(c) {
+      var options = '<option value="">เลือกชั้นเรียน</option>' + allClasses.map(function(c) {
         return '<option value="' + escHtml(c.class_id) + '">' + escHtml(c.class_label || fmtCls(c.level, c.section)) + '</option>';
       }).join('');
       var select = document.getElementById('newClassIds');
@@ -258,10 +260,10 @@ function addSubject() {
   var hours = document.getElementById('newHours').value.trim();
   var description = document.getElementById('newDescription').value.trim();
   var classSelect = document.getElementById('newClassIds');
-  var classIds = Array.from(classSelect.selectedOptions).map(function(o) { return o.value; });
+  var classId = classSelect ? classSelect.value : '';
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
-  if (classIds.length === 0) { showToast('กรุณาเลือกชั้นเรียนอย่างน้อย 1 รายการ', 'error'); return; }
+  if (!classId) { showToast('กรุณาเลือกชั้นเรียน', 'error'); return; }
 
   var btn = document.getElementById('addSubjectBtn');
   btn.disabled = true;
@@ -275,7 +277,7 @@ function addSubject() {
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
       document.getElementById('newDescription').value = '';
-      Array.from(document.getElementById('newClassIds').options).forEach(function(o) { o.selected = false; });
+      document.getElementById('newClassIds').value = '';
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
       loadSubjects();
@@ -284,7 +286,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description, classIds.join(','));
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description, classId);
 }
 
 function openEditModal(subject_id) {

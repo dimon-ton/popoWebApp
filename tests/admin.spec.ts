@@ -157,7 +157,7 @@ test.describe('US-004: School info, classes, and subjects', () => {
     await page.fill('#newSubjectName', 'ภาษาอังกฤษทดสอบ');
     await page.fill('#newSubjectCode', 'test_001');
     await page.fill('#newHours', '80');
-    await page.selectOption('#newClassIds', ['class_test_class_p1_1']);
+    await page.selectOption('#newClassIds', 'class_test_class_p1_1');
     await page.click('#addSubjectBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มวิชาสำเร็จ', { timeout: 15_000 });
