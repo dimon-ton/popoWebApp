@@ -206,7 +206,7 @@ function generateClassId(level, section) {
 function getClassesList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  return { classes: withClassLabels(dbGetAll('Classes')) };
+  return { classes: sortClassRows(withClassLabels(dbGetAll('Classes'))) };
 }
 
 function serverAddClass(token, class_id, level, section, homeroom_teacher_user_id) {

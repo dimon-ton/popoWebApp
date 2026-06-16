@@ -250,6 +250,49 @@ function withClassLabels(classes) {
   });
 }
 
+function getClassSortParts(cls) {
+  var level = String((cls && cls.level) || '').trim();
+  var section = String((cls && cls.section) || '').trim();
+  var groupOrder = [
+    { re: /^(อ\.?|อนุบาล)/, rank: 1 },
+    { re: /^(ป\.?|ประถม)/, rank: 2 },
+    { re: /^(ม\.?|มัธยม)/, rank: 3 }
+  ];
+  var groupRank = 99;
+  for (var i = 0; i < groupOrder.length; i++) {
+    if (groupOrder[i].re.test(level)) {
+      groupRank = groupOrder[i].rank;
+      break;
+    }
+  }
+
+  var levelNumberMatch = level.match(/\d+/);
+  var sectionNumberMatch = section.match(/\d+/);
+  return {
+    groupRank: groupRank,
+    levelNumber: levelNumberMatch ? Number(levelNumberMatch[0]) : 999,
+    sectionNumber: sectionNumberMatch ? Number(sectionNumberMatch[0]) : 999,
+    level: level,
+    section: section,
+    classId: String((cls && cls.class_id) || '')
+  };
+}
+
+function compareClassRows(a, b) {
+  var aa = getClassSortParts(a);
+  var bb = getClassSortParts(b);
+  if (aa.groupRank !== bb.groupRank) return aa.groupRank - bb.groupRank;
+  if (aa.levelNumber !== bb.levelNumber) return aa.levelNumber - bb.levelNumber;
+  if (aa.level !== bb.level) return aa.level.localeCompare(bb.level, 'th');
+  if (aa.sectionNumber !== bb.sectionNumber) return aa.sectionNumber - bb.sectionNumber;
+  if (aa.section !== bb.section) return aa.section.localeCompare(bb.section, 'th');
+  return aa.classId.localeCompare(bb.classId, 'th');
+}
+
+function sortClassRows(classes) {
+  return (classes || []).slice().sort(compareClassRows);
+}
+
 function getDashboardHtml(token) {
   var session = getSession(token);
   if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
