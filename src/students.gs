@@ -29,26 +29,37 @@ function getStudentsList(token, class_id) {
 function sanitizeRow(row) {
   if (!row) return row;
   var out = {};
-  var THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function toDateInputValue(value) {
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    }
+    var s = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.substring(0, 10) : '';
+  }
+  function toThaiBuddhistDateDisplay(value) {
+    var iso = toDateInputValue(value);
+    if (!iso) return String(value || '');
+    var parts = iso.split('-');
+    return parts[2] + '/' + parts[1] + '/' + (Number(parts[0]) + 543);
+  }
   Object.keys(row).forEach(function(k) {
     var v = row[k];
     if (v instanceof Date) {
       if (isNaN(v.getTime())) {
         out[k] = '';
       } else {
-        // Format as Thai short date: "04 ม.ค. 64"
         var d = v.getDate();
-        var m = THAI_MONTHS[v.getMonth()];
-        var fy = v.getFullYear();
-        // If year < 2400, it's Gregorian -> add 543 to get BE
-        var beYear = fy < 2400 ? fy + 543 : fy;
-        var y = beYear % 100;
-        out[k] = (d < 10 ? '0' + d : d) + ' ' + m + ' ' + (y < 10 ? '0' + y : y);
+        var m = v.getMonth() + 1;
+        var beYear = v.getFullYear() + 543;
+        out[k] = (d < 10 ? '0' + d : d) + '/' + (m < 10 ? '0' + m : m) + '/' + beYear;
       }
     } else if (v === null || v === undefined) {
       out[k] = '';
     } else {
-      out[k] = v;
+      out[k] = k === 'dob' ? toThaiBuddhistDateDisplay(v) : v;
+    }
+    if (k === 'dob') {
+      out.dob_input = toDateInputValue(v);
     }
   });
   return out;

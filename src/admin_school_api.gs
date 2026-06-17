@@ -8,15 +8,17 @@ var DEFAULT_WEIGHTS = {
 // ── School Info ───────────────────────────────────────────────────────────────
 
 function getSchoolInfo() {
+  ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
   var rows = dbGetAll('SchoolInfo');
   return rows.length > 0 ? rows[0] : {
-    school_name: '', district: '', province: '', academic_year: ''
+    school_name: '', district: '', province: '', academic_year: '', semester_start_date: '', required_attendance_days: ''
   };
 }
 
-function serverSaveSchoolInfo(token, school_name, district, province, academic_year) {
+function serverSaveSchoolInfo(token, school_name, district, province, academic_year, semester_start_date, required_attendance_days) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
 
   // SchoolInfo always has at most one data row (row 2); overwrite it directly.
   var lock = LockService.getDocumentLock();
@@ -24,7 +26,15 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   try {
     var sheet = getSheet('SchoolInfo');
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var values = [school_name, district, province, academic_year].slice(0, headers.length);
+    var rowObj = {
+      school_name: school_name,
+      district: district,
+      province: province,
+      academic_year: academic_year,
+      semester_start_date: semester_start_date || '',
+      required_attendance_days: parseInt(required_attendance_days, 10) || ''
+    };
+    var values = headers.map(function(h) { return rowObj[h] !== undefined ? rowObj[h] : ''; });
     // Pad to header count
     while (values.length < headers.length) values.push('');
     if (sheet.getLastRow() >= 2) {
@@ -242,11 +252,14 @@ function generateClassSubjectId(subject_code, subject_name, class_id) {
 }
 
 function insertSubjectWeightsIfMissing(subject_id, group) {
+  ensureColumns('SubjectWeights', ['class_id']);
+  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
   var existingWeight = dbFindOne('SubjectWeights', 'subject_id', subject_id);
   if (existingWeight) return;
   var w = DEFAULT_WEIGHTS[String(group)] || DEFAULT_WEIGHTS['1'];
   dbInsert('SubjectWeights', {
     subject_id: subject_id,
+    class_id: subject ? (subject.class_id || '') : '',
     coursework_max: w.coursework_max,
     final_max: w.final_max,
     pre_mid_max: w.pre_mid_max,
@@ -350,16 +363,24 @@ function getTeachersList(token) {
 function getWeightsList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureColumns('SubjectWeights', ['class_id']);
   var subjects = dbGetAll('Subjects');
+  var classes = {};
+  dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
   var weights = dbGetAll('SubjectWeights');
   var weightMap = {};
   weights.forEach(function(w) { weightMap[w.subject_id] = w; });
 
   var result = subjects.map(function(s) {
     var w = weightMap[s.subject_id] || {};
+    var cls = classes[s.class_id] || {};
+    var classLabel = cls.class_id ? fmtClassLabel(cls.level, cls.section) : '';
     return {
       subject_id: s.subject_id,
+      class_id: s.class_id || w.class_id || '',
+      class_label: classLabel,
       subject_name: s.subject_name,
+      subject_code: s.subject_code || '',
       weight_group: s.weight_group,
       coursework_max: w.coursework_max !== undefined ? w.coursework_max : '',
       final_max: w.final_max !== undefined ? w.final_max : '',
@@ -390,13 +411,17 @@ function serverSaveWeights(token, rows) {
     return { error: 'รวมต้องเท่ากับ 100 — ' + errors.join(', ') };
   }
 
+  ensureColumns('SubjectWeights', ['class_id']);
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
+    var subjectMap = {};
+    dbGetAll('Subjects').forEach(function(s) { subjectMap[s.subject_id] = s; });
     var sheet = getSheet('SubjectWeights');
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var sidCol = headers.indexOf('subject_id');
+    var clsCol = headers.indexOf('class_id');
     var cwCol = headers.indexOf('coursework_max');
     var fmCol = headers.indexOf('final_max');
     var pmCol = headers.indexOf('pre_mid_max');
@@ -406,8 +431,13 @@ function serverSaveWeights(token, rows) {
 
     rows.forEach(function(r) {
       var found = false;
+      var classId = (subjectMap[r.subject_id] && subjectMap[r.subject_id].class_id) || r.class_id || '';
       for (var i = 1; i < data.length; i++) {
         if (data[i][sidCol] === r.subject_id) {
+          if (clsCol !== -1) {
+            sheet.getRange(i + 1, clsCol + 1).setValue(classId);
+            data[i][clsCol] = classId;
+          }
           sheet.getRange(i + 1, cwCol + 1).setValue(Number(r.coursework_max));
           sheet.getRange(i + 1, fmCol + 1).setValue(Number(r.final_max));
           sheet.getRange(i + 1, pmCol + 1).setValue(Number(r.pre_mid_max));
@@ -427,6 +457,7 @@ function serverSaveWeights(token, rows) {
       if (!found) {
         var newRow = headers.map(function() { return ''; });
         newRow[sidCol] = r.subject_id;
+        if (clsCol !== -1) newRow[clsCol] = classId;
         newRow[cwCol] = Number(r.coursework_max);
         newRow[fmCol] = Number(r.final_max);
         newRow[pmCol] = Number(r.pre_mid_max);
@@ -451,15 +482,23 @@ function serverSaveWeights(token, rows) {
 function getWeightsForRef(token) {
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  ensureColumns('SubjectWeights', ['class_id']);
   var subjects = dbGetAll('Subjects');
+  var classes = {};
+  dbGetAll('Classes').forEach(function(c) { classes[c.class_id] = c; });
   var weights = dbGetAll('SubjectWeights');
   var weightMap = {};
   weights.forEach(function(w) { weightMap[w.subject_id] = w; });
   var result = subjects.map(function(s) {
     var w = weightMap[s.subject_id] || {};
+    var cls = classes[s.class_id] || {};
+    var classLabel = cls.class_id ? fmtClassLabel(cls.level, cls.section) : '';
     return {
       subject_id: s.subject_id,
+      class_id: s.class_id || w.class_id || '',
+      class_label: classLabel,
       subject_name: s.subject_name,
+      subject_code: s.subject_code || '',
       weight_group: s.weight_group,
       coursework_max: w.coursework_max !== undefined ? w.coursework_max : '',
       final_max: w.final_max !== undefined ? w.final_max : '',

@@ -10,6 +10,11 @@
     tbody td { vertical-align: top; }
     #auditStatus { color: var(--text-muted); font-size: 14px; margin: 8px 0; }
     .btn-secondary { background: #e5e7eb; color: #333; border: none; }
+    .json-val { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .json-val.collapsed { max-height: 58px; overflow: hidden; }
+    .expand-link { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--brand); cursor: pointer; background: none; border: none; padding: 0; }
+    .pagination { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+    .pagination button { padding: 5px 10px; font-size: 12.5px; }
   </style>
 </head>
 <body>
@@ -42,11 +47,17 @@
         </div>
         <div class="filter-group">
           <label for="filterDateFrom">วันที่เริ่มต้น</label>
-          <input type="date" id="filterDateFrom">
+          <div class="thai-date-picker" data-thai-date-picker>
+            <input type="hidden" id="filterDateFrom" data-thai-date-value>
+            <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
+          </div>
         </div>
         <div class="filter-group">
           <label for="filterDateTo">วันที่สิ้นสุด</label>
-          <input type="date" id="filterDateTo">
+          <div class="thai-date-picker" data-thai-date-picker>
+            <input type="hidden" id="filterDateTo" data-thai-date-value>
+            <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
+          </div>
         </div>
         <div class="filter-group" style="padding-bottom:1px">
           <label>&nbsp;</label>
@@ -82,6 +93,11 @@
           <tbody id="auditBody"></tbody>
         </table>
       </div>
+      <div class="pagination" id="auditPagination" style="display:none">
+        <button class="btn btn-secondary" onclick="changeAuditPage(-1)">ก่อนหน้า</button>
+        <span id="auditPageLabel"></span>
+        <button class="btn btn-secondary" onclick="changeAuditPage(1)">ถัดไป</button>
+      </div>
     </div>
   </div>
 
@@ -89,6 +105,9 @@
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
+var auditRows = [];
+var auditPage = 1;
+var auditPageSize = 25;
 
 function goHome() {
   google.script.run
@@ -162,20 +181,34 @@ function doSearch() {
 
 function renderRows(rows) {
   document.getElementById('searchBtn').disabled = false;
+  auditRows = rows || [];
+  auditPage = 1;
+  renderAuditPage();
+}
+
+function renderAuditPage() {
   var tbody = document.getElementById('auditBody');
   tbody.innerHTML = '';
 
-  if (!rows || rows.length === 0) {
+  if (!auditRows || auditRows.length === 0) {
     document.getElementById('auditStatus').textContent = 'ไม่พบข้อมูล';
     document.getElementById('auditTableWrap').style.display = 'none';
+    document.getElementById('auditPagination').style.display = 'none';
     return;
   }
 
-  document.getElementById('auditStatus').textContent = 'พบ ' + rows.length + ' รายการ';
-  document.getElementById('auditTableWrap').style.display = 'block';
+  var totalPages = Math.max(1, Math.ceil(auditRows.length / auditPageSize));
+  if (auditPage > totalPages) auditPage = totalPages;
+  var start = (auditPage - 1) * auditPageSize;
+  var pageRows = auditRows.slice(start, start + auditPageSize);
 
-  rows.forEach(function(r) {
-    var ts = r.timestamp ? new Date(r.timestamp).toLocaleString('th-TH') : '';
+  document.getElementById('auditStatus').textContent = 'พบ ' + auditRows.length + ' รายการ';
+  document.getElementById('auditTableWrap').style.display = 'block';
+  document.getElementById('auditPagination').style.display = totalPages > 1 ? 'flex' : 'none';
+  document.getElementById('auditPageLabel').textContent = 'หน้า ' + auditPage + ' / ' + totalPages;
+
+  pageRows.forEach(function(r) {
+    var ts = typeof formatThaiBuddhistDateTime === 'function' ? formatThaiBuddhistDateTime(r.timestamp) : (r.timestamp ? new Date(r.timestamp).toLocaleString('th-TH') : '');
     var tr = document.createElement('tr');
     tr.setAttribute('data-entity', r.entity || '');
     tr.setAttribute('data-user-id', r.user_id || '');
@@ -184,10 +217,31 @@ function renderRows(rows) {
       '<td>' + escHtml(ts) + '</td>' +
       '<td>' + escHtml(r.user_name || r.user_id || '') + '</td>' +
       '<td><span class="entity-badge">' + escHtml(r.entity || '') + '</span></td>' +
-      '<td><div class="json-val">' + escHtml(formatJson(r.old_value)) + '</div></td>' +
-      '<td><div class="json-val">' + escHtml(formatJson(r.new_value)) + '</div></td>';
+      '<td>' + longJsonCell(formatJson(r.old_value)) + '</td>' +
+      '<td>' + longJsonCell(formatJson(r.new_value)) + '</td>';
     tbody.appendChild(tr);
   });
+}
+
+function changeAuditPage(delta) {
+  var totalPages = Math.max(1, Math.ceil(auditRows.length / auditPageSize));
+  auditPage = Math.min(totalPages, Math.max(1, auditPage + delta));
+  renderAuditPage();
+}
+
+function longJsonCell(text) {
+  text = String(text || '');
+  var isLong = text.length > 120;
+  var cls = isLong ? 'json-val collapsed' : 'json-val';
+  return '<div class="' + cls + '">' + escHtml(text) + '</div>' +
+    (isLong ? '<button class="expand-link" onclick="toggleLongCell(this)">แสดงเพิ่มเติม</button>' : '');
+}
+
+function toggleLongCell(btn) {
+  var div = btn.previousElementSibling;
+  if (!div) return;
+  var collapsed = div.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'แสดงเพิ่มเติม' : 'ย่อ';
 }
 
 function escHtml(s) {
@@ -210,10 +264,16 @@ function formatJson(val) {
 function clearFilters() {
   document.getElementById('filterUserId').value = '';
   document.getElementById('filterEntity').value = '';
-  document.getElementById('filterDateFrom').value = '';
-  document.getElementById('filterDateTo').value = '';
+  if (typeof setThaiDatePickerValue === 'function') {
+    setThaiDatePickerValue(document.getElementById('filterDateFrom'), '');
+    setThaiDatePickerValue(document.getElementById('filterDateTo'), '');
+  } else {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+  }
   document.getElementById('auditStatus').textContent = 'ล้างตัวกรองแล้ว — กดค้นหาเพื่อโหลดข้อมูล';
   document.getElementById('auditTableWrap').style.display = 'none';
+  document.getElementById('auditPagination').style.display = 'none';
   document.getElementById('auditBody').innerHTML = '';
 }
 

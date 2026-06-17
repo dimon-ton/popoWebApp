@@ -45,7 +45,9 @@ function getWorkloadData() {
 
     pairs.forEach(function(e) {
       var sub = subjects[e.subject_id];
-      if (sub) subjectNames.push(sub.subject_name);
+      var cls = classes[e.class_id] || {};
+      var classLabel = fmtClassLabelWithCounts(cls.level, cls.section, levelCounts);
+      if (sub) subjectNames.push((sub.subject_name || e.subject_id) + (classLabel ? ' - ' + classLabel : ''));
       // Count distinct classes for student totals
       if (!classesCountedForStudents[e.class_id]) {
         classesCountedForStudents[e.class_id] = true;
@@ -62,11 +64,13 @@ function getWorkloadData() {
       pairs: pairs.map(function(e) {
         var cls = classes[e.class_id] || {};
         var sub = subjects[e.subject_id] || {};
+        var classLabel = fmtClassLabelWithCounts(cls.level, cls.section, levelCounts);
         return {
           class_id: e.class_id,
-          class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
+          class_label: classLabel,
           subject_id: e.subject_id,
-          subject_name: sub.subject_name || e.subject_id
+          subject_name: sub.subject_name || e.subject_id,
+          subject_title: (sub.subject_name || e.subject_id) + (classLabel ? ' - ' + classLabel : '')
         };
       })
     };

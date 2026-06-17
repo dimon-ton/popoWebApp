@@ -862,6 +862,106 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .info-label { color: var(--text-muted); min-width: 120px; flex-shrink: 0; font-size: 13.5px; }
 .info-value { font-weight: 600; }
 
+/* ===== THAI DATE PICKER ===== */
+.thai-date-picker {
+  position: relative;
+  width: 100%;
+}
+.thai-date-display {
+  width: 100%;
+  cursor: pointer;
+  background: white;
+}
+.thai-date-popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10001;
+  width: 292px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  padding: 10px;
+}
+.thai-date-popover[hidden] { display: none; }
+.thai-date-head {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.thai-date-nav {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+.thai-date-month {
+  display: flex;
+  gap: 6px;
+}
+.thai-date-month select {
+  min-width: 0;
+  flex: 1;
+  padding: 6px 8px;
+}
+.thai-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.thai-date-dow,
+.thai-date-day {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+}
+.thai-date-dow {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.thai-date-day {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+}
+.thai-date-day:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-light);
+}
+.thai-date-day.selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: white;
+}
+.thai-date-day.today:not(.selected) {
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: 700;
+}
+.thai-date-day.empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+.thai-date-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+}
+.thai-date-actions button {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 640px) {
   .navbar { padding: 0 12px; gap: 2px; }
@@ -891,12 +991,288 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   .filter-group input, .filter-group select { width: 100%; }
 
   .modal { padding: 20px; }
+  .thai-date-popover { width: min(292px, calc(100vw - 32px)); }
 }
 .back-btn { display:inline-flex;align-items:center;gap:5px;padding:4px 0;background:none;color:var(--brand);border:none;border-radius:var(--radius-sm);font-size:13px;font-family:inherit;cursor:pointer;text-decoration:none;font-weight:500;transition:color 0.15s;margin-bottom:14px; }
 .back-btn:hover { color:var(--brand-dark);text-decoration:underline; }
 .back-btn svg { width:16px;height:16px;fill:currentColor; }
 </style>
 <script>
+var THAI_DATE_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+var THAI_DATE_WEEKDAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+function padThaiDate(n) {
+  return n < 10 ? '0' + n : String(n);
+}
+
+function parseIsoDateValue(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  var parts = value.split('-');
+  var y = Number(parts[0]);
+  var m = Number(parts[1]) - 1;
+  var d = Number(parts[2]);
+  var date = new Date(y, m, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
+  return date;
+}
+
+function isoFromDateValue(date) {
+  return date.getFullYear() + '-' + padThaiDate(date.getMonth() + 1) + '-' + padThaiDate(date.getDate());
+}
+
+function formatThaiDateValue(value) {
+  var date = parseIsoDateValue(value);
+  if (!date) return '';
+  return date.getDate() + ' ' + THAI_DATE_MONTHS[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+}
+
+function formatThaiBuddhistDate(value) {
+  if (!value) return '';
+  var date = value instanceof Date ? value : new Date(value);
+  if (!date || isNaN(date.getTime())) return '';
+  return padThaiDate(date.getDate()) + '/' + padThaiDate(date.getMonth() + 1) + '/' + (date.getFullYear() + 543);
+}
+
+function formatThaiBuddhistDateTime(value) {
+  if (!value) return '';
+  var date = value instanceof Date ? value : new Date(value);
+  if (!date || isNaN(date.getTime())) return '';
+  return formatThaiBuddhistDate(date) + ' ' + padThaiDate(date.getHours()) + ':' + padThaiDate(date.getMinutes());
+}
+
+function dispatchThaiDateChange(input) {
+  if (!input) return;
+  try {
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  } catch (e) {
+    var inputEvent = document.createEvent('Event');
+    inputEvent.initEvent('input', true, true);
+    input.dispatchEvent(inputEvent);
+    var changeEvent = document.createEvent('Event');
+    changeEvent.initEvent('change', true, true);
+    input.dispatchEvent(changeEvent);
+  }
+}
+
+function setThaiDatePickerValue(target, value) {
+  var root = target && target.getAttribute && target.getAttribute('data-thai-date-picker') !== null
+    ? target
+    : target && target.closest ? target.closest('[data-thai-date-picker]') : null;
+  if (!root) return;
+  var hidden = root.querySelector('[data-thai-date-value]');
+  var display = root.querySelector('[data-thai-date-display]');
+  var date = parseIsoDateValue(value);
+  var iso = date ? isoFromDateValue(date) : '';
+  if (hidden) hidden.value = iso;
+  if (display) display.value = formatThaiDateValue(iso);
+  root._thaiDateSelected = date || null;
+  root._thaiDateView = date ? new Date(date.getFullYear(), date.getMonth(), 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  renderThaiDateCalendar(root);
+  dispatchThaiDateChange(hidden);
+}
+
+function closeThaiDatePickers(exceptRoot) {
+  var pickers = document.querySelectorAll('[data-thai-date-picker]');
+  for (var i = 0; i < pickers.length; i++) {
+    if (pickers[i] !== exceptRoot && pickers[i]._thaiDatePopover) pickers[i]._thaiDatePopover.hidden = true;
+  }
+}
+
+function positionThaiDatePopover(root) {
+  if (!root || !root._thaiDatePopover || !root._thaiDateDisplay || root._thaiDatePopover.hidden) return;
+  var displayRect = root._thaiDateDisplay.getBoundingClientRect();
+  var popover = root._thaiDatePopover;
+  var gap = 6;
+  var margin = 12;
+  var width = Math.min(292, Math.max(260, window.innerWidth - (margin * 2)));
+  popover.style.width = width + 'px';
+
+  var left = displayRect.left;
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - margin - width;
+  if (left < margin) left = margin;
+
+  var popoverHeight = popover.offsetHeight || 330;
+  var top = displayRect.bottom + gap;
+  if (top + popoverHeight > window.innerHeight - margin && displayRect.top - popoverHeight - gap >= margin) {
+    top = displayRect.top - popoverHeight - gap;
+  }
+  if (top < margin) top = margin;
+
+  popover.style.left = left + 'px';
+  popover.style.top = top + 'px';
+}
+
+function openThaiDatePicker(root) {
+  if (!root || !root._thaiDatePopover) return;
+  closeThaiDatePickers(root);
+  root._thaiDatePopover.hidden = false;
+  renderThaiDateCalendar(root);
+  positionThaiDatePopover(root);
+}
+
+function buildThaiDatePopover(root) {
+  var popover = document.createElement('div');
+  popover.className = 'thai-date-popover';
+  popover.hidden = true;
+  popover.innerHTML =
+    '<div class="thai-date-head">' +
+      '<button type="button" class="thai-date-nav" data-thai-date-prev aria-label="เดือนก่อนหน้า">&lt;</button>' +
+      '<div class="thai-date-month">' +
+        '<select data-thai-date-month></select>' +
+        '<select data-thai-date-year></select>' +
+      '</div>' +
+      '<button type="button" class="thai-date-nav" data-thai-date-next aria-label="เดือนถัดไป">&gt;</button>' +
+    '</div>' +
+    '<div class="thai-date-grid" data-thai-date-grid></div>' +
+    '<div class="thai-date-actions">' +
+      '<button type="button" data-thai-date-today>วันนี้</button>' +
+      '<button type="button" data-thai-date-clear>ล้าง</button>' +
+    '</div>';
+  document.body.appendChild(popover);
+
+  var monthSelect = popover.querySelector('[data-thai-date-month]');
+  for (var m = 0; m < THAI_DATE_MONTHS.length; m++) {
+    var monthOption = document.createElement('option');
+    monthOption.value = String(m);
+    monthOption.textContent = THAI_DATE_MONTHS[m];
+    monthSelect.appendChild(monthOption);
+  }
+
+  popover.querySelector('[data-thai-date-prev]').onclick = function() {
+    root._thaiDateView.setMonth(root._thaiDateView.getMonth() - 1);
+    renderThaiDateCalendar(root);
+    positionThaiDatePopover(root);
+  };
+  popover.querySelector('[data-thai-date-next]').onclick = function() {
+    root._thaiDateView.setMonth(root._thaiDateView.getMonth() + 1);
+    renderThaiDateCalendar(root);
+    positionThaiDatePopover(root);
+  };
+  monthSelect.onchange = function() {
+    root._thaiDateView.setMonth(Number(this.value));
+    renderThaiDateCalendar(root);
+    positionThaiDatePopover(root);
+  };
+  popover.querySelector('[data-thai-date-year]').onchange = function() {
+    root._thaiDateView.setFullYear(Number(this.value));
+    renderThaiDateCalendar(root);
+    positionThaiDatePopover(root);
+  };
+  popover.querySelector('[data-thai-date-today]').onclick = function() {
+    setThaiDatePickerValue(root, isoFromDateValue(new Date()));
+    popover.hidden = true;
+  };
+  popover.querySelector('[data-thai-date-clear]').onclick = function() {
+    setThaiDatePickerValue(root, '');
+    popover.hidden = true;
+  };
+  return popover;
+}
+
+function renderThaiDateCalendar(root) {
+  if (!root || !root._thaiDatePopover) return;
+  var view = root._thaiDateView || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  var popover = root._thaiDatePopover;
+  var monthSelect = popover.querySelector('[data-thai-date-month]');
+  var yearSelect = popover.querySelector('[data-thai-date-year]');
+  var grid = popover.querySelector('[data-thai-date-grid]');
+  var viewYear = view.getFullYear();
+
+  monthSelect.value = String(view.getMonth());
+  yearSelect.innerHTML = '';
+  for (var y = viewYear - 80; y <= viewYear + 5; y++) {
+    var yearOption = document.createElement('option');
+    yearOption.value = String(y);
+    yearOption.textContent = String(y + 543);
+    if (y === viewYear) yearOption.selected = true;
+    yearSelect.appendChild(yearOption);
+  }
+
+  grid.innerHTML = '';
+  for (var w = 0; w < THAI_DATE_WEEKDAYS.length; w++) {
+    var dow = document.createElement('div');
+    dow.className = 'thai-date-dow';
+    dow.textContent = THAI_DATE_WEEKDAYS[w];
+    grid.appendChild(dow);
+  }
+
+  var firstDay = new Date(viewYear, view.getMonth(), 1);
+  var daysInMonth = new Date(viewYear, view.getMonth() + 1, 0).getDate();
+  var todayIso = isoFromDateValue(new Date());
+  var selectedIso = root._thaiDateSelected ? isoFromDateValue(root._thaiDateSelected) : '';
+
+  for (var e = 0; e < firstDay.getDay(); e++) {
+    var empty = document.createElement('div');
+    empty.className = 'thai-date-day empty';
+    grid.appendChild(empty);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dayDate = new Date(viewYear, view.getMonth(), d);
+    var iso = isoFromDateValue(dayDate);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'thai-date-day';
+    if (iso === selectedIso) btn.className += ' selected';
+    if (iso === todayIso) btn.className += ' today';
+    btn.textContent = String(d);
+    btn.setAttribute('data-thai-date-day', iso);
+    btn.onclick = function() {
+      setThaiDatePickerValue(root, this.getAttribute('data-thai-date-day'));
+      root._thaiDatePopover.hidden = true;
+    };
+    grid.appendChild(btn);
+  }
+}
+
+function initThaiDatePickers(scope) {
+  var rootScope = scope || document;
+  var pickers = rootScope.querySelectorAll ? rootScope.querySelectorAll('[data-thai-date-picker]') : [];
+  for (var i = 0; i < pickers.length; i++) {
+    var root = pickers[i];
+    if (root._thaiDateReady) continue;
+    var hidden = root.querySelector('[data-thai-date-value]');
+    var display = root.querySelector('[data-thai-date-display]');
+    if (!hidden || !display) continue;
+    root._thaiDateReady = true;
+    root._thaiDateHidden = hidden;
+    root._thaiDateDisplay = display;
+    root._thaiDatePopover = buildThaiDatePopover(root);
+    var initialDate = parseIsoDateValue(hidden.value);
+    root._thaiDateSelected = initialDate || null;
+    root._thaiDateView = initialDate ? new Date(initialDate.getFullYear(), initialDate.getMonth(), 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    display.value = formatThaiDateValue(hidden.value);
+    renderThaiDateCalendar(root);
+    display.onclick = function(ev) {
+      var currentRoot = ev.currentTarget.closest('[data-thai-date-picker]');
+      if (currentRoot._thaiDatePopover.hidden) openThaiDatePicker(currentRoot);
+      else currentRoot._thaiDatePopover.hidden = true;
+    };
+    display.onkeydown = function(ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        ev.currentTarget.click();
+      }
+    };
+  }
+}
+
+document.addEventListener('click', function(ev) {
+  if (!ev.target.closest) return;
+  if (!ev.target.closest('[data-thai-date-picker]') && !ev.target.closest('.thai-date-popover')) closeThaiDatePickers();
+});
+window.addEventListener('resize', function() {
+  var pickers = document.querySelectorAll('[data-thai-date-picker]');
+  for (var i = 0; i < pickers.length; i++) positionThaiDatePopover(pickers[i]);
+});
+window.addEventListener('scroll', function() {
+  var pickers = document.querySelectorAll('[data-thai-date-picker]');
+  for (var i = 0; i < pickers.length; i++) positionThaiDatePopover(pickers[i]);
+}, true);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { initThaiDatePickers(document); });
+else initThaiDatePickers(document);
+
 function showNavLoading() {
   if (document.getElementById('navOverlay')) return;
   var d = document.createElement('div');

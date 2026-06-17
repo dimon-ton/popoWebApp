@@ -131,14 +131,14 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// Thai day abbreviations for Mon–Sun
-var THAI_DAYS = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+var THAI_DAYS_BY_DATE = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
 // Build the week select dropdown options
 function buildWeekSelect() {
   var sel = document.getElementById('weekJump');
+  var maxWeeks = currentData && currentData.max_weeks ? Number(currentData.max_weeks) : 40;
   sel.innerHTML = '<option value="">— ข้ามไปสัปดาห์ที่ —</option>';
-  for (var w = 1; w <= 40; w++) {
+  for (var w = 1; w <= maxWeeks; w++) {
     var opt = document.createElement('option');
     opt.value = w;
     opt.textContent = 'สัปดาห์ที่ ' + w;
@@ -156,7 +156,8 @@ function loadAttendance() {
   google.script.run
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
-      currentData = result;
+  currentData = result;
+      buildWeekSelect();
       renderGrid(result);
     })
     .withFailureHandler(function(err) {
@@ -188,10 +189,10 @@ function renderGrid(data) {
   // Build header
   var thead = document.getElementById('attHead');
   var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
-  data.dates.forEach(function(dateStr, i) {
+  data.dates.forEach(function(dateStr) {
     var dt = new Date(dateStr + 'T00:00:00');
-    var dayLabel = THAI_DAYS[i]; // Mon=0, Tue=1... matches our date array order
-    var dateLabel = dt.getDate() + '/' + (dt.getMonth() + 1);
+    var dayLabel = THAI_DAYS_BY_DATE[dt.getDay()];
+    var dateLabel = typeof formatThaiBuddhistDate === 'function' ? formatThaiBuddhistDate(dateStr + 'T00:00:00') : (dt.getDate() + '/' + (dt.getMonth() + 1) + '/' + (dt.getFullYear() + 543));
     headRow += '<th>' + dayLabel + '<br><span style="font-weight:normal;font-size:11px">' + dateLabel + '</span></th>';
   });
   headRow += '<th>มา</th><th>ลา</th><th>ขาด</th><th>รวม<br>ชม.</th></tr>';
@@ -278,7 +279,8 @@ function cycleCell(el) {
 
 function changeWeek(delta) {
   var newWeek = parseInt(currentWeek) + delta;
-  if (newWeek < 1 || newWeek > 40) return;
+  var maxWeeks = currentData && currentData.max_weeks ? Number(currentData.max_weeks) : 40;
+  if (newWeek < 1 || newWeek > maxWeeks) return;
   currentWeek = newWeek;
   buildWeekSelect();
   loadAttendance();
@@ -286,7 +288,8 @@ function changeWeek(delta) {
 
 function jumpToWeek(val) {
   var w = parseInt(val);
-  if (!w || w < 1 || w > 40) return;
+  var maxWeeks = currentData && currentData.max_weeks ? Number(currentData.max_weeks) : 40;
+  if (!w || w < 1 || w > maxWeeks) return;
   currentWeek = w;
   buildWeekSelect();
   loadAttendance();

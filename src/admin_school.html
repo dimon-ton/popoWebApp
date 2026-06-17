@@ -49,6 +49,17 @@
       <label>ปีการศึกษา</label>
       <input type="text" id="academicYear" placeholder="เช่น 2567">
     </div>
+    <div class="form-group">
+      <label>วันเปิดภาคเรียน / วันเริ่มนับเวลาเรียน</label>
+      <div class="thai-date-picker" data-thai-date-picker>
+        <input type="hidden" id="semesterStartDate" data-thai-date-value>
+        <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>จำนวนวันเรียนที่ต้องนับ</label>
+      <input type="number" id="requiredAttendanceDays" min="1" max="260" placeholder="เช่น 200">
+    </div>
     <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
   </div>
 </div>
@@ -100,6 +111,9 @@ function loadSchoolInfo() {
       document.getElementById('district').value = info.district || '';
       document.getElementById('province').value = info.province || '';
       document.getElementById('academicYear').value = info.academic_year || '';
+      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('semesterStartDate'), info.semester_start_date || '');
+      else document.getElementById('semesterStartDate').value = info.semester_start_date || '';
+      document.getElementById('requiredAttendanceDays').value = info.required_attendance_days || '';
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSchoolInfo();
@@ -112,6 +126,8 @@ function saveSchoolInfo() {
   var district = document.getElementById('district').value.trim();
   var province = document.getElementById('province').value.trim();
   var academic_year = document.getElementById('academicYear').value.trim();
+  var semester_start_date = document.getElementById('semesterStartDate').value.trim();
+  var required_attendance_days = document.getElementById('requiredAttendanceDays').value.trim();
 
   google.script.run
     .withSuccessHandler(function(result) {
@@ -123,7 +139,7 @@ function saveSchoolInfo() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year);
+    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days);
 }
 
 loadSchoolInfo();

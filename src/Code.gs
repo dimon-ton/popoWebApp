@@ -110,6 +110,12 @@ function doGet(e) {
           class_id: params.class_id || '',
           subject_id: params.subject_id || ''
         });
+      case 'class_dev_activity':
+        return buildPage('class_dev_activity', {
+          session: session, token: token,
+          class_id: params.class_id || '',
+          subject_id: params.subject_id || ''
+        });
       case 'class_report':
         return buildPage('class_report', {
           session: session, token: token,
@@ -338,6 +344,7 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
       'class_summative': 'class_summative',
       'class_characteristics': 'class_characteristics',
       'class_readthinkwrite': 'class_readthinkwrite',
+      'class_dev_activity': 'class_dev_activity',
       'class_report': 'class_report',
       'admin_indicators': 'admin_indicators',
       'subject_indicators_ref': 'subject_indicators_ref'
@@ -479,7 +486,7 @@ function getIndicatorsPageHtml(token, subject_id) {
       var cls = dbFindOne('Classes', 'class_id', subj.class_id);
       if (cls) class_label = fmtClassLabel(cls.level, cls.section);
     }
-    var subject_title = subject_name + (class_label && String(subject_name).indexOf(class_label) === -1 ? ' ' + class_label : '');
+    var subject_title = (subj && subj.subject_code ? subj.subject_code + ' - ' : '') + subject_name + (class_label ? ' - ' + class_label : '');
     var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
     tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
     return tmpl.evaluate().getContent();

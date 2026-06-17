@@ -98,7 +98,7 @@ function renderWorkload(teachers) {
   var html = '<table id="workloadTable">' +
     '<thead><tr>' +
     '<th>ชื่อครู</th>' +
-    '<th>จำนวน (class, subject)</th>' +
+    '<th>จำนวนวิชา</th>' +
     '<th>รายวิชาที่สอน</th>' +
     '<th>จำนวนนักเรียนรวม</th>' +
     '</tr></thead>' +
@@ -140,7 +140,7 @@ function showDrill(row, idx) {
         '&subject_id=' + encodeURIComponent(p.subject_id) + '&token=' + encodeURIComponent(TOKEN);
       tr.innerHTML =
         '<td class="drill-class">' + esc(p.class_label) + '</td>' +
-        '<td class="drill-subject">' + esc(p.subject_name) + '</td>' +
+        '<td class="drill-subject">' + esc(p.subject_title || p.subject_name) + '</td>' +
         '<td><a href="' + gradeLink + '" class="drill-link">เปิดเกรดบุ๊ก</a></td>';
       tbody.appendChild(tr);
     });

@@ -466,3 +466,131 @@ function clientBulkAssign(token, mode, teacherUserId, classId, subjectId, classI
     return { error: err.message };
   }
 }
+
+function clientImportEnrollmentsCSV(token, rows) {
+  try {
+    var session = getSession(token);
+    requireAdmin(session);
+    if (!rows || rows.length === 0) return { error: 'ไม่พบข้อมูลในไฟล์ CSV' };
+
+    var teachers = dbGetAll('Users').filter(function(u) { return u.role === 'teacher'; });
+    var teacherByUsername = {};
+    var teacherByName = {};
+    teachers.forEach(function(t) {
+      if (t.username) teacherByUsername[String(t.username).trim().toLowerCase()] = t;
+      if (t.full_name) teacherByName[String(t.full_name).trim().toLowerCase()] = t;
+    });
+
+    var classes = dbGetAll('Classes');
+    var classMatches = {};
+    classes.forEach(function(c) {
+      var level = String(c.level || '').trim();
+      var section = String(c.section || '').trim();
+      var key = level + '|' + section;
+      if (!classMatches[key]) classMatches[key] = [];
+      classMatches[key].push(c);
+      if (!classMatches[level + '|']) classMatches[level + '|'] = [];
+      classMatches[level + '|'].push(c);
+    });
+
+    var subjects = dbGetAll('Subjects');
+    var subjectsByClass = {};
+    subjects.forEach(function(s) {
+      if (!subjectsByClass[s.class_id]) subjectsByClass[s.class_id] = [];
+      subjectsByClass[s.class_id].push(s);
+    });
+
+    var enrollments = dbGetAll('Enrollments');
+    var enrollmentMap = {};
+    enrollments.forEach(function(e) { enrollmentMap[e.class_id + '|' + e.subject_id] = e; });
+
+    var errors = [];
+    var assignments = [];
+    rows.forEach(function(row, idx) {
+      var line = idx + 2;
+      var teacher = teacherByUsername[String(row.teacher_username || '').trim().toLowerCase()] ||
+        teacherByName[String(row.teacher_full_name || '').trim().toLowerCase()];
+      if (!teacher) {
+        errors.push('แถวที่ ' + line + ': ไม่พบครูจาก username/full_name');
+        return;
+      }
+
+      var level = String(row.grade_level || '').trim();
+      var section = String(row.section || '').trim();
+      var classId = String(row.class_id || '').trim();
+      var cls = classId ? dbFindOne('Classes', 'class_id', classId) : null;
+      if (!cls) {
+        var matchedClasses = classMatches[level + '|' + section] || [];
+        if (!section && matchedClasses.length > 1) {
+          errors.push('แถวที่ ' + line + ': ระดับชั้น ' + level + ' มีหลายห้อง กรุณาระบุ section หรือ class_id');
+          return;
+        }
+        cls = matchedClasses[0] || null;
+      }
+      if (!cls) {
+        errors.push('แถวที่ ' + line + ': ไม่พบชั้นเรียน ' + (level || classId));
+        return;
+      }
+
+      var subjectCode = String(row.subject_code || '').trim();
+      var subjectName = String(row.subject_name || '').trim();
+      if (!subjectCode || !subjectName || !level) {
+        errors.push('แถวที่ ' + line + ': ต้องระบุ subject_code, subject_name และ grade_level');
+        return;
+      }
+
+      var candidates = subjectsByClass[cls.class_id] || [];
+      var matched = candidates.filter(function(s) {
+        return String(s.subject_code || '').trim() === subjectCode &&
+          String(s.subject_name || '').trim() === subjectName;
+      });
+      if (matched.length === 0) {
+        errors.push('แถวที่ ' + line + ': ไม่พบวิชา ' + subjectCode + ' - ' + subjectName + ' ใน ' + level);
+        return;
+      }
+
+      assignments.push({ teacher_user_id: teacher.user_id, class_id: cls.class_id, subject_id: matched[0].subject_id, line: line });
+    });
+
+    if (errors.length > 0) return { error: 'นำเข้าไม่สำเร็จ', errors: errors };
+
+    var created = 0, reassigned = 0, unchanged = 0;
+    var lock = LockService.getDocumentLock();
+    if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
+    try {
+      assignments.forEach(function(a) {
+        var key = a.class_id + '|' + a.subject_id;
+        var existing = enrollmentMap[key];
+        if (!existing) {
+          var newId = generateId('enr');
+          dbInsert('Enrollments', {
+            enrollment_id: newId,
+            class_id: a.class_id,
+            subject_id: a.subject_id,
+            teacher_user_id: a.teacher_user_id,
+            dev_activity_result: ''
+          });
+          enrollmentMap[key] = { enrollment_id: newId, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id };
+          appendAuditLog(session.user_id, 'Enrollments', newId, null, { imported: true, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id });
+          created++;
+        } else if (existing.teacher_user_id === a.teacher_user_id) {
+          unchanged++;
+        } else {
+          appendAuditLog(session.user_id, 'Enrollments', existing.enrollment_id,
+            { class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: existing.teacher_user_id },
+            { imported: true, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id });
+          dbUpdate('Enrollments', 'enrollment_id', existing.enrollment_id, { teacher_user_id: a.teacher_user_id });
+          existing.teacher_user_id = a.teacher_user_id;
+          reassigned++;
+        }
+      });
+    } finally {
+      lock.releaseLock();
+    }
+
+    if (created || reassigned) invalidateWorkloadCache();
+    return { ok: true, created: created, reassigned: reassigned, unchanged: unchanged, total: assignments.length };
+  } catch (err) {
+    return { error: err.message };
+  }
+}

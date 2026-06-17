@@ -13,13 +13,13 @@
 
 var TAB_SCHEMA = {
   'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'avatar', 'must_change_pwd', 'last_login_at', 'created_at'],
-  'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year'],
+  'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days'],
   'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id'],
   'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group'],
   'Enrollments':      ['enrollment_id', 'class_id', 'subject_id', 'teacher_user_id', 'dev_activity_result'],
   'Students':         ['student_id', 'class_id', 'seq_no', 'student_code', 'citizen_id', 'full_name', 'dob', 'note'],
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],
-  'SubjectWeights':   ['subject_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
+  'SubjectWeights':   ['subject_id', 'class_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
   'Attendance':       ['attendance_id', 'student_id', 'subject_id', 'date', 'period', 'status', 'updated_by', 'updated_at'],
   'IndicatorScores':  ['id', 'student_id', 'subject_id', 'indicator_id', 'score', 'updated_by', 'updated_at'],
   'SummativeScores':  ['id', 'student_id', 'subject_id', 'coursework', 'midterm', 'final', 'total', 'computed_grade', 'makeup_grade', 'final_grade', 'updated_by', 'updated_at'],

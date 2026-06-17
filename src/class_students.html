@@ -68,7 +68,10 @@
       </div>
       <div class="form-group" style="min-width:110px">
         <label>วันเกิด</label>
-        <input type="text" id="newDob" placeholder="01 ม.ค. 60">
+        <div class="thai-date-picker" data-thai-date-picker>
+          <input type="hidden" id="newDob" data-thai-date-value>
+          <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันเกิด" readonly>
+        </div>
       </div>
       <div class="form-group" style="min-width:120px">
         <label>หมายเหตุ</label>
@@ -365,6 +368,7 @@ function renderStudents(students) {
   students.forEach(function(s) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-student-id', s.student_id);
+    tr.setAttribute('data-dob-input', s.dob_input || '');
     var actionCell = CAN_EDIT
       ? '<td><div class="action-btns">' +
           '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
@@ -390,8 +394,17 @@ function startEdit(student_id) {
   var fields = ['seq_no','student_code','citizen_id','full_name','dob','note'];
   fields.forEach(function(f) {
     var td = tr.querySelector('.cell-' + f);
-    var val = td.textContent;
-    td.innerHTML = '<input class="edit-field" data-field="' + f + '" value="' + escHtml(val) + '">';
+    var val = f === 'dob' ? (tr.getAttribute('data-dob-input') || '') : td.textContent;
+    if (f === 'dob') {
+      td.innerHTML =
+        '<div class="thai-date-picker" data-thai-date-picker>' +
+          '<input type="hidden" data-field="' + f + '" data-thai-date-value value="' + escHtml(val) + '">' +
+          '<input type="text" class="edit-field thai-date-display" data-thai-date-display placeholder="เลือกวันเกิด" readonly>' +
+        '</div>';
+      if (typeof initThaiDatePickers === 'function') initThaiDatePickers(td);
+    } else {
+      td.innerHTML = '<input type="text" class="edit-field" data-field="' + f + '" value="' + escHtml(val) + '">';
+    }
   });
   var actionDiv = tr.querySelector('.action-btns');
   actionDiv.innerHTML =
@@ -454,7 +467,8 @@ function addStudent() {
       document.getElementById('newPrefix').value = '';
       document.getElementById('newFirstName').value = '';
       document.getElementById('newLastName').value = '';
-      document.getElementById('newDob').value = '';
+      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('newDob'), '');
+      else document.getElementById('newDob').value = '';
       document.getElementById('newNote').value = '';
       loadStudents();
     })

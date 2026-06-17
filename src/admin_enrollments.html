@@ -181,6 +181,18 @@
     <!-- US-019: Bulk assign panel -->
     <div class="all-pairs-panel" id="bulkAssignTab" style="display:none">
       <div class="section-title">กำหนดครูแบบกลุ่ม</div>
+      <div class="bulk-panel" style="margin-bottom:16px">
+        <h3>นำเข้ารายการสอนด้วย CSV</h3>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:10px">
+          เหมาะสำหรับนำเข้าจำนวนมาก ระบบจะตรวจสอบครู รหัสวิชา ชื่อวิชา และระดับชั้นก่อนบันทึก ส่วน "กำหนดครูแบบกลุ่ม" ด้านล่างยังใช้ได้สำหรับแก้ไขแบบเลือกเองทีละชุด
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-secondary" onclick="downloadEnrollmentCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+          <input type="file" id="enrollmentCsvInput" accept=".csv" style="padding:6px 11px">
+          <button class="btn btn-primary" id="importEnrollmentCsvBtn" onclick="importEnrollmentCSV()">นำเข้า CSV</button>
+        </div>
+        <div class="bulk-result" id="importEnrollmentResult"></div>
+      </div>
       <div class="bulk-panel">
         <h3>โหมด</h3>
         <div class="bulk-mode-tabs">
@@ -735,6 +747,114 @@ function submitBulkAssign(mode) {
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .clientBulkAssign(TOKEN, params.mode, params.teacher_user_id, classIdArg, subjectIdArg, classIdsArg, subjectIdsArg);
+}
+
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var rows = [];
+  var row = [''];
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i], next = text[i + 1];
+    if (c === '"') {
+      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) row.push('');
+    else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      rows.push(row); row = [''];
+    } else row[row.length - 1] += c;
+  }
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+
+function csvEscape(value) {
+  var s = String(value == null ? '' : value);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function downloadEnrollmentCSVTemplate() {
+  var rows = [
+    ['teacher_username', 'teacher_full_name', 'class_id', 'grade_level*', 'section', 'subject_code*', 'subject_name*'],
+    ['teacher01', 'ครูสมชาย ใจดี', '', 'ป.4', '1', 'ศ14101', 'ศิลปะ']
+  ];
+  var csv = rows.map(function(row) { return row.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'teaching_assignments_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function normalizeCSVHeader(header) {
+  return String(header || '').trim().replace(/\s*\*$/, '').trim();
+}
+
+function importEnrollmentCSV() {
+  var input = document.getElementById('enrollmentCsvInput');
+  if (!input.files || input.files.length === 0) { showToast('กรุณาเลือกไฟล์ CSV', 'error'); return; }
+  var btn = document.getElementById('importEnrollmentCsvBtn');
+  var resultEl = document.getElementById('importEnrollmentResult');
+  btn.disabled = true;
+  btn.textContent = 'กำลังนำเข้า...';
+  resultEl.classList.remove('show');
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var csvRows = parseCSV(e.target.result);
+      var headers = (csvRows[0] || []).map(normalizeCSVHeader);
+      var required = ['teacher_username', 'teacher_full_name', 'grade_level', 'subject_code', 'subject_name'];
+      var missing = required.filter(function(h) { return headers.indexOf(h) === -1; });
+      if (missing.length) throw new Error('หัวตารางไม่ครบ: ' + missing.join(', '));
+      var rows = [];
+      for (var i = 1; i < csvRows.length; i++) {
+        var r = csvRows[i];
+        if (!r || r.join('').trim() === '') continue;
+        var obj = {};
+        headers.forEach(function(h, idx) { obj[h] = r[idx] ? r[idx].trim() : ''; });
+        rows.push(obj);
+      }
+      if (!rows.length) throw new Error('ไม่พบข้อมูลในไฟล์');
+      google.script.run
+        .withSuccessHandler(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'นำเข้า CSV';
+          if (data && data.error) {
+            var detail = data.errors && data.errors.length ? '\n' + data.errors.slice(0, 12).join('\n') : '';
+            resultEl.textContent = data.error + detail;
+            resultEl.classList.add('show');
+            showToast(data.error, 'error');
+            return;
+          }
+          var msg = 'นำเข้าสำเร็จ ' + data.total + ' รายการ: เพิ่มใหม่ ' + data.created + ', เปลี่ยนครู ' + data.reassigned + ', ไม่เปลี่ยน ' + data.unchanged;
+          resultEl.textContent = msg;
+          resultEl.classList.add('show');
+          showToast(msg, 'success');
+          input.value = '';
+          loadData();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .clientImportEnrollmentsCSV(TOKEN, rows);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'นำเข้า CSV';
+      showToast('อ่านไฟล์ CSV ไม่สำเร็จ: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = function() {
+    btn.disabled = false;
+    btn.textContent = 'นำเข้า CSV';
+    showToast('ไม่สามารถอ่านไฟล์ CSV ได้', 'error');
+  };
+  reader.readAsText(input.files[0], 'UTF-8');
 }
 
 

@@ -219,7 +219,7 @@ function serverExportReportPdf(token, class_id, subject_id) {
   // Export as PDF
   var fileId  = tmpSs.getId();
   var pdfBlob = DriveApp.getFileById(fileId).getAs('application/pdf');
-  pdfBlob.setName('cover_report_' + (cls.level || '') + '_' + (subj.subject_code || '') + '.pdf');
+  pdfBlob.setName('pp5_report_book_' + (cls.level || '') + '_' + (subj.subject_code || '') + '.pdf');
 
   var base64 = Utilities.base64Encode(pdfBlob.getBytes());
 
@@ -229,7 +229,7 @@ function serverExportReportPdf(token, class_id, subject_id) {
   return {
     ok: true,
     base64: base64,
-    filename: 'cover_report_' + (cls.level || cls.class_id || class_id) + '_' + (subj.subject_code || subject_id) + '.pdf'
+    filename: 'pp5_report_book_' + (cls.level || cls.class_id || class_id) + '_' + (subj.subject_code || subject_id) + '.pdf'
   };
 }
 

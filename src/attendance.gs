@@ -28,21 +28,14 @@ function getAttendanceData(token, class_id, subject_id, week) {
     can_edit = enrollment.length > 0;
   }
 
-  // Compute week start date (Monday of the requested week)
-  // Academic year week 1 starts the first Monday of the academic year
   var weekNum = parseInt(week) || 1;
   if (weekNum < 1) weekNum = 1;
-  if (weekNum > 40) weekNum = 40;
-
-  var yearStart = getAcademicYearStart();
-  var weekStartMs = yearStart.getTime() + (weekNum - 1) * 7 * 24 * 60 * 60 * 1000;
-  var weekStart = new Date(weekStartMs);
-
-  // Build array of 7 dates (Mon–Sun)
-  var dates = [];
-  for (var d = 0; d < 7; d++) {
-    dates.push(new Date(weekStart.getTime() + d * 24 * 60 * 60 * 1000));
-  }
+  var attendanceConfig = getAttendanceConfig();
+  var allAttendanceDates = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days);
+  var maxWeeks = Math.max(1, Math.ceil(allAttendanceDates.length / 5));
+  if (weekNum > maxWeeks) weekNum = maxWeeks;
+  var dates = allAttendanceDates.slice((weekNum - 1) * 5, (weekNum - 1) * 5 + 5);
+  var weekStart = dates[0] || attendanceConfig.start_date;
 
   // Get students ordered by seq_no
   var students = dbFind('Students', 'class_id', class_id);
@@ -77,6 +70,8 @@ function getAttendanceData(token, class_id, subject_id, week) {
   return {
     students: students,
     week: weekNum,
+    max_weeks: maxWeeks,
+    required_attendance_days: attendanceConfig.required_days,
     weekStart: weekStart.toISOString(),
     dates: dateStrings,
     attendance: attMap,
@@ -172,11 +167,15 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
 // Returns the first Monday of the academic year based on SchoolInfo.academic_year
 // academic_year format: "2567" (Thai year) or "2024"
 // Thai academic year starts in mid-May; we use May 13 as the anchor
-function getAcademicYearStart() {
+function getAttendanceConfig() {
   try {
     var info = dbGetAll('SchoolInfo');
-    if (info.length > 0 && info[0].academic_year) {
-      var year = parseInt(String(info[0].academic_year));
+    var row = info.length > 0 ? info[0] : {};
+    var configuredStart = parseISODate(row.semester_start_date);
+    var requiredDays = parseInt(row.required_attendance_days, 10) || 200;
+    if (configuredStart) return { start_date: configuredStart, required_days: requiredDays };
+    if (row.academic_year) {
+      var year = parseInt(String(row.academic_year));
       // Convert Thai year to CE year if needed
       if (year > 2500) year = year - 543;
       // Find the first Monday on or after May 13 of this year
@@ -184,11 +183,30 @@ function getAcademicYearStart() {
       var day = anchor.getDay(); // 0=Sun, 1=Mon
       var daysToMon = day === 0 ? 1 : (day === 1 ? 0 : (8 - day));
       anchor.setDate(anchor.getDate() + daysToMon);
-      return anchor;
+      return { start_date: anchor, required_days: requiredDays };
     }
   } catch (e) {}
-  // Default fallback: 2024-05-13 (already a Monday)
-  return new Date(2024, 4, 13);
+  return { start_date: new Date(2024, 4, 13), required_days: 200 };
+}
+
+function parseISODate(value) {
+  var s = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  var parts = s.split('-');
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function buildAttendanceDates(startDate, requiredDays) {
+  var dates = [];
+  var cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  var limit = Math.max(1, Math.min(parseInt(requiredDays, 10) || 200, 260));
+  while (dates.length < limit) {
+    var day = cursor.getDay();
+    if (day !== 0 && day !== 6) dates.push(new Date(cursor.getTime()));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
 }
 
 // Format a Date as YYYY-MM-DD
