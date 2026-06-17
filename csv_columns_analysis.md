@@ -14,8 +14,7 @@ graph TD
         C1(class_id)
         C2(level*)
         C3(section*)
-        C4(homeroom_teacher_user_id)
-        C5(homeroom_teacher_username)
+        C4(homeroom_teacher_fullname)
     end
     
     subgraph Indicators CSV
@@ -36,8 +35,7 @@ graph TD
         S6(ชื่อวิชา* / subject_name)
         S7(จำนวนชั่วโมง / hours)
         S8(กลุ่มน้ำหนัก / weight_group)
-        S9(คำอธิบาย / description)
-        S10(คะแนนย่อย / weights...)
+        S9(คะแนนย่อย / weights...)
     end
 
     subgraph Users CSV
@@ -77,7 +75,7 @@ graph TD
 
     class C1,I1,S4,U1,W1,ST1 key;
     class C2,C3,I3,S6,U2,U4,U5,U7,W4,W5,W6,W7,ST2,ST6,ST7 required;
-    class C4,C5,I2,I4,I5,I6,S1,S2,S3,S5,S7,S8,S9,S10,U3,U6,U8,U9,W2,W3,ST3,ST4,ST5,ST8,ST9,ST10 optional;
+    class C4,I2,I4,I5,I6,S1,S2,S3,S5,S7,S8,S9,U3,U6,U8,U9,W2,W3,ST3,ST4,ST5,ST8,ST9,ST10 optional;
 ```
 
 ---
@@ -93,8 +91,7 @@ Used to provision class structures (e.g., Grade Level and Section) and assign Ho
 | **`class_id`** | `class_id` | No | `class_01` | System ID. If provided, updates existing class; if blank, creates new class. |
 | **`level*`** | `level` | **Yes** | `ป.1` | Grade Level in Thai format (e.g., ป.1, ม.3). |
 | **`section*`** | `section` | **Yes** | `1` | Section/Room number (usually a number as string). |
-| **`homeroom_teacher_user_id`** | `homeroom_teacher_user_id` | No | `usr_9823` | ID of the teacher assigned to this classroom. |
-| **`homeroom_teacher_username`** | `homeroom_teacher_username` | No | `somchai.t` | Alternative to assign by username instead of system ID. |
+| **`homeroom_teacher_fullname`** | `homeroom_teacher_fullname` | No | `นายสมชาย ใจดี` | Full name of the homeroom teacher. Must match one user exactly; duplicate names are skipped with a warning. |
 
 > [!NOTE]
 > Either `level` and `section` must be present. If both are blank, the row is ignored.
@@ -137,7 +134,6 @@ Defines academic courses and maps them to classrooms. It can also initialize sco
 | **`ชื่อวิชา*`** | `subject_name` | **Yes** | `ภาษาไทย` | Subject name. |
 | **`จำนวนชั่วโมง`** | `hours` | No | `200` | Teaching load hours per year. |
 | **`กลุ่มน้ำหนัก`** | `weight_group` | No | `1` | Weights categorization group (defaults to 1). |
-| **`คำอธิบาย`** | `description` | No | `วิชาพื้นฐาน` | Course scope summary. |
 | **`ก่อนกลางภาค`** | `pre_mid_max` | No | `30` | Coursework: pre-midterm max weight. |
 | **`กลางภาค`** | `mid_max` | No | `20` | Coursework: midterm exam max weight. |
 | **`หลังกลางภาค`** | `post_mid_max` | No | `20` | Coursework: post-midterm max weight. |

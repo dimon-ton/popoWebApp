@@ -68,17 +68,6 @@ test.describe('US-015: Static reference pages', () => {
     await expect(page.locator('#weightsBody')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
   });
 
-  test('US-015: /subject_description page renders description field', async ({ page }) => {
-    const url = process.env.WEB_APP_URL!;
-    // Use the pre-seeded English subject
-    await page.goto(`${url}?page=subject_description&subject_id=subj_eng`);
-
-    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('#pageHeading')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
-    await expect(page.locator('#subjectName')).toContainText('ภาษาอังกฤษ', { timeout: 15_000 });
-    await expect(page.locator('#subjectCode')).toBeVisible();
-  });
-
   test('US-015: /subject_indicators_ref page lists indicators for subj_eng', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=subject_indicators_ref&subject_id=subj_eng`);

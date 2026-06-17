@@ -141,6 +141,24 @@ function ensureColumns(tabName, requiredHeaders) {
   }
 }
 
+function removeColumns(tabName, obsoleteHeaders) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet(tabName);
+    var lastCol = sheet.getLastColumn();
+    if (lastCol < 1) return;
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    for (var i = headers.length - 1; i >= 0; i--) {
+      if (obsoleteHeaders.indexOf(headers[i]) !== -1) {
+        sheet.deleteColumn(i + 1);
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function generateId(prefix) {
   return prefix + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
 }

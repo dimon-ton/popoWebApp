@@ -64,7 +64,14 @@
   <div class="card">
     <h3>นำเข้าชั้นเรียนด้วย CSV</h3>
     <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
-      ใช้สำหรับเพิ่มหรืออัปเดตชั้นเรียนหลายรายการ คอลัมน์ <code>level*</code> และ <code>section*</code> ต้องกรอก หากเว้น <code>class_id</code> ระบบจะสร้างจากระดับชั้นและห้อง สามารถระบุครูประจำชั้นด้วย <code>user_id</code> หรือ <code>username</code> ได้
+      ใช้สำหรับเพิ่มหรืออัปเดตชั้นเรียนหลายรายการ คอลัมน์ <code>level*</code> และ <code>section*</code> ต้องกรอก หากเว้น <code>class_id</code> ระบบจะสร้างจากระดับชั้นและห้อง สามารถระบุครูประจำชั้นด้วยชื่อ-สกุลที่ตรงกับข้อมูลผู้ใช้ในระบบ
+      <div style="margin-top:8px;">
+        <strong>ลำดับคอลัมน์:</strong>
+        <code>class_id</code>,
+        <code>level*</code>,
+        <code>section*</code>,
+        <code>homeroom_teacher_fullname</code>
+      </div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <button class="btn-secondary" onclick="downloadClassesCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>

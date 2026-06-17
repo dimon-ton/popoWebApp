@@ -44,7 +44,7 @@ function handleTestApi(e) {
 
       case 'seed_subject':
         ensureTestPrefix(params.subject_id);
-        ensureColumns('Subjects', ['class_id']);
+        ensureSubjectsSchema();
         dbDelete('Subjects', 'subject_id', params.subject_id);
         dbInsert('Subjects', {
           subject_id: params.subject_id,
@@ -52,8 +52,7 @@ function handleTestApi(e) {
           subject_name: params.name || params.subject_id,
           subject_code: params.code || 'TST0000',
           hours_per_year: params.hours || 40,
-          weight_group: params.group || 1,
-          description: ''
+          weight_group: params.group || 1
         });
         return jsonOk({ subject_id: params.subject_id });
 

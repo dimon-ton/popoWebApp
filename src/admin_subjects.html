@@ -31,7 +31,7 @@
     <h3>เพิ่มวิชาใหม่</h3>
     
     <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #0d47a1; line-height: 1.5;">
-      <strong>💡 ข้อมูลสำคัญเกี่ยวกับระบบรายวิชา:</strong> รายวิชาจะถูกสร้างเป็นฐานข้อมูลกลางของโรงเรียน (เช่น รหัสวิชา ท11101 ภาษาไทย) โดย<strong>ยังไม่ต้องระบุห้องเรียนที่นี่</strong> เมื่อสร้างวิชาเสร็จแล้ว คุณสามารถนำรายวิชาไปจัดคู่มอบหมายให้กับชั้นเรียนและครูผู้สอนได้ที่หน้า <a href="#" onclick="navigate('admin_enrollments'); return false;" style="color: #1565c0; font-weight: bold; text-decoration: underline;">จัดการผู้สอน / มอบหมายรายวิชา</a>
+      <strong>ข้อมูลสำคัญเกี่ยวกับระบบรายวิชา:</strong> รายวิชาจะถูกสร้างแยกตามชั้นเรียนที่เลือก เช่น ป.1/1 ภาษาไทย และ ป.1/2 ภาษาไทย จะเป็นคนละรายการเพื่อให้มอบหมายครูผู้สอนและบันทึกคะแนนแยกห้องได้ถูกต้อง หลังเพิ่มรายวิชาแล้ว ให้ไปที่หน้า <a href="#" onclick="navigate('admin_enrollments'); return false;" style="color: #1565c0; font-weight: bold; text-decoration: underline;">จัดการผู้สอน / มอบหมายรายวิชา</a> เพื่อกำหนดครูผู้สอน
     </div>
 
     <div class="form-row">
@@ -53,10 +53,6 @@
           <option value="">เลือกชั้นเรียน</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>คำอธิบายวิชา (ไม่บังคับ)</label>
-        <input type="text" id="newDescription" placeholder="เช่น รายวิชาพื้นฐาน">
-      </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
       </div>
@@ -66,7 +62,22 @@
   <div class="card">
     <h3>นำเข้ารายวิชาด้วย CSV</h3>
     <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>⚠️ ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก หากไม่ระบุ <code>class_id</code> ต้องกรอกระดับชั้นและห้อง ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนถ้าระบุครบ 100 คะแนน
+      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
+      <div style="margin-top: 8px;">
+        <strong>ลำดับคอลัมน์:</strong>
+        <code>class_id</code>,
+        <code>ระดับชั้น</code>,
+        <code>ห้อง</code>,
+        <code>รหัสระบบ</code>,
+        <code>รหัสวิชา</code>,
+        <code>ชื่อวิชา*</code>,
+        <code>จำนวนชั่วโมง</code>,
+        <code>กลุ่มน้ำหนัก</code>,
+        <code>ก่อนกลางภาค</code>,
+        <code>กลางภาค</code>,
+        <code>หลังกลางภาค</code>,
+        <code>ปลายภาค</code>
+      </div>
     </div>
     
     <div class="form-row" style="align-items: center;">
@@ -90,19 +101,6 @@
 
   <div class="card">
     <h3>รายการวิชาทั้งหมด</h3>
-    
-    <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <div class="form-group" style="margin-bottom: 0; min-width: 260px;">
-        <label style="margin-bottom: 4px;">เลือกกลุ่มรายวิชาเริ่มต้น</label>
-        <select id="preseedPreset" style="width: 100%;">
-          <option value="p1_3">ประถมศึกษาตอนต้น (ป.1 - ป.3)</option>
-          <option value="p4_6">ประถมศึกษาตอนปลาย (ป.4 - ป.6)</option>
-          <option value="m1_3">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
-          <option value="generic">วิชาแกนกลางทั่วไป (11 วิชาดั้งเดิม)</option>
-        </select>
-      </div>
-      <button class="btn-primary" id="preseedBtn" onclick="preseedSubjects()" style="padding: 8px 16px; margin-top: 19px;">เพิ่มรายวิชาเริ่มต้น</button>
-    </div>
 
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
@@ -118,7 +116,6 @@
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
           <th>เวลาเรียน</th>
-          <th>คำอธิบาย</th>
           <th style="width: 200px">จัดการ</th>
         </tr>
       </thead>
@@ -143,10 +140,6 @@
     <div class="form-group">
       <label>เวลาเรียน (ชม./ปี)</label>
       <input type="number" id="editHours" placeholder="80" min="0">
-    </div>
-    <div class="form-group">
-      <label>คำอธิบายวิชา (ไม่บังคับ)</label>
-      <input type="text" id="editDescription" placeholder="เช่น รายวิชาพื้นฐาน">
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="saveEditBtn" onclick="saveSubjectEdit()">บันทึก</button>
@@ -243,7 +236,6 @@ function renderSubjects(subjects) {
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
-      '<td>' + escHtml(s.description || '—') + '</td>' +
       '<td>' +
         '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
         '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px;background:#f59e0b" onclick="openEditModal(\'' + escHtml(s.subject_id) + '\')">แก้ไข</button>' +
@@ -258,7 +250,6 @@ function addSubject() {
   var subject_name = document.getElementById('newSubjectName').value.trim();
   var subject_code = document.getElementById('newSubjectCode').value.trim();
   var hours = document.getElementById('newHours').value.trim();
-  var description = document.getElementById('newDescription').value.trim();
   var classSelect = document.getElementById('newClassIds');
   var classId = classSelect ? classSelect.value : '';
 
@@ -276,7 +267,6 @@ function addSubject() {
       document.getElementById('newSubjectName').value = '';
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
-      document.getElementById('newDescription').value = '';
       document.getElementById('newClassIds').value = '';
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
@@ -286,7 +276,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', description, classId);
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId);
 }
 
 function openEditModal(subject_id) {
@@ -297,7 +287,6 @@ function openEditModal(subject_id) {
   document.getElementById('editSubjectCode').value = s.subject_code || '';
   document.getElementById('editSubjectName').value = s.subject_name || '';
   document.getElementById('editHours').value = s.hours_per_year || '';
-  document.getElementById('editDescription').value = s.description || '';
   
   document.getElementById('editModalOverlay').classList.add('open');
 }
@@ -311,7 +300,6 @@ function saveSubjectEdit() {
   var subject_name = document.getElementById('editSubjectName').value.trim();
   var subject_code = document.getElementById('editSubjectCode').value.trim();
   var hours = document.getElementById('editHours').value.trim();
-  var description = document.getElementById('editDescription').value.trim();
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
 
@@ -330,7 +318,7 @@ function saveSubjectEdit() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', description);
+    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1');
 }
 
 function parseCSV(text) {
@@ -379,10 +367,10 @@ function normalizeCSVHeader(header) {
 }
 
 function downloadCSVTemplate() {
-  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'คำอธิบาย', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
+  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
   var rows = [
-    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', '200', '1', 'รายวิชาพื้นฐาน', '30', '20', '20', '30'],
-    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', '200', '1', 'รายวิชาพื้นฐาน', '30', '20', '20', '30']
+    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', '200', '1', '30', '20', '20', '30'],
+    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', '200', '1', '30', '20', '20', '30']
   ];
   var csv = [headers].concat(rows).map(function(row) {
     return row.map(csvEscape).join(',');
@@ -432,7 +420,6 @@ function importCSVFile() {
       var nameIdx = headers.indexOf('ชื่อวิชา');
       var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
       var groupIdx = headers.indexOf('กลุ่มน้ำหนัก');
-      var descIdx = headers.indexOf('คำอธิบาย');
       var preMidIdx = headers.indexOf('ก่อนกลางภาค');
       var midIdx = headers.indexOf('กลางภาค');
       var postMidIdx = headers.indexOf('หลังกลางภาค');
@@ -456,9 +443,8 @@ function importCSVFile() {
         var name = row[nameIdx] ? row[nameIdx].trim() : '';
         var hours = hoursIdx !== -1 && row[hoursIdx] ? row[hoursIdx].trim() : '';
         var group = groupIdx !== -1 && row[groupIdx] ? row[groupIdx].trim() : '1';
-        var description = descIdx !== -1 && row[descIdx] ? row[descIdx].trim() : '';
         
-        if (!classId && !classLevel && !classSection && !subjectId && !code && !name && !hours && !description) continue;
+        if (!classId && !classLevel && !classSection && !subjectId && !code && !name && !hours) continue;
         
         rowsToImport.push({
           class_id: classId,
@@ -469,7 +455,6 @@ function importCSVFile() {
           subject_name: name,
           hours: hours,
           weight_group: group,
-          description: description,
           pre_mid_max: preMidIdx !== -1 && row[preMidIdx] ? row[preMidIdx].trim() : '',
           mid_max: midIdx !== -1 && row[midIdx] ? row[midIdx].trim() : '',
           post_mid_max: postMidIdx !== -1 && row[postMidIdx] ? row[postMidIdx].trim() : '',
@@ -566,26 +551,6 @@ function deleteSubject(subject_id) {
     })
     .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .serverDeleteSubject(TOKEN, subject_id);
-}
-
-function preseedSubjects() {
-  var preset = document.getElementById('preseedPreset').value;
-  var btn = document.getElementById('preseedBtn');
-  btn.disabled = true;
-  google.script.run
-    .withSuccessHandler(function(result) {
-      btn.disabled = false;
-      if (result && result.error) { showToast(result.error, 'error'); return; }
-      showToast('เพิ่มวิชาเริ่มต้นสำเร็จ', 'success');
-      document.getElementById('subjectsLoading').style.display = 'block';
-      document.getElementById('subjectsTable').style.display = 'none';
-      loadSubjects();
-    })
-    .withFailureHandler(function(err) {
-      btn.disabled = false;
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
-    })
-    .preseedSubjects(preset);
 }
 
 loadClassesForSubjects();

@@ -1,167 +1,9 @@
 // US-004: School info, classes, and subjects CRUD
 
-// ── Pre-seed subject list (FR-7) ──────────────────────────────────────────────
-
-var PRESEED_SUBJECTS = [
-  { id: 'subj_thai',    name: 'ภาษาไทย',           code: 'T01', hours: 200, group: 1 },
-  { id: 'subj_math',    name: 'คณิตศาสตร์',          code: 'T02', hours: 160, group: 1 },
-  { id: 'subj_sci',     name: 'วิทยาศาสตร์',          code: 'T03', hours: 80,  group: 1 },
-  { id: 'subj_soc',     name: 'สังคมศึกษา',           code: 'T04', hours: 80,  group: 1 },
-  { id: 'subj_hist',    name: 'ประวัติศาสตร์',         code: 'T05', hours: 40,  group: 1 },
-  { id: 'subj_eng',     name: 'ภาษาอังกฤษ',           code: 'T06', hours: 80,  group: 1 },
-  { id: 'subj_art',     name: 'ศิลปะ',               code: 'T07', hours: 80,  group: 2 },
-  { id: 'subj_pe',      name: 'สุขศึกษาพลศึกษา',      code: 'T08', hours: 80,  group: 2 },
-  { id: 'subj_career',  name: 'การงานอาชีพ',          code: 'T09', hours: 40,  group: 2 },
-  { id: 'subj_comp',    name: 'วิทยาการคำนวณ',        code: 'T10', hours: 40,  group: 2 },
-  { id: 'subj_defense', name: 'การป้องกัน',           code: 'T11', hours: 40,  group: 2 }
-];
-
-var PRESETS = {
-  p1_3: [
-    { id: 'subj_thai_p1', name: 'ภาษาไทย ป.1', code: 'ท11101', hours: 200, group: 1 },
-    { id: 'subj_thai_p2', name: 'ภาษาไทย ป.2', code: 'ท12101', hours: 200, group: 1 },
-    { id: 'subj_thai_p3', name: 'ภาษาไทย ป.3', code: 'ท13101', hours: 200, group: 1 },
-    { id: 'subj_math_p1', name: 'คณิตศาสตร์ ป.1', code: 'ค11101', hours: 200, group: 1 },
-    { id: 'subj_math_p2', name: 'คณิตศาสตร์ ป.2', code: 'ค12101', hours: 200, group: 1 },
-    { id: 'subj_math_p3', name: 'คณิตศาสตร์ ป.3', code: 'ค13101', hours: 200, group: 1 },
-    { id: 'subj_eng_p1', name: 'ภาษาอังกฤษ ป.1', code: 'อ11101', hours: 120, group: 1 },
-    { id: 'subj_eng_p2', name: 'ภาษาอังกฤษ ป.2', code: 'อ12101', hours: 120, group: 1 },
-    { id: 'subj_eng_p3', name: 'ภาษาอังกฤษ ป.3', code: 'อ13101', hours: 120, group: 1 },
-    { id: 'subj_sci_p1', name: 'วิทยาศาสตร์และเทคโนโลยี ป.1', code: 'ว11101', hours: 80, group: 1 },
-    { id: 'subj_sci_p2', name: 'วิทยาศาสตร์และเทคโนโลยี ป.2', code: 'ว12101', hours: 80, group: 1 },
-    { id: 'subj_sci_p3', name: 'วิทยาศาสตร์และเทคโนโลยี ป.3', code: 'ว13101', hours: 80, group: 1 },
-    { id: 'subj_soc_p1', name: 'สังคมศึกษาฯ ป.1', code: 'ส11101', hours: 80, group: 1 },
-    { id: 'subj_soc_p2', name: 'สังคมศึกษาฯ ป.2', code: 'ส12101', hours: 80, group: 1 },
-    { id: 'subj_soc_p3', name: 'สังคมศึกษาฯ ป.3', code: 'ส13101', hours: 80, group: 1 },
-    { id: 'subj_hist_p1', name: 'ประวัติศาสตร์ ป.1', code: 'ส11102', hours: 40, group: 1 },
-    { id: 'subj_hist_p2', name: 'ประวัติศาสตร์ ป.2', code: 'ส12102', hours: 40, group: 1 },
-    { id: 'subj_hist_p3', name: 'ประวัติศาสตร์ ป.3', code: 'ส13102', hours: 40, group: 1 },
-    { id: 'subj_pe_p1', name: 'สุขศึกษาและพลศึกษา ป.1', code: 'พ11101', hours: 40, group: 2 },
-    { id: 'subj_pe_p2', name: 'สุขศึกษาและพลศึกษา ป.2', code: 'พ12101', hours: 40, group: 2 },
-    { id: 'subj_pe_p3', name: 'สุขศึกษาและพลศึกษา ป.3', code: 'พ13101', hours: 40, group: 2 },
-    { id: 'subj_art_p1', name: 'ศิลปะ ป.1', code: 'ศ11101', hours: 40, group: 2 },
-    { id: 'subj_art_p2', name: 'ศิลปะ ป.2', code: 'ศ12101', hours: 40, group: 2 },
-    { id: 'subj_art_p3', name: 'ศิลปะ ป.3', code: 'ศ13101', hours: 40, group: 2 },
-    { id: 'subj_career_p1', name: 'การงานอาชีพ ป.1', code: 'ง11101', hours: 40, group: 2 },
-    { id: 'subj_career_p2', name: 'การงานอาชีพ ป.2', code: 'ง12101', hours: 40, group: 2 },
-    { id: 'subj_career_p3', name: 'การงานอาชีพ ป.3', code: 'ง13101', hours: 40, group: 2 },
-    { id: 'subj_defense_p1', name: 'ป้องกันการทุจริต ป.1', code: 'ส11201', hours: 40, group: 2 },
-    { id: 'subj_defense_p2', name: 'ป้องกันการทุจริต ป.2', code: 'ส12201', hours: 40, group: 2 },
-    { id: 'subj_defense_p3', name: 'ป้องกันการทุจริต ป.3', code: 'ส13201', hours: 40, group: 2 }
-  ],
-  p4_6: [
-    { id: 'subj_thai_p4', name: 'ภาษาไทย ป.4', code: 'ท14101', hours: 160, group: 1 },
-    { id: 'subj_thai_p5', name: 'ภาษาไทย ป.5', code: 'ท15101', hours: 160, group: 1 },
-    { id: 'subj_thai_p6', name: 'ภาษาไทย ป.6', code: 'ท16101', hours: 160, group: 1 },
-    { id: 'subj_math_p4', name: 'คณิตศาสตร์ ป.4', code: 'ค14101', hours: 160, group: 1 },
-    { id: 'subj_math_p5', name: 'คณิตศาสตร์ ป.5', code: 'ค15101', hours: 160, group: 1 },
-    { id: 'subj_math_p6', name: 'คณิตศาสตร์ ป.6', code: 'ค16101', hours: 160, group: 1 },
-    { id: 'subj_eng_p4', name: 'ภาษาอังกฤษ ป.4', code: 'อ14101', hours: 80, group: 1 },
-    { id: 'subj_eng_p5', name: 'ภาษาอังกฤษ ป.5', code: 'อ15101', hours: 80, group: 1 },
-    { id: 'subj_eng_p6', name: 'ภาษาอังกฤษ ป.6', code: 'อ16101', hours: 80, group: 1 },
-    { id: 'subj_sci_p4', name: 'วิทยาศาสตร์และเทคโนโลยี ป.4', code: 'ว14101', hours: 80, group: 1 },
-    { id: 'subj_sci_p5', name: 'วิทยาศาสตร์และเทคโนโลยี ป.5', code: 'ว15101', hours: 80, group: 1 },
-    { id: 'subj_sci_p6', name: 'วิทยาศาสตร์และเทคโนโลยี ป.6', code: 'ว16101', hours: 80, group: 1 },
-    { id: 'subj_soc_p4', name: 'สังคมศึกษาฯ ป.4', code: 'ส14101', hours: 80, group: 1 },
-    { id: 'subj_soc_p5', name: 'สังคมศึกษาฯ ป.5', code: 'ส15101', hours: 80, group: 1 },
-    { id: 'subj_soc_p6', name: 'สังคมศึกษาฯ ป.6', code: 'ส16101', hours: 80, group: 1 },
-    { id: 'subj_hist_p4', name: 'ประวัติศาสตร์ ป.4', code: 'ส14102', hours: 40, group: 1 },
-    { id: 'subj_hist_p5', name: 'ประวัติศาสตร์ ป.5', code: 'ส15102', hours: 40, group: 1 },
-    { id: 'subj_hist_p6', name: 'ประวัติศาสตร์ ป.6', code: 'ส16102', hours: 40, group: 1 },
-    { id: 'subj_pe_p4', name: 'สุขศึกษาและพลศึกษา ป.4', code: 'พ14101', hours: 80, group: 2 },
-    { id: 'subj_pe_p5', name: 'สุขศึกษาและพลศึกษา ป.5', code: 'พ15101', hours: 80, group: 2 },
-    { id: 'subj_pe_p6', name: 'สุขศึกษาและพลศึกษา ป.6', code: 'พ16101', hours: 80, group: 2 },
-    { id: 'subj_art_p4', name: 'ศิลปะ ป.4', code: 'ศ14101', hours: 80, group: 2 },
-    { id: 'subj_art_p5', name: 'ศิลปะ ป.5', code: 'ศ15101', hours: 80, group: 2 },
-    { id: 'subj_art_p6', name: 'ศิลปะ ป.6', code: 'ศ16101', hours: 80, group: 2 },
-    { id: 'subj_career_p4', name: 'การงานอาชีพ ป.4', code: 'ง14101', hours: 80, group: 2 },
-    { id: 'subj_career_p5', name: 'การงานอาชีพ ป.5', code: 'ง15101', hours: 80, group: 2 },
-    { id: 'subj_career_p6', name: 'การงานอาชีพ ป.6', code: 'ง16101', hours: 80, group: 2 },
-    { id: 'subj_defense_p4', name: 'ป้องกันการทุจริต ป.4', code: 'ส14201', hours: 40, group: 2 },
-    { id: 'subj_defense_p5', name: 'ป้องกันการทุจริต ป.5', code: 'ส15201', hours: 40, group: 2 },
-    { id: 'subj_defense_p6', name: 'ป้องกันการทุจริต ป.6', code: 'ส16201', hours: 40, group: 2 }
-  ],
-  m1_3: [
-    { id: 'subj_thai_m1', name: 'ภาษาไทย ม.1', code: 'ท21101', hours: 120, group: 1 },
-    { id: 'subj_thai_m2', name: 'ภาษาไทย ม.2', code: 'ท22101', hours: 120, group: 1 },
-    { id: 'subj_thai_m3', name: 'ภาษาไทย ม.3', code: 'ท23101', hours: 120, group: 1 },
-    { id: 'subj_math_m1', name: 'คณิตศาสตร์ ม.1', code: 'ค21101', hours: 120, group: 1 },
-    { id: 'subj_math_m2', name: 'คณิตศาสตร์ ม.2', code: 'ค22101', hours: 120, group: 1 },
-    { id: 'subj_math_m3', name: 'คณิตศาสตร์ ม.3', code: 'ค23101', hours: 120, group: 1 },
-    { id: 'subj_eng_m1', name: 'ภาษาอังกฤษ ม.1', code: 'อ21101', hours: 120, group: 1 },
-    { id: 'subj_eng_m2', name: 'ภาษาอังกฤษ ม.2', code: 'อ22101', hours: 120, group: 1 },
-    { id: 'subj_eng_m3', name: 'ภาษาอังกฤษ ม.3', code: 'อ23101', hours: 120, group: 1 },
-    { id: 'subj_sci_m1', name: 'วิทยาศาสตร์ ม.1', code: 'ว21101', hours: 120, group: 1 },
-    { id: 'subj_sci_m2', name: 'วิทยาศาสตร์ ม.2', code: 'ว22101', hours: 120, group: 1 },
-    { id: 'subj_sci_m3', name: 'วิทยาศาสตร์ ม.3', code: 'ว23101', hours: 120, group: 1 },
-    { id: 'subj_soc_m1', name: 'สังคมศึกษาฯ ม.1', code: 'ส21101', hours: 120, group: 1 },
-    { id: 'subj_soc_m2', name: 'สังคมศึกษาฯ ม.2', code: 'ส22101', hours: 120, group: 1 },
-    { id: 'subj_soc_m3', name: 'สังคมศึกษาฯ ม.3', code: 'ส23101', hours: 120, group: 1 },
-    { id: 'subj_hist_m1', name: 'ประวัติศาสตร์ ม.1', code: 'ส21102', hours: 40, group: 1 },
-    { id: 'subj_hist_m2', name: 'ประวัติศาสตร์ ม.2', code: 'ส22102', hours: 40, group: 1 },
-    { id: 'subj_hist_m3', name: 'ประวัติศาสตร์ ม.3', code: 'ส23102', hours: 40, group: 1 },
-    { id: 'subj_pe_m1', name: 'สุขศึกษาและพลศึกษา ม.1', code: 'พ21101', hours: 80, group: 2 },
-    { id: 'subj_pe_m2', name: 'สุขศึกษาและพลศึกษา ม.2', code: 'พ22101', hours: 80, group: 2 },
-    { id: 'subj_pe_m3', name: 'สุขศึกษาและพลศึกษา ม.3', code: 'พ23101', hours: 80, group: 2 },
-    { id: 'subj_art_m1', name: 'ศิลปะ ม.1', code: 'ศ21101', hours: 80, group: 2 },
-    { id: 'subj_art_m2', name: 'ศิลปะ ม.2', code: 'ศ22101', hours: 80, group: 2 },
-    { id: 'subj_art_m3', name: 'ศิลปะ ม.3', code: 'ศ23101', hours: 80, group: 2 },
-    { id: 'subj_career_m1', name: 'การงานอาชีพ ม.1', code: 'ง21101', hours: 80, group: 2 },
-    { id: 'subj_career_m2', name: 'การงานอาชีพ ม.2', code: 'ง22101', hours: 80, group: 2 },
-    { id: 'subj_career_m3', name: 'การงานอาชีพ ม.3', code: 'ง23101', hours: 80, group: 2 },
-    { id: 'subj_defense_m1', name: 'ป้องกันการทุจริต ม.1', code: 'ส21201', hours: 40, group: 2 },
-    { id: 'subj_defense_m2', name: 'ป้องกันการทุจริต ม.2', code: 'ส22201', hours: 40, group: 2 },
-    { id: 'subj_defense_m3', name: 'ป้องกันการทุจริต ม.3', code: 'ส23201', hours: 40, group: 2 }
-  ],
-  generic: PRESEED_SUBJECTS
-};
-
 var DEFAULT_WEIGHTS = {
   '1': { coursework_max: 70, final_max: 30, pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30 },
   '2': { coursework_max: 80, final_max: 20, pre_mid_max: 30, mid_max: 20, post_mid_max: 30, final_exam_max: 20 }
 };
-
-function preseedSubjects(presetKey) {
-  var key = presetKey || 'generic';
-  var list = PRESETS[key] || PRESETS['generic'];
-
-  var existing = dbGetAll('Subjects');
-  var existingIds = existing.map(function(s) { return s.subject_id; });
-  var existingWeights = dbGetAll('SubjectWeights');
-  var existingWeightIds = existingWeights.map(function(w) { return w.subject_id; });
-
-  list.forEach(function(s) {
-    var sId = s.id || s.subject_id;
-    var sName = s.name || s.subject_name;
-    var sCode = s.code || s.subject_code;
-    var sHours = s.hours || s.hours_per_year;
-    var sGroup = s.group || s.weight_group;
-
-    if (existingIds.indexOf(sId) === -1) {
-      dbInsert('Subjects', {
-        subject_id: sId,
-        subject_name: sName,
-        subject_code: sCode,
-        hours_per_year: sHours,
-        weight_group: sGroup,
-        description: ''
-      });
-    }
-    if (existingWeightIds.indexOf(sId) === -1) {
-      var w = DEFAULT_WEIGHTS[String(sGroup)] || DEFAULT_WEIGHTS['1'];
-      dbInsert('SubjectWeights', {
-        subject_id: sId,
-        coursework_max: w.coursework_max,
-        final_max: w.final_max,
-        pre_mid_max: w.pre_mid_max,
-        mid_max: w.mid_max,
-        post_mid_max: w.post_mid_max,
-        final_exam_max: w.final_exam_max
-      });
-    }
-  });
-  return { ok: true };
-}
 
 // ── School Info ───────────────────────────────────────────────────────────────
 
@@ -326,10 +168,15 @@ function serverImportClassesCSV(token, rows) {
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
 
+function ensureSubjectsSchema() {
+  ensureColumns('Subjects', ['class_id']);
+  removeColumns('Subjects', ['description']);
+}
+
 function getSubjectsList(token) {
   var session = getSession(token);
   if (!session) throw new Error('ไม่มีสิทธิ์');
-  ensureColumns('Subjects', ['class_id']);
+  ensureSubjectsSchema();
   var classes = dbGetAll('Classes');
   var levelCounts = buildClassLevelCounts(classes);
   var classesById = {};
@@ -409,10 +256,10 @@ function insertSubjectWeightsIfMissing(subject_id, group) {
   });
 }
 
-function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description, class_ids) {
+function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, class_ids) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  ensureColumns('Subjects', ['class_id']);
+  ensureSubjectsSchema();
 
   var classIdList = String(class_ids || '').split(',').map(function(id) { return id.trim(); }).filter(Boolean);
   if (!subject_name) throw new Error('Missing subject_name');
@@ -439,8 +286,7 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
       subject_name: subject_name || '',
       subject_code: subject_code || '',
       hours_per_year: parseInt(hours_per_year) || 0,
-      weight_group: grp,
-      description: description || ''
+      weight_group: grp
     });
     insertSubjectWeightsIfMissing(newSubjectId, grp);
     createdIds.push(newSubjectId);
@@ -449,9 +295,10 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
   return { ok: true, subject_id: createdIds[0], subject_ids: createdIds };
 }
 
-function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, description) {
+function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureSubjectsSchema();
   
   var oldSubject = dbFindOne('Subjects', 'subject_id', subject_id);
   var oldGroup = oldSubject ? oldSubject.weight_group : null;
@@ -461,8 +308,7 @@ function serverUpdateSubject(token, subject_id, subject_name, subject_code, hour
     subject_name: subject_name,
     subject_code: subject_code,
     hours_per_year: parseInt(hours_per_year) || 0,
-    weight_group: newGroup,
-    description: description || ''
+    weight_group: newGroup
   });
   
   // If weight group changed, also sync SubjectWeights
@@ -626,15 +472,6 @@ function getWeightsForRef(token) {
   return { weights: result };
 }
 
-// Returns a single subject's data for the read-only /subject_description page.
-function getSubjectDescription(token, subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (!subject) return { error: 'ไม่พบวิชานี้' };
-  return { subject: subject };
-}
-
 // Returns indicators for a subject for the read-only /subject_indicators_ref page.
 function getSubjectIndicatorsRef(token, subject_id) {
   var session = getSession(token);
@@ -649,7 +486,7 @@ function getSubjectIndicatorsRef(token, subject_id) {
 function serverImportSubjectsCSV(token, rows) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  ensureColumns('Subjects', ['class_id']);
+  ensureSubjectsSchema();
 
   var successCount = 0;
   var createdCount = 0;
@@ -671,7 +508,6 @@ function serverImportSubjectsCSV(token, rows) {
     var subjectCodeCol = subjectHeaders.indexOf('subject_code');
     var hoursCol = subjectHeaders.indexOf('hours_per_year');
     var groupCol = subjectHeaders.indexOf('weight_group');
-    var descriptionCol = subjectHeaders.indexOf('description');
 
     var weightsSheet = getSheet('SubjectWeights');
     var weightsData = weightsSheet.getDataRange().getValues();
@@ -707,7 +543,7 @@ function serverImportSubjectsCSV(token, rows) {
       classesByLevelSection[String(c.level || '').trim() + '|' + String(c.section || '').trim()] = c;
     });
 
-    function makeSubjectRow(subjectId, classId, name, code, hours, group, description) {
+    function makeSubjectRow(subjectId, classId, name, code, hours, group) {
       var row = subjectHeaders.map(function() { return ''; });
       row[subjectIdCol] = subjectId;
       if (classIdCol !== -1) row[classIdCol] = classId;
@@ -715,7 +551,6 @@ function serverImportSubjectsCSV(token, rows) {
       row[subjectCodeCol] = code;
       row[hoursCol] = hours;
       row[groupCol] = group;
-      row[descriptionCol] = description;
       return row;
     }
 
@@ -811,7 +646,6 @@ function serverImportSubjectsCSV(token, rows) {
       var hoursStr = (row.hours || '').trim();
       var hours = parseInt(hoursStr) || 0;
       var group = parseInt(row.weight_group, 10) || 1;
-      var description = (row.description || '').trim();
       var importWeights = getImportWeights(row, group, lineNum);
 
       if (!name) {
@@ -849,26 +683,23 @@ function serverImportSubjectsCSV(token, rows) {
           class_id: classIdCol !== -1 ? existing.row[classIdCol] : '',
           subject_code: existing.row[subjectCodeCol],
           hours_per_year: existing.row[hoursCol],
-          weight_group: existing.row[groupCol],
-          description: existing.row[descriptionCol]
+          weight_group: existing.row[groupCol]
         };
         if (classIdCol !== -1) subjectSheet.getRange(existing.rowIndex, classIdCol + 1).setValue(classId);
         subjectSheet.getRange(existing.rowIndex, subjectNameCol + 1).setValue(name);
         subjectSheet.getRange(existing.rowIndex, subjectCodeCol + 1).setValue(code);
         subjectSheet.getRange(existing.rowIndex, hoursCol + 1).setValue(hours);
         subjectSheet.getRange(existing.rowIndex, groupCol + 1).setValue(group);
-        subjectSheet.getRange(existing.rowIndex, descriptionCol + 1).setValue(description);
         if (classIdCol !== -1) existing.row[classIdCol] = classId;
         existing.row[subjectNameCol] = name;
         existing.row[subjectCodeCol] = code;
         existing.row[hoursCol] = hours;
         existing.row[groupCol] = group;
-        existing.row[descriptionCol] = description;
         ensureSubjectWeights(subjectId, group, importWeights);
         updatedCount++;
         auditRows.push({ entity_id: subjectId, old_value: oldValue, new_value: { imported: true, action: 'update' } });
       } else {
-        var newRow = makeSubjectRow(subjectId, classId, name, code, hours, group, description);
+        var newRow = makeSubjectRow(subjectId, classId, name, code, hours, group);
         subjectSheet.appendRow(newRow);
         subjectsById[subjectId] = { rowIndex: subjectSheet.getLastRow(), row: newRow };
         if (code) subjectsByCodeAndClass[code + '|' + classId] = subjectsById[subjectId];

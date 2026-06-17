@@ -120,11 +120,6 @@ function doGet(e) {
         return buildPage('help', { session: session, token: token });
       case 'weights_ref':
         return buildPage('weights_ref', { session: session, token: token });
-      case 'subject_description':
-        return buildPage('subject_description', {
-          session: session, token: token,
-          subject_id: params.subject_id || ''
-        });
       case 'subject_indicators_ref':
         return buildPage('subject_indicators_ref', {
           session: session, token: token,
@@ -345,7 +340,6 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
       'class_readthinkwrite': 'class_readthinkwrite',
       'class_report': 'class_report',
       'admin_indicators': 'admin_indicators',
-      'subject_description': 'subject_description',
       'subject_indicators_ref': 'subject_indicators_ref'
     };
     var tmplName = templateMap[page];
@@ -480,23 +474,14 @@ function getIndicatorsPageHtml(token, subject_id) {
     }
     var subj = dbFindOne('Subjects', 'subject_id', subject_id);
     var subject_name = subj ? subj.subject_name : subject_id;
-    var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
-    tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name };
-    return tmpl.evaluate().getContent();
-  } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
-  }
-}
-
-// US-015: navigate to subject description reference page (any logged-in user)
-function getSubjectDescriptionPageHtml(token, subject_id) {
-  try {
-    var session = getSession(token);
-    if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+    var class_label = '';
+    if (subj && subj.class_id) {
+      var cls = dbFindOne('Classes', 'class_id', subj.class_id);
+      if (cls) class_label = fmtClassLabel(cls.level, cls.section);
     }
-    var tmpl = HtmlService.createTemplateFromFile('subject_description');
-    tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
+    var subject_title = subject_name + (class_label && String(subject_name).indexOf(class_label) === -1 ? ' ' + class_label : '');
+    var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
+    tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
