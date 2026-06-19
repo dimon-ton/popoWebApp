@@ -125,7 +125,7 @@ function showDrill(row, idx) {
   rows.forEach(function(r) { r.classList.remove('active'); });
   row.classList.add('active');
 
-  document.getElementById('drillTitle').textContent = t.full_name + ' — รายละเอียด (' + t.pair_count + ' คู่)';
+  document.getElementById('drillTitle').textContent = t.full_name + ' — รายละเอียด (' + t.pair_count + ' วิชา)';
   var tbody = document.getElementById('drillBody');
   tbody.innerHTML = '';
 

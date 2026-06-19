@@ -60,13 +60,8 @@
     /* Bulk panel */
     .bulk-panel { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px; }
     .bulk-panel h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); }
-    .bulk-mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-    .bulk-mode-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; background: white; font-family: inherit; }
-    .bulk-mode-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
     .bulk-result { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; background: #e8f5e9; color: #2e7d32; display: none; }
     .bulk-result.show { display: block; }
-    select[multiple] { min-height: 100px; }
-    .multi-select-help { color: var(--text-muted); font-size: 11px; margin-top: 5px; }
 
     /* Reassignment confirmation */
     .dialog-overlay { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 32, 52, 0.52); backdrop-filter: blur(3px); }
@@ -97,9 +92,6 @@
       .form-row { align-items: stretch; }
       .form-group { min-width: 100%; }
       .form-row .btn { width: 100%; }
-      .bulk-mode-tabs { flex-direction: column; }
-      .bulk-mode-btn { width: 100%; }
-      select[multiple] { min-height: 180px; }
       .dialog-overlay { align-items: flex-end; padding: 12px; }
       .dialog { border-radius: 18px 18px 12px 12px; }
       .dialog-header { padding: 18px 18px 12px; }
@@ -133,7 +125,6 @@
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-teacher" onclick="switchTab('teacher')">ครูรายคน</button>
       <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">รายการสอน</button>
-      <button class="tab-btn" id="tab-bulk" onclick="switchTab('bulk')">กำหนดกลุ่ม</button>
     </div>
     <div class="teacher-search-wrap">
       <input type="search" id="teacherSearch" placeholder="ค้นหาชื่อครู..." oninput="renderTeacherList()">
@@ -160,6 +151,18 @@
         <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">มีครูผู้สอนแล้ว</span></div>
         <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">ยังไม่มีครูผู้สอน</span></div>
       </div>
+      <div class="bulk-panel" style="margin-bottom:16px">
+        <h3>นำเข้ารายการสอนด้วย CSV</h3>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:10px">
+          เหมาะสำหรับนำเข้าจำนวนมาก ระบบจะตรวจสอบครู รหัสวิชา ชื่อวิชา และระดับชั้นก่อนบันทึก
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-secondary" onclick="downloadEnrollmentCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+          <input type="file" id="enrollmentCsvInput" accept=".csv" style="padding:6px 11px">
+          <button class="btn btn-primary" id="importEnrollmentCsvBtn" onclick="importEnrollmentCSV()">นำเข้า CSV</button>
+        </div>
+        <div class="bulk-result" id="importEnrollmentResult"></div>
+      </div>
       <div class="pair-filters">
         <input type="search" id="pairSearch" placeholder="ค้นหาวิชา หรือชื่อครู..." oninput="applyPairFilters()">
         <select id="pairClassFilter" onchange="applyPairFilters()"><option value="">ทุกชั้นเรียน</option></select>
@@ -176,75 +179,6 @@
           <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
           <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:30%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:35%"></div></div>
         </div>
-      </div>
-    </div>
-    <!-- US-019: Bulk assign panel -->
-    <div class="all-pairs-panel" id="bulkAssignTab" style="display:none">
-      <div class="section-title">กำหนดครูแบบกลุ่ม</div>
-      <div class="bulk-panel" style="margin-bottom:16px">
-        <h3>นำเข้ารายการสอนด้วย CSV</h3>
-        <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:10px">
-          เหมาะสำหรับนำเข้าจำนวนมาก ระบบจะตรวจสอบครู รหัสวิชา ชื่อวิชา และระดับชั้นก่อนบันทึก ส่วน "กำหนดครูแบบกลุ่ม" ด้านล่างยังใช้ได้สำหรับแก้ไขแบบเลือกเองทีละชุด
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-secondary" onclick="downloadEnrollmentCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
-          <input type="file" id="enrollmentCsvInput" accept=".csv" style="padding:6px 11px">
-          <button class="btn btn-primary" id="importEnrollmentCsvBtn" onclick="importEnrollmentCSV()">นำเข้า CSV</button>
-        </div>
-        <div class="bulk-result" id="importEnrollmentResult"></div>
-      </div>
-      <div class="bulk-panel">
-        <h3>โหมด</h3>
-        <div class="bulk-mode-tabs">
-          <button class="bulk-mode-btn active" id="bulkModeABtn" onclick="switchBulkMode('A')">
-            (A) หลายวิชา — ชั้นเดียว
-          </button>
-          <button class="bulk-mode-btn" id="bulkModeBBtn" onclick="switchBulkMode('B')">
-            (B) หลายชั้น — วิชาเดียว
-          </button>
-        </div>
-
-        <!-- Mode A: pick class + teacher + multi-select subjects -->
-        <div id="bulkModeA">
-          <div class="form-row" style="margin-bottom:12px">
-            <div class="form-group">
-              <label>ชั้นเรียน</label>
-              <select id="bulkAClassId"></select>
-            </div>
-            <div class="form-group">
-              <label>ครู</label>
-              <select id="bulkATeacherId"></select>
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:12px">
-            <label>วิชา (เลือกได้หลายรายการ)</label>
-            <select id="bulkASubjectIds" multiple></select>
-            <div class="multi-select-help">คอมพิวเตอร์: กด Ctrl ค้างเพื่อเลือกหลายรายการ</div>
-          </div>
-          <button class="btn btn-primary" id="bulkABtn" onclick="submitBulkAssign('A')">กำหนดครู</button>
-        </div>
-
-        <!-- Mode B: pick subject + teacher + multi-select classes -->
-        <div id="bulkModeB" style="display:none">
-          <div class="form-row" style="margin-bottom:12px">
-            <div class="form-group">
-              <label>วิชา</label>
-              <select id="bulkBSubjectId"></select>
-            </div>
-            <div class="form-group">
-              <label>ครู</label>
-              <select id="bulkBTeacherId"></select>
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:12px">
-            <label>ชั้นเรียน (เลือกได้หลายรายการ)</label>
-            <select id="bulkBClassIds" multiple></select>
-            <div class="multi-select-help">คอมพิวเตอร์: กด Ctrl ค้างเพื่อเลือกหลายรายการ</div>
-          </div>
-          <button class="btn btn-primary" id="bulkBBtn" onclick="submitBulkAssign('B')">กำหนดครู</button>
-        </div>
-
-        <div class="bulk-result" id="bulkResult"></div>
       </div>
     </div>
   </div>
@@ -311,7 +245,6 @@ function loadData() {
       allData = data;
       renderTeacherList();
       renderAllPairs();
-      populateBulkDropdowns();
     })
     .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
     .clientGetEnrollmentsData(TOKEN);
@@ -321,12 +254,9 @@ function loadData() {
 function switchTab(tab) {
   document.getElementById('tab-teacher').classList.toggle('active', tab === 'teacher');
   document.getElementById('tab-allpairs').classList.toggle('active', tab === 'allpairs');
-  document.getElementById('tab-bulk').classList.toggle('active', tab === 'bulk');
   document.querySelector('.teacher-panel').classList.toggle('compact', tab !== 'teacher');
   document.getElementById('teacherTab').style.display = tab === 'teacher' ? '' : 'none';
   document.getElementById('allPairsTab').style.display = tab === 'allpairs' ? '' : 'none';
-  document.getElementById('bulkAssignTab').style.display = tab === 'bulk' ? '' : 'none';
-  if (tab === 'bulk') populateBulkDropdowns();
 }
 
 // ---- Teacher list ----
@@ -649,104 +579,6 @@ function applyPairFilters() {
         '<td>' + teacherCell + '</td>' +
       '</tr>';
     }).join('') + '</tbody></table></div>';
-}
-
-// ---- US-019: Bulk assign ----
-var bulkMode = 'A';
-
-function populateBulkDropdowns() {
-  if (!allData) return;
-  var classOptions = (allData.classes || []).map(function(c) {
-    return '<option value="' + escAttr(c.class_id) + '">' + escHtml(c.class_label || fmtCls(c.level, c.section)) + '</option>';
-  }).join('');
-  var subjectOptions = (allData.subjects || []).map(function(s) {
-    return '<option value="' + escAttr(s.subject_id) + '">' + escHtml(subjectLabel(s)) + '</option>';
-  }).join('');
-  var teacherOptions = (allData.teachers || []).map(function(t) {
-    return '<option value="' + escAttr(t.user_id) + '">' + escHtml(t.full_name) + '</option>';
-  }).join('');
-
-  // Mode A dropdowns
-  document.getElementById('bulkAClassId').innerHTML = classOptions;
-  document.getElementById('bulkASubjectIds').innerHTML = subjectOptions;
-  document.getElementById('bulkATeacherId').innerHTML = teacherOptions;
-
-  // Mode B dropdowns
-  document.getElementById('bulkBSubjectId').innerHTML = subjectOptions;
-  document.getElementById('bulkBClassIds').innerHTML = classOptions;
-  document.getElementById('bulkBTeacherId').innerHTML = teacherOptions;
-}
-
-function switchBulkMode(mode) {
-  bulkMode = mode;
-  document.getElementById('bulkModeABtn').classList.toggle('active', mode === 'A');
-  document.getElementById('bulkModeBBtn').classList.toggle('active', mode === 'B');
-  document.getElementById('bulkModeA').style.display = mode === 'A' ? '' : 'none';
-  document.getElementById('bulkModeB').style.display = mode === 'B' ? '' : 'none';
-  document.getElementById('bulkResult').classList.remove('show');
-}
-
-function submitBulkAssign(mode) {
-  var params = { mode: mode };
-  var btn;
-
-  if (mode === 'A') {
-    var classId = document.getElementById('bulkAClassId').value;
-    var teacherId = document.getElementById('bulkATeacherId').value;
-    var subjectSelect = document.getElementById('bulkASubjectIds');
-    var subjectIds = Array.from(subjectSelect.selectedOptions).map(function(o) { return o.value; });
-    if (!classId || !teacherId || subjectIds.length === 0) {
-      showToast('กรุณาเลือกชั้นเรียน ครู และวิชาอย่างน้อย 1 รายการ', 'error');
-      return;
-    }
-    params.class_id = classId;
-    params.teacher_user_id = teacherId;
-    params.subject_ids = subjectIds.join(',');
-    btn = document.getElementById('bulkABtn');
-  } else {
-    var subjectId = document.getElementById('bulkBSubjectId').value;
-    var teacherId2 = document.getElementById('bulkBTeacherId').value;
-    var classSelect = document.getElementById('bulkBClassIds');
-    var classIds = Array.from(classSelect.selectedOptions).map(function(o) { return o.value; });
-    if (!subjectId || !teacherId2 || classIds.length === 0) {
-      showToast('กรุณาเลือกวิชา ครู และชั้นเรียนอย่างน้อย 1 รายการ', 'error');
-      return;
-    }
-    params.subject_id = subjectId;
-    params.teacher_user_id = teacherId2;
-    params.class_ids = classIds.join(',');
-    btn = document.getElementById('bulkBBtn');
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'กำลังบันทึก...';
-  document.getElementById('bulkResult').classList.remove('show');
-
-  var classIdArg = mode === 'A' ? params.class_id : '';
-  var subjectIdArg = mode === 'B' ? params.subject_id : '';
-  var classIdsArg = mode === 'B' ? params.class_ids : '';
-  var subjectIdsArg = mode === 'A' ? params.subject_ids : '';
-
-  google.script.run
-    .withSuccessHandler(function(data) {
-      btn.disabled = false;
-      btn.textContent = 'กำหนดครู';
-      if (data.error) { showToast(data.error, 'error'); return; }
-      var msg = data.created + ' เพิ่มใหม่, ' + data.reassigned + ' เปลี่ยนครู, ' + data.unchanged + ' ไม่เปลี่ยน';
-      var resultEl = document.getElementById('bulkResult');
-      resultEl.textContent = msg;
-      resultEl.classList.add('show');
-      var toastMsg = (data.created > 0 || data.reassigned > 0)
-        ? 'บันทึกการกำหนดครูสำเร็จ: ' + msg
-        : 'ไม่มีรายการเปลี่ยนแปลง: รายการที่เลือกถูกกำหนดไว้แล้ว';
-      showToast(toastMsg, 'success');
-      loadData();
-    })
-    .withFailureHandler(function(err) {
-      btn.disabled = false; btn.textContent = 'กำหนดครู';
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
-    })
-    .clientBulkAssign(TOKEN, params.mode, params.teacher_user_id, classIdArg, subjectIdArg, classIdsArg, subjectIdsArg);
 }
 
 function parseCSV(text) {

@@ -128,12 +128,24 @@ function saveSchoolInfo() {
   var academic_year = document.getElementById('academicYear').value.trim();
   var semester_start_date = document.getElementById('semesterStartDate').value.trim();
   var required_attendance_days = document.getElementById('requiredAttendanceDays').value.trim();
+  if (semester_start_date && !/^\d{4}-\d{2}-\d{2}$/.test(semester_start_date)) {
+    btn.disabled = false;
+    showToast('กรุณาเลือกวันเปิดภาคเรียนใหม่', 'error');
+    return;
+  }
+  var attendanceDays = Number(required_attendance_days);
+  if (required_attendance_days && (!Number.isInteger(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
+    btn.disabled = false;
+    showToast('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260', 'error');
+    return;
+  }
 
   google.script.run
     .withSuccessHandler(function(result) {
       btn.disabled = false;
       if (result && result.error) { showToast(result.error, 'error'); return; }
       showToast('บันทึกข้อมูลโรงเรียนสำเร็จ', 'success');
+      loadSchoolInfo();
     })
     .withFailureHandler(function(err) {
       btn.disabled = false;

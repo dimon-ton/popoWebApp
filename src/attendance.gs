@@ -1,9 +1,9 @@
 // US-007: Attendance grid view and edit
 
 // Returns attendance data for a given class/subject/week.
-// week: 1–40 integer. Week 1 starts on the first Monday of the academic year
-// (hardcoded as 2024-05-13 Thai academic year start — this is computed from
-// SchoolInfo.academic_year if present, otherwise uses a sensible default).
+// week: 1–N integer. Week 1 starts on SchoolInfo.semester_start_date exactly.
+// If no opening date is configured, the academic-year fallback starts on the
+// first Monday on or after May 13.
 //
 // Returns:
 //   { students, week, weekStart, dates, attendance, subject_info, class_info, can_edit }
@@ -31,10 +31,10 @@ function getAttendanceData(token, class_id, subject_id, week) {
   var weekNum = parseInt(week) || 1;
   if (weekNum < 1) weekNum = 1;
   var attendanceConfig = getAttendanceConfig();
-  var allAttendanceDates = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days);
-  var maxWeeks = Math.max(1, Math.ceil(allAttendanceDates.length / 5));
+  var attendanceWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days);
+  var maxWeeks = Math.max(1, attendanceWeeks.length);
   if (weekNum > maxWeeks) weekNum = maxWeeks;
-  var dates = allAttendanceDates.slice((weekNum - 1) * 5, (weekNum - 1) * 5 + 5);
+  var dates = attendanceWeeks[weekNum - 1] || [];
   var weekStart = dates[0] || attendanceConfig.start_date;
 
   // Get students ordered by seq_no
@@ -72,7 +72,7 @@ function getAttendanceData(token, class_id, subject_id, week) {
     week: weekNum,
     max_weeks: maxWeeks,
     required_attendance_days: attendanceConfig.required_days,
-    weekStart: weekStart.toISOString(),
+    weekStart: formatDateISO(weekStart),
     dates: dateStrings,
     attendance: attMap,
     yearly: yearlyMap,
@@ -98,6 +98,20 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   }
 
   var valid = ['/', 'ล', 'ข', ''];
+  var attendanceConfig = getAttendanceConfig();
+  var allowedDates = {};
+  buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days).forEach(function(date) {
+    allowedDates[formatDateISO(date)] = true;
+  });
+  var invalidDates = [];
+  (cells || []).forEach(function(cell) {
+    var dateStr = normalizeISODate(cell.date);
+    if (!dateStr || !allowedDates[dateStr]) invalidDates.push(String(cell.date || ''));
+  });
+  if (invalidDates.length > 0) {
+    throw new Error('วันที่เข้าเรียนอยู่นอกช่วงภาคเรียน: ' + invalidDates.join(', '));
+  }
+
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
@@ -118,7 +132,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
       var status = cell.status || '';
       if (valid.indexOf(status) === -1) return; // silently skip invalid status
 
-      var dateStr = cell.date; // ISO date string e.g. '2024-05-13'
+      var dateStr = normalizeISODate(cell.date); // ISO date string e.g. '2024-05-13'
       var student_id = cell.student_id;
 
       // Look for existing row to update
@@ -169,8 +183,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
 // Thai academic year starts in mid-May; we use May 13 as the anchor
 function getAttendanceConfig() {
   try {
-    var info = dbGetAll('SchoolInfo');
-    var row = info.length > 0 ? info[0] : {};
+    var row = getSchoolInfo();
     var configuredStart = parseISODate(row.semester_start_date);
     var requiredDays = parseInt(row.required_attendance_days, 10) || 200;
     if (configuredStart) return { start_date: configuredStart, required_days: requiredDays };
@@ -190,23 +203,59 @@ function getAttendanceConfig() {
 }
 
 function parseISODate(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
   var s = String(value || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   var parts = s.split('-');
   var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  return isNaN(d.getTime()) ? null : d;
+  if (isNaN(d.getTime()) ||
+      d.getFullYear() !== Number(parts[0]) ||
+      d.getMonth() !== Number(parts[1]) - 1 ||
+      d.getDate() !== Number(parts[2])) return null;
+  return d;
+}
+
+function normalizeISODate(value) {
+  var date = parseISODate(value);
+  return date ? formatDateISO(date) : '';
 }
 
 function buildAttendanceDates(startDate, requiredDays) {
   var dates = [];
+  buildAttendanceWeeks(startDate, requiredDays).forEach(function(weekDates) {
+    weekDates.forEach(function(date) {
+      dates.push(date);
+    });
+  });
+  return dates;
+}
+
+// Week 1 begins on the semester opening date and contains weekdays through
+// Friday. Every following week contains Monday through Friday. Saturdays and
+// Sundays are excluded. The last week may be shorter when requiredDays is reached.
+function buildAttendanceWeeks(startDate, requiredDays) {
+  var weeks = [];
+  var dates = [];
   var cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
   var limit = Math.max(1, Math.min(parseInt(requiredDays, 10) || 200, 260));
-  while (dates.length < limit) {
+  var total = 0;
+
+  while (total < limit) {
     var day = cursor.getDay();
-    if (day !== 0 && day !== 6) dates.push(new Date(cursor.getTime()));
+    if (day !== 0 && day !== 6) {
+      dates.push(new Date(cursor.getTime()));
+      total++;
+    }
+    var isEndOfWeek = day === 0;
     cursor.setDate(cursor.getDate() + 1);
+    if ((isEndOfWeek || total === limit) && dates.length > 0) {
+      weeks.push(dates);
+      dates = [];
+    }
   }
-  return dates;
+  return weeks;
 }
 
 // Format a Date as YYYY-MM-DD

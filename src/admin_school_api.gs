@@ -9,16 +9,37 @@ var DEFAULT_WEIGHTS = {
 
 function getSchoolInfo() {
   ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
-  var rows = dbGetAll('SchoolInfo');
-  return rows.length > 0 ? rows[0] : {
+  var sheet = getSheet('SchoolInfo');
+  if (sheet.getLastRow() < 2) {
+    return {
+      school_name: '', district: '', province: '', academic_year: '', semester_start_date: '', required_attendance_days: ''
+    };
+  }
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = sheet.getRange(2, 1, 1, headers.length).getValues()[0];
+  var info = {};
+  headers.forEach(function(header, index) {
+    info[header] = values[index];
+  });
+  if (!Object.keys(info).length) {
+    info = {
     school_name: '', district: '', province: '', academic_year: '', semester_start_date: '', required_attendance_days: ''
-  };
+    };
+  }
+  info.semester_start_date = normalizeSchoolDateValue(info.semester_start_date);
+  return info;
 }
 
 function serverSaveSchoolInfo(token, school_name, district, province, academic_year, semester_start_date, required_attendance_days) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
+  var normalizedStartDate = normalizeSchoolDateValue(semester_start_date);
+  if (semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
+  var attendanceDays = required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10);
+  if (attendanceDays !== '' && (!isFinite(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
+    throw new Error('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260');
+  }
 
   // SchoolInfo always has at most one data row (row 2); overwrite it directly.
   var lock = LockService.getDocumentLock();
@@ -31,8 +52,8 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
       district: district,
       province: province,
       academic_year: academic_year,
-      semester_start_date: semester_start_date || '',
-      required_attendance_days: parseInt(required_attendance_days, 10) || ''
+      semester_start_date: normalizedStartDate,
+      required_attendance_days: attendanceDays
     };
     var values = headers.map(function(h) { return rowObj[h] !== undefined ? rowObj[h] : ''; });
     // Pad to header count
@@ -42,11 +63,33 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
     } else {
       sheet.appendRow(values);
     }
+    var startDateCol = headers.indexOf('semester_start_date');
+    if (startDateCol !== -1) {
+      var startDateCell = sheet.getRange(2, startDateCol + 1);
+      startDateCell.setNumberFormat('@');
+      startDateCell.setValue(normalizedStartDate);
+    }
   } finally {
     lock.releaseLock();
   }
   try { CacheService.getScriptCache().remove('school_name'); } catch(e) {}
   return { ok: true };
+}
+
+function normalizeSchoolDateValue(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone() || 'Asia/Bangkok', 'yyyy-MM-dd');
+  }
+  var s = String(value).trim();
+  var match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  var year = Number(match[1]);
+  var month = Number(match[2]);
+  var day = Number(match[3]);
+  var date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
+  return match[1] + '-' + match[2] + '-' + match[3];
 }
 
 // ── Classes ───────────────────────────────────────────────────────────────────
@@ -379,6 +422,7 @@ function getWeightsList(token) {
       subject_id: s.subject_id,
       class_id: s.class_id || w.class_id || '',
       class_label: classLabel,
+      grade_level: cls.level || '',
       subject_name: s.subject_name,
       subject_code: s.subject_code || '',
       weight_group: s.weight_group,

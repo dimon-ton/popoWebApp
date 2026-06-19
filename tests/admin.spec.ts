@@ -1,5 +1,5 @@
 /**
- * Admin feature tests — US-001, US-018, US-019, US-020
+ * Admin feature tests — US-001, US-018, US-020
  * Runs against the production /exec URL using the saved auth.json session.
  * All test data uses test_ prefix and is cleaned up in afterAll.
  */
@@ -114,6 +114,27 @@ test.describe('US-004: School info, classes, and subjects', () => {
     await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
     // Give it a moment for loadSchoolInfo() to fill the field
     await expect(page.locator('#schoolName')).toHaveValue('test_school_name', { timeout: 15_000 });
+  });
+
+  test('US-004: semester opening date persists as the exact selected date', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_school`);
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+
+    await page.evaluate(() => {
+      const input = document.getElementById('semesterStartDate');
+      if (!input || typeof (window as any).setThaiDatePickerValue !== 'function') {
+        throw new Error('Thai date picker is not initialized');
+      }
+      (window as any).setThaiDatePickerValue(input, '2026-05-16');
+    });
+    await page.fill('#requiredAttendanceDays', '200');
+    await page.click('#saveSchoolBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกข้อมูลโรงเรียนสำเร็จ', { timeout: 15_000 });
+
+    await page.goto(`${url}?page=admin_school`);
+    await expect(page.locator('#semesterStartDate')).toHaveValue('2026-05-16', { timeout: 15_000 });
+    await expect(page.locator('[data-thai-date-display]')).toHaveValue('16 พฤษภาคม 2569');
   });
 
   test('US-004: create class test_class_p1_1 and assert it appears in list', async ({ page }) => {
@@ -334,9 +355,9 @@ test.describe('US-010: Subject weights configuration', () => {
 
   test.beforeAll(async () => {
     await cleanupTestData();
-    subjectId = await seedTestSubject({ suffix: 'us010_eng', name: 'ภาษาอังกฤษทดสอบ US010', code: 'US010', group: 1 });
-    await seedTestSubjectWeights({ subject_id: subjectId, pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30, coursework_max: 70, final_max: 30 });
     classId = await seedTestClass({ suffix: 'us010_c1', level: 'ป.1', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us010_eng', name: 'ภาษาอังกฤษทดสอบ US010', code: 'US010', group: 1, class_id: classId });
+    await seedTestSubjectWeights({ subject_id: subjectId, pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30, coursework_max: 70, final_max: 30 });
   });
 
   test.afterAll(async () => {
@@ -370,6 +391,22 @@ test.describe('US-010: Subject weights configuration', () => {
 
     // Error toast should appear
     await expect(page.locator('#toast')).toContainText('รวมต้องเท่ากับ 100', { timeout: 15_000 });
+  });
+
+  test('US-010: grade filter and quick-fill affect only visible rows in one column', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_weights`);
+    await expect(page.locator('#weightsTableWrap')).toBeVisible({ timeout: 20_000 });
+
+    await page.selectOption('#gradeFilter', 'ป.1');
+    const row = page.locator(`tr[data-subject-id="${subjectId}"]`);
+    await expect(row).toBeVisible();
+    const originalMid = await row.locator('.mid').inputValue();
+    await page.fill('#quickFillValue', '17');
+    await page.getByRole('button', { name: 'ก่อนกลางภาค' }).click();
+
+    await expect(row.locator('.pre-mid')).toHaveValue('17');
+    await expect(row.locator('.mid')).toHaveValue(originalMid);
   });
 
   test('US-010: fix weights to sum=100, save, and assert success toast', async ({ page }) => {
@@ -448,6 +485,16 @@ test.describe('US-018: Teacher enrollment management', () => {
     // Pair count badge starts at 0 for both
     await expect(page.locator(`#badge-${teacherAId}`)).toContainText('0');
     await expect(page.locator(`#badge-${teacherBId}`)).toContainText('0');
+  });
+
+  test('US-018: CSV import is inside the teaching-list tab and group tab is removed', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.click('#tab-allpairs');
+
+    await expect(page.locator('#allPairsTab #enrollmentCsvInput')).toBeVisible();
+    await expect(page.locator('#allPairsTab #importEnrollmentCsvBtn')).toBeVisible();
+    await expect(page.locator('#tab-bulk')).toHaveCount(0);
   });
 
   test('US-018: teacher search filters the teacher list', async ({ page }) => {
@@ -653,94 +700,6 @@ test.describe('US-018: Teacher enrollment management', () => {
   });
 });
 
-// ---- US-019: Admin bulk-assigns one teacher to many subjects ----
-
-test.describe('US-019: Bulk assignment', () => {
-  let teacherId: string;
-  let class1Id: string;
-  let class2Id: string;
-  let class3Id: string;
-  let subjectId: string;
-
-  test.beforeAll(async () => {
-    teacherId = await seedTestUser({ suffix: 'us019_t1', role: 'teacher', full_name: 'ครูบัลค์ทดสอบ' });
-    class1Id = await seedTestClass({ suffix: 'us019_c1', level: 'ป.2', section: '1' });
-    class2Id = await seedTestClass({ suffix: 'us019_c2', level: 'ป.2', section: '2' });
-    class3Id = await seedTestClass({ suffix: 'us019_c3', level: 'ป.2', section: '3' });
-    subjectId = await seedTestSubject({ suffix: 'us019_s1', name: 'วิชาบัลค์ทดสอบ', code: 'BLK019' });
-  });
-
-  test.afterAll(async () => {
-    await cleanupTestData();
-  });
-
-  test('US-019: bulk assign tab is visible and has mode buttons', async ({ page }) => {
-    const url = process.env.WEB_APP_URL!;
-    await page.goto(`${url}?page=admin_enrollments`);
-    await page.waitForSelector('#tab-bulk');
-
-    // Click bulk tab
-    await page.click('#tab-bulk');
-
-    // Bulk assign panel should be visible
-    await expect(page.locator('#bulkAssignTab')).toBeVisible();
-    await expect(page.locator('#bulkModeABtn')).toBeVisible();
-    await expect(page.locator('#bulkModeBBtn')).toBeVisible();
-  });
-
-  test('US-019: mode B bulk assign — 3 classes × 1 subject — summary shows 3 created', async ({ page }) => {
-    const url = process.env.WEB_APP_URL!;
-    await page.goto(`${url}?page=admin_enrollments`);
-    await page.waitForSelector('#tab-bulk');
-
-    // Open bulk tab
-    await page.click('#tab-bulk');
-    await expect(page.locator('#bulkAssignTab')).toBeVisible();
-
-    // Switch to mode B (many classes, one subject)
-    await page.click('#bulkModeBBtn');
-    await expect(page.locator('#bulkModeB')).toBeVisible();
-
-    // Select the test subject
-    await page.selectOption('#bulkBSubjectId', subjectId);
-
-    // Select the test teacher
-    await page.selectOption('#bulkBTeacherId', teacherId);
-
-    // Multi-select all 3 test classes via the select element
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await page.locator('#bulkBClassIds').evaluate(
-      (sel: any, ids: string[]) => {
-        for (const opt of Array.from(sel.options) as any[]) {
-          opt.selected = ids.includes(opt.value);
-        }
-      },
-      [class1Id, class2Id, class3Id]
-    );
-
-    // Submit
-    await page.click('#bulkBBtn');
-
-    // Result panel should show "3 เพิ่มใหม่"
-    await expect(page.locator('#bulkResult')).toHaveClass(/show/, { timeout: 20_000 });
-    await expect(page.locator('#bulkResult')).toContainText('3 เพิ่มใหม่');
-
-    // Toast success
-    await expect(page.locator('#toast')).toContainText('กำหนดครูแบบกลุ่มสำเร็จ', { timeout: 20_000 });
-  });
-
-  test('US-019: all 3 (class, subject) rows now have the test teacher via API', async () => {
-    // Verify via test API that the 3 enrollments were created correctly
-    const enrollments = await queryTestRows('Enrollments', 'subject_id');
-    const myEnrollments = (enrollments as Record<string, string>[]).filter(
-      (e) => e.subject_id === subjectId && e.teacher_user_id === teacherId
-    );
-    expect(myEnrollments).toHaveLength(3);
-    const assignedClassIds = myEnrollments.map((e) => e.class_id).sort();
-    expect(assignedClassIds).toEqual([class1Id, class2Id, class3Id].sort());
-  });
-});
-
 // ---- US-020: Admin views teacher workload across the school ----
 
 test.describe('US-020: Teacher workload dashboard', () => {
@@ -831,6 +790,7 @@ test.describe('US-020: Teacher workload dashboard', () => {
 
     // Title should contain teacher name
     await expect(page.locator('#drillTitle')).toContainText('ครูภาระมาก');
+    await expect(page.locator('#drillTitle')).toContainText('วิชา');
 
     // Drill table should have exactly 3 pairs for our heavy teacher (may have more if other data exists)
     // We count only the rows that belong to our seeded subjects

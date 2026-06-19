@@ -12,6 +12,20 @@
     input[type="number"] { width: 70px; text-align: center; }
     .save-bar { margin-top: 16px; }
     .legend { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .weights-toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+    .weights-filter { display: flex; flex-direction: column; gap: 4px; min-width: 190px; }
+    .weights-filter label, .quick-fill-label { font-size: 12px; color: var(--text-muted); }
+    .quick-fill { display: flex; align-items: flex-end; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+    .quick-fill-value { display: flex; flex-direction: column; gap: 4px; }
+    .quick-fill-value input { width: 84px; }
+    .quick-fill .btn { padding: 7px 10px; font-size: 12px; }
+    .weights-empty { padding: 24px; text-align: center; color: var(--text-muted); }
+    @media (max-width: 760px) {
+      .weights-toolbar, .quick-fill { align-items: stretch; }
+      .weights-filter, .quick-fill-value { width: 100%; }
+      .quick-fill-value input, .weights-filter select { width: 100%; }
+      .quick-fill .btn { flex: 1 1 calc(50% - 6px); }
+    }
   </style>
 </head>
 <body>
@@ -37,6 +51,24 @@
 
   <div class="card">
     <h3>น้ำหนักคะแนนแต่ละวิชาแยกตามชั้นเรียน</h3>
+    <div class="weights-toolbar">
+      <div class="weights-filter">
+        <label for="gradeFilter">ระดับชั้น</label>
+        <select id="gradeFilter" onchange="applyGradeFilter()">
+          <option value="">ทุกระดับชั้น</option>
+        </select>
+      </div>
+      <div class="quick-fill" aria-label="กรอกคะแนนด่วนตามคอลัมน์">
+        <div class="quick-fill-value">
+          <label class="quick-fill-label" for="quickFillValue">ค่าที่ต้องการกรอก</label>
+          <input type="number" id="quickFillValue" min="0" max="100" value="0">
+        </div>
+        <button class="btn btn-secondary" type="button" onclick="quickFillColumn('pre-mid')">ก่อนกลางภาค</button>
+        <button class="btn btn-secondary" type="button" onclick="quickFillColumn('mid')">กลางภาค</button>
+        <button class="btn btn-secondary" type="button" onclick="quickFillColumn('post-mid')">หลังกลางภาค</button>
+        <button class="btn btn-secondary" type="button" onclick="quickFillColumn('final-exam')">ปลายภาค</button>
+      </div>
+    </div>
     <div class="loading-msg" id="weightsLoading">
       <div class="skeleton-table two-tier">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:28%"></div><div class="skeleton-table-cell" style="width:48%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
@@ -121,6 +153,7 @@ function loadWeights() {
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
       weightsData = (result && result.weights) ? result.weights : [];
+      populateGradeFilter(weightsData);
       renderWeights(weightsData);
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
@@ -135,6 +168,7 @@ function renderWeights(weights) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-subject-id', w.subject_id);
     tr.setAttribute('data-class-id', w.class_id || '');
+    tr.setAttribute('data-grade-level', w.grade_level || '');
     var preMid = Number(w.pre_mid_max) || 0;
     var mid = Number(w.mid_max) || 0;
     var postMid = Number(w.post_mid_max) || 0;
@@ -156,6 +190,64 @@ function renderWeights(weights) {
     tbody.appendChild(tr);
   });
   document.getElementById('weightsTableWrap').style.display = 'block';
+  applyGradeFilter();
+}
+
+function populateGradeFilter(weights) {
+  var select = document.getElementById('gradeFilter');
+  var levels = [];
+  weights.forEach(function(w) {
+    var level = String(w.grade_level || '').trim();
+    if (level && levels.indexOf(level) === -1) levels.push(level);
+  });
+  levels.sort(function(a, b) { return a.localeCompare(b, 'th', { numeric: true }); });
+  select.innerHTML = '<option value="">ทุกระดับชั้น</option>' + levels.map(function(level) {
+    return '<option value="' + escHtml(level) + '">' + escHtml(level) + '</option>';
+  }).join('');
+}
+
+function applyGradeFilter() {
+  var selected = document.getElementById('gradeFilter').value;
+  var visibleCount = 0;
+  document.querySelectorAll('#weightsBody tr').forEach(function(tr) {
+    var visible = !selected || tr.getAttribute('data-grade-level') === selected;
+    tr.style.display = visible ? '' : 'none';
+    if (visible) visibleCount++;
+  });
+  var empty = document.getElementById('weightsEmpty');
+  if (!empty) {
+    empty = document.createElement('div');
+    empty.id = 'weightsEmpty';
+    empty.className = 'weights-empty';
+    empty.textContent = 'ไม่พบวิชาในระดับชั้นที่เลือก';
+    document.getElementById('weightsTableWrap').insertBefore(empty, document.getElementById('weightsTable'));
+  }
+  empty.style.display = visibleCount === 0 ? 'block' : 'none';
+  document.getElementById('weightsTable').style.display = visibleCount === 0 ? 'none' : 'table';
+}
+
+function quickFillColumn(columnClass) {
+  var valueInput = document.getElementById('quickFillValue');
+  var value = Number(valueInput.value);
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    showToast('ค่ากรอกด่วนต้องอยู่ระหว่าง 0 ถึง 100', 'error');
+    valueInput.focus();
+    return;
+  }
+  var changed = 0;
+  document.querySelectorAll('#weightsBody tr').forEach(function(tr) {
+    if (tr.style.display === 'none') return;
+    var input = tr.querySelector('.' + columnClass);
+    if (!input) return;
+    input.value = value;
+    updateRow(input);
+    changed++;
+  });
+  if (changed === 0) {
+    showToast('ไม่มีรายการวิชาที่แสดงอยู่', 'error');
+    return;
+  }
+  showToast('กรอกค่า ' + value + ' ให้ ' + changed + ' รายการแล้ว', 'success');
 }
 
 function updateRow(input) {

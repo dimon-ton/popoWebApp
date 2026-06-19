@@ -169,9 +169,6 @@ function doPost(e) {
         return handleRemoveEnrollment(e, session);
       case 'confirm_reassign':
         return handleConfirmReassign(e, session);
-      // Bulk assign (US-019)
-      case 'bulk_assign':
-        return handleBulkAssign(e, session);
       // User management (US-003)
       case 'add_user':
         requireAdmin(session);
