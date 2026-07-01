@@ -377,67 +377,35 @@ test.describe('US-013: Cover report aggregates', () => {
     await cleanupTestData();
   });
 
-  test('US-013: report page loads with school info header and section titles', async ({ page }) => {
+  test('US-013: report page loads with A4 report book and section tables', async ({ page }) => {
     await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('#pageHeading')).toContainText('รายงานผลการเรียน (ปก)', { timeout: 15_000 });
+    await expect(page.locator('#pageHeading')).toContainText('ป.พ.5', { timeout: 15_000 });
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
-    // Info section should render
-    await expect(page.locator('#infoGrid')).toBeVisible({ timeout: 15_000 });
-    // Grade table
-    await expect(page.locator('#gradeTable')).toBeVisible({ timeout: 10_000 });
-    // Characteristics distribution table
-    await expect(page.locator('#charDistTable')).toBeVisible({ timeout: 10_000 });
-    // RTW distribution table
-    await expect(page.locator('#rtwDistTable')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.a4-report-book')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.a4-page')).toHaveCount(14, { timeout: 15_000 });
+    await expect(page.locator('.form-summary-table')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.form-grid-table')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#devActivityCard')).toHaveCount(0);
   });
 
   test('US-013: grade distribution counts match seeded summative scores', async ({ page }) => {
     await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('#gradeBody')).toBeVisible({ timeout: 15_000 });
-
-    // Grade 4: count 2
-    const grade4Row = page.locator('#gradeBody tr[data-grade="4"]');
-    await expect(grade4Row).toBeVisible({ timeout: 10_000 });
-    await expect(grade4Row.locator('#grade-count-4')).toHaveText('2', { timeout: 10_000 });
-
-    // Grade 3.5: count 1
-    const grade35Row = page.locator('#gradeBody tr[data-grade="3.5"]');
-    await expect(grade35Row).toBeVisible({ timeout: 10_000 });
-    await expect(grade35Row.locator('#grade-count-3-5')).toHaveText('1', { timeout: 10_000 });
-
-    // Grade 3: count 2
-    const grade3Row = page.locator('#gradeBody tr[data-grade="3"]');
-    await expect(grade3Row).toBeVisible({ timeout: 10_000 });
-    await expect(grade3Row.locator('#grade-count-3')).toHaveText('2', { timeout: 10_000 });
-
-    // Total students note
-    await expect(page.locator('#totalStudentsNote')).toContainText('5', { timeout: 10_000 });
+    await expect(page.locator('.form-summary-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.form-summary-table')).toContainText('5', { timeout: 10_000 });
+    await expect(page.locator('.form-summary-table')).toContainText('2', { timeout: 10_000 });
+    await expect(page.locator('.form-summary-table')).toContainText('1', { timeout: 10_000 });
   });
 
-  test('US-013: dev activity save and reflect in summary', async ({ page }) => {
+  test('US-013: dev activity editor is removed from report page', async ({ page }) => {
     await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('#devBody')).toBeVisible({ timeout: 15_000 });
-
-    // Set the first student's result to 'ผ่าน'
-    const firstSelect = page.locator('select.dev-result-select').first();
-    await expect(firstSelect).toBeVisible({ timeout: 10_000 });
-    await firstSelect.selectOption('ผ่าน');
-
-    // Save
-    await page.click('#saveBtn');
-    await expect(page.locator('#toast')).toContainText('บันทึกสำเร็จ', { timeout: 20_000 });
-
-    // After reload, the dev summary should show at least 1 ผ่าน
-    await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
-    await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('#devSummaryBody')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('#devSummaryBody')).toContainText('ผ่าน', { timeout: 10_000 });
+    await expect(page.locator('#devActivityCard')).toHaveCount(0);
+    await expect(page.locator('select.dev-result-select')).toHaveCount(0);
   });
 });
 
@@ -482,18 +450,16 @@ test.describe('US-014: PDF export of cover report', () => {
     await expect(page.locator('#exportPdfBtn')).toHaveText('Export PDF', { timeout: 5_000 });
   });
 
-  test('US-014: clicking Export PDF triggers server PDF generation and shows success toast', async ({ page }) => {
+  test('US-014: clicking Export PDF opens browser print flow and shows success toast', async ({ page }) => {
     await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('#exportPdfBtn')).toBeVisible({ timeout: 10_000 });
 
-    // Click the Export PDF button
+    await page.evaluate(() => {
+      window.print = () => {};
+    });
     await page.click('#exportPdfBtn');
-
-    // Wait for the success toast confirming PDF was generated and download triggered
-    // (Blob URL downloads inside GAS iframes don't fire Playwright download events,
-    //  so we verify via the toast message that the server returned a valid PDF base64)
     await expect(page.locator('#toast')).toContainText('ดาวน์โหลด PDF สำเร็จ', { timeout: 60_000 });
   });
 });

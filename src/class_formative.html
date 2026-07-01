@@ -15,6 +15,11 @@
     tfoot td { background: var(--bg-table-head); font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 6px; }
     tfoot td.avg-row { font-style: italic; }
     .no-indicators { color: var(--text-muted); font-size: 14px; padding: 16px 0; }
+    .score-table-scroll { overflow-x: auto; }
+    .score-top-scroll { overflow-x: auto; overflow-y: hidden; height: 16px; margin-bottom: 4px; display: none; }
+    .score-top-scroll-inner { height: 1px; }
+    .bulk-max-score { color: var(--brand); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .bulk-max-score:hover { color: var(--brand-dark); }
   </style>
 </head>
 <body>
@@ -54,11 +59,16 @@
     <p class="no-indicators" id="noIndicatorsMsg" style="display:none">
       ยังไม่มีตัวชี้วัดสำหรับวิชานี้ — กรุณาเพิ่มตัวชี้วัดในหน้าจัดการก่อน
     </p>
-    <table id="formativeTable" style="display:none">
-      <thead id="formativeHead"></thead>
-      <tbody id="formativeBody"></tbody>
-      <tfoot id="formativeFoot"></tfoot>
-    </table>
+    <div class="score-top-scroll" id="formativeTopScroll" aria-hidden="true">
+      <div class="score-top-scroll-inner" id="formativeTopScrollInner"></div>
+    </div>
+    <div class="score-table-scroll" id="formativeTableScroll" style="display:none">
+      <table id="formativeTable">
+        <thead id="formativeHead"></thead>
+        <tbody id="formativeBody"></tbody>
+        <tfoot id="formativeFoot"></tfoot>
+      </table>
+    </div>
   </div>
 
   <div class="save-bar" id="saveBar" style="display:none">
@@ -116,7 +126,8 @@ function escHtml(s) {
 
 function loadFormative() {
   document.getElementById('loadingMsg').style.display = 'block';
-  document.getElementById('formativeTable').style.display = 'none';
+  document.getElementById('formativeTableScroll').style.display = 'none';
+  document.getElementById('formativeTopScroll').style.display = 'none';
   document.getElementById('noIndicatorsMsg').style.display = 'none';
   document.getElementById('saveBar').style.display = 'none';
 
@@ -168,8 +179,12 @@ function renderGrid(data) {
   var thead = document.getElementById('formativeHead');
   var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
   indicators.forEach(function(ind) {
+    var maxText = '/' + escHtml(ind.max_score);
+    var maxHtml = String(ind.max_score) === '3' && data.can_edit
+      ? '<span class="bulk-max-score" title="คลิกเพื่อใส่ 3 ทั้งคอลัมน์" data-fill-value="3" onclick="fillIndicatorColumn(this)">' + maxText + '</span>'
+      : '<span>' + maxText + '</span>';
     headRow += '<th title="' + escHtml(ind.description || ind.code) + '">' +
-      escHtml(ind.code) + '<br><span style="font-weight:normal;font-size:11px">/' + escHtml(ind.max_score) + '</span></th>';
+      escHtml(ind.code) + '<br><span style="font-weight:normal;font-size:11px" data-indicator="' + escHtml(ind.indicator_id) + '">' + maxHtml + '</span></th>';
   });
   headRow += '<th class="total-col">รวม</th></tr>';
   thead.innerHTML = headRow;
@@ -227,7 +242,8 @@ function renderGrid(data) {
   footRow += '<td></td></tr>';
   tfoot.innerHTML = footRow;
 
-  document.getElementById('formativeTable').style.display = 'table';
+  document.getElementById('formativeTableScroll').style.display = 'block';
+  initFormativeTopScroll();
 }
 
 // Live update row total when a score input changes
@@ -273,6 +289,48 @@ function updateColAverage(indicatorId) {
   });
   var avgCell = document.getElementById('col-avg-' + indicatorId);
   if (avgCell) avgCell.textContent = count > 0 ? (sum / count).toFixed(1) : '-';
+}
+
+function fillIndicatorColumn(el) {
+  var wrapper = el.closest('[data-indicator]');
+  if (!wrapper) return;
+  var indicatorId = wrapper.getAttribute('data-indicator');
+  var fillValue = el.getAttribute('data-fill-value') || '3';
+  var inputs = document.querySelectorAll('input.score-input[data-indicator="' + indicatorId + '"]');
+  if (!inputs.length) return;
+
+  inputs.forEach(function(input) {
+    input.value = fillValue;
+    clampScore(input);
+  });
+  updateColAverage(indicatorId);
+  showToast('ใส่คะแนน ' + fillValue + ' ให้คอลัมน์นี้แล้ว อย่าลืมกดบันทึก', 'success');
+}
+
+function initFormativeTopScroll() {
+  var topScroll = document.getElementById('formativeTopScroll');
+  var topInner = document.getElementById('formativeTopScrollInner');
+  var tableScroll = document.getElementById('formativeTableScroll');
+  var table = document.getElementById('formativeTable');
+  if (!topScroll || !topInner || !tableScroll || !table) return;
+
+  var updateWidth = function() {
+    topInner.style.width = table.scrollWidth + 'px';
+    topScroll.style.display = table.scrollWidth > tableScroll.clientWidth ? 'block' : 'none';
+  };
+  updateWidth();
+  setTimeout(updateWidth, 0);
+
+  if (!topScroll.getAttribute('data-sync-bound')) {
+    topScroll.addEventListener('scroll', function() {
+      tableScroll.scrollLeft = topScroll.scrollLeft;
+    });
+    tableScroll.addEventListener('scroll', function() {
+      topScroll.scrollLeft = tableScroll.scrollLeft;
+    });
+    window.addEventListener('resize', updateWidth);
+    topScroll.setAttribute('data-sync-bound', '1');
+  }
 }
 
 function saveFormative() {

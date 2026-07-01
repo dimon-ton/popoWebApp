@@ -126,6 +126,29 @@ function computeGrade(total) {
   return 0;
 }
 
+function scoreMaxes(weights) {
+  weights = weights || {};
+  var preMidMax = weights.pre_mid_max !== undefined ? Number(weights.pre_mid_max) : 25;
+  var postMidMax = weights.post_mid_max !== undefined ? Number(weights.post_mid_max) : 25;
+  var courseworkMax = (!isNaN(preMidMax) ? preMidMax : 25) + (!isNaN(postMidMax) ? postMidMax : 25);
+  var midtermMax = weights.mid_max !== undefined ? Number(weights.mid_max) : 20;
+  var finalMax = weights.final_exam_max !== undefined ? Number(weights.final_exam_max) : 30;
+  return {
+    coursework: !isNaN(courseworkMax) ? courseworkMax : 50,
+    midterm: !isNaN(midtermMax) ? midtermMax : 20,
+    final: !isNaN(finalMax) ? finalMax : 30
+  };
+}
+
+function normalizeScore(value, max) {
+  if (value === '' || value === null || value === undefined) return '';
+  var n = Number(value);
+  if (isNaN(n)) return '';
+  if (n < 0) return 0;
+  if (!isNaN(max) && n > max) return max;
+  return n;
+}
+
 function loadSummative() {
   document.getElementById('loadingMsg').style.display = 'block';
   document.getElementById('summativeTable').style.display = 'none';
@@ -167,9 +190,10 @@ function renderGrid(data) {
   var weights = data.weights || {};
   var scores = data.scores || {};
 
-  var cwMax = weights.coursework_max !== undefined ? Number(weights.coursework_max) : 70;
-  var midMax = weights.mid_max !== undefined ? Number(weights.mid_max) : 20;
-  var finMax = weights.final_exam_max !== undefined ? Number(weights.final_exam_max) : 30;
+  var maxes = scoreMaxes(weights);
+  var cwMax = maxes.coursework;
+  var midMax = maxes.midterm;
+  var finMax = maxes.final;
 
   // Build header
   var thead = document.getElementById('summativeHead');
@@ -192,9 +216,9 @@ function renderGrid(data) {
   students.forEach(function(student) {
     var sid = student.student_id;
     var s = scores[sid] || {};
-    var cw = s.coursework !== undefined && s.coursework !== '' ? s.coursework : '';
-    var mid = s.midterm !== undefined && s.midterm !== '' ? s.midterm : '';
-    var fin = s.final !== undefined && s.final !== '' ? s.final : '';
+    var cw = normalizeScore(s.coursework !== undefined && s.coursework !== '' ? s.coursework : '', cwMax);
+    var mid = normalizeScore(s.midterm !== undefined && s.midterm !== '' ? s.midterm : '', midMax);
+    var fin = normalizeScore(s.final !== undefined && s.final !== '' ? s.final : '', finMax);
     var makeup = s.makeup_grade !== undefined && s.makeup_grade !== '' ? s.makeup_grade : '';
 
     var total = computeTotal(cw, mid, fin);

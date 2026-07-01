@@ -141,6 +141,159 @@ function getReportData(token, class_id, subject_id) {
   };
 }
 
+// Full printable ป.พ.5 report packet data.
+// Returns the cover aggregates above plus row-level data for the 17-page A4
+// HTML report book rendered by class_report.html.
+function getReportBookData(token, class_id, subject_id) {
+  var d = getReportData(token, class_id, subject_id);
+  var students = dbFind('Students', 'class_id', class_id);
+  students.sort(function(a, b) { return Number(a.seq_no) - Number(b.seq_no); });
+  var studentIds = students.map(function(s) { return s.student_id; });
+  var studentSet = {};
+  studentIds.forEach(function(id) { studentSet[id] = true; });
+
+  var indicators = dbFind('Indicators', 'subject_id', subject_id);
+  indicators.sort(function(a, b) { return Number(a.display_order) - Number(b.display_order); });
+
+  var formativeScoreMap = {};
+  dbGetAll('IndicatorScores').forEach(function(row) {
+    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
+    if (!formativeScoreMap[row.student_id]) formativeScoreMap[row.student_id] = {};
+    formativeScoreMap[row.student_id][row.indicator_id] = row.score === '' ? '' : Number(row.score);
+  });
+
+  var formative_students = students.map(function(student) {
+    var scores = formativeScoreMap[student.student_id] || {};
+    var total = 0;
+    var hasScore = false;
+    indicators.forEach(function(ind) {
+      var val = scores[ind.indicator_id];
+      if (val !== '' && val !== null && val !== undefined && !isNaN(Number(val))) {
+        total += Number(val);
+        hasScore = true;
+      }
+    });
+    return {
+      student_id: student.student_id,
+      seq_no: student.seq_no,
+      student_code: student.student_code || '',
+      full_name: student.full_name || '',
+      scores: scores,
+      total: hasScore ? total : ''
+    };
+  });
+
+  var summativeMap = {};
+  dbGetAll('SummativeScores').forEach(function(row) {
+    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
+    summativeMap[row.student_id] = {
+      coursework: reportValueOrBlank(row.coursework),
+      midterm: reportValueOrBlank(row.midterm),
+      final: reportValueOrBlank(row.final),
+      total: reportValueOrBlank(row.total),
+      computed_grade: reportValueOrBlank(row.computed_grade),
+      makeup_grade: reportValueOrBlank(row.makeup_grade),
+      final_grade: reportValueOrBlank(row.final_grade)
+    };
+  });
+  var summative_students = students.map(function(student) {
+    var score = summativeMap[student.student_id] || {};
+    return {
+      student_id: student.student_id,
+      seq_no: student.seq_no,
+      student_code: student.student_code || '',
+      full_name: student.full_name || '',
+      coursework: reportValueOrBlank(score.coursework),
+      midterm: reportValueOrBlank(score.midterm),
+      final: reportValueOrBlank(score.final),
+      total: reportValueOrBlank(score.total),
+      computed_grade: reportValueOrBlank(score.computed_grade),
+      makeup_grade: reportValueOrBlank(score.makeup_grade),
+      final_grade: reportValueOrBlank(score.final_grade)
+    };
+  });
+
+  var attendance_totals = {};
+  students.forEach(function(student) {
+    attendance_totals[student.student_id] = { present: 0, leave: 0, absent: 0, total: 0 };
+  });
+  dbGetAll('Attendance').forEach(function(row) {
+    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
+    var bucket = attendance_totals[row.student_id];
+    if (!bucket) return;
+    if (row.status === '/') bucket.present++;
+    else if (row.status === 'ล') bucket.leave++;
+    else if (row.status === 'ข') bucket.absent++;
+    bucket.total = bucket.present + bucket.leave + bucket.absent;
+  });
+  var attendance_students = students.map(function(student) {
+    var totals = attendance_totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+    return {
+      student_id: student.student_id,
+      seq_no: student.seq_no,
+      student_code: student.student_code || '',
+      full_name: student.full_name || '',
+      present: totals.present,
+      leave: totals.leave,
+      absent: totals.absent,
+      total: totals.total
+    };
+  });
+
+  var charMap = {};
+  dbGetAll('Characteristics').forEach(function(row) {
+    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
+    charMap[row.student_id] = reportPickFields(row, ['t1','t2','t3','t4','t5','t6','t7','t8','total','label']);
+  });
+  var characteristics_students = students.map(function(student) {
+    var row = charMap[student.student_id] || {};
+    row.student_id = student.student_id;
+    row.seq_no = student.seq_no;
+    row.student_code = student.student_code || '';
+    row.full_name = student.full_name || '';
+    return row;
+  });
+
+  var rtwFields = ['r1','r2','r3','t1','t2','t3','t4','w1','w2','w3','total','label'];
+  var rtwMap = {};
+  dbGetAll('ReadThinkWrite').forEach(function(row) {
+    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
+    rtwMap[row.student_id] = reportPickFields(row, rtwFields);
+  });
+  var readthinkwrite_students = students.map(function(student) {
+    var row = rtwMap[student.student_id] || {};
+    row.student_id = student.student_id;
+    row.seq_no = student.seq_no;
+    row.student_code = student.student_code || '';
+    row.full_name = student.full_name || '';
+    return row;
+  });
+
+  var weights = dbFindOne('SubjectWeights', 'subject_id', subject_id) || {};
+  d.students = students;
+  d.indicators = indicators;
+  d.weights = weights;
+  d.formative_students = formative_students;
+  d.summative_students = summative_students;
+  d.attendance_students = attendance_students;
+  d.characteristics_students = characteristics_students;
+  d.readthinkwrite_students = readthinkwrite_students;
+  d.report_generated_at = new Date().toISOString();
+  return d;
+}
+
+function reportValueOrBlank(value) {
+  return value === null || value === undefined ? '' : value;
+}
+
+function reportPickFields(row, fields) {
+  var picked = {};
+  fields.forEach(function(field) {
+    picked[field] = reportValueOrBlank(row[field]);
+  });
+  return picked;
+}
+
 // US-014: Export cover report as PDF.
 // Builds a temporary Google Spreadsheet that mirrors the ปก layout,
 // exports it as PDF (A4 portrait), returns base64 so the client can

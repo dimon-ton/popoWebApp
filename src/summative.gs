@@ -15,6 +15,39 @@ function computeGrade(total) {
   return 0;
 }
 
+function getSummativeScoreMaxes(subject_id) {
+  var weights = dbFindOne('SubjectWeights', 'subject_id', subject_id) || {
+    pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30
+  };
+  var preMidMax = weights.pre_mid_max !== undefined && weights.pre_mid_max !== '' ? Number(weights.pre_mid_max) : 25;
+  var postMidMax = weights.post_mid_max !== undefined && weights.post_mid_max !== '' ? Number(weights.post_mid_max) : 25;
+  var midtermMax = weights.mid_max !== undefined && weights.mid_max !== '' ? Number(weights.mid_max) : 20;
+  var finalMax = weights.final_exam_max !== undefined && weights.final_exam_max !== '' ? Number(weights.final_exam_max) : 30;
+  return {
+    coursework: (!isNaN(preMidMax) ? preMidMax : 25) + (!isNaN(postMidMax) ? postMidMax : 25),
+    midterm: !isNaN(midtermMax) ? midtermMax : 20,
+    final: !isNaN(finalMax) ? finalMax : 30
+  };
+}
+
+function parseSummativeScore(value, max, label, student_id) {
+  if (value === '' || value === null || value === undefined) return '';
+  var n = Number(value);
+  if (isNaN(n) || n < 0 || n > max) {
+    throw new Error('คะแนน ' + label + ' ของนักเรียน ' + student_id + ' ต้องอยู่ระหว่าง 0 ถึง ' + max);
+  }
+  return n;
+}
+
+function parseMakeupGrade(value, student_id) {
+  if (value === '' || value === null || value === undefined) return '';
+  var n = Number(value);
+  if (isNaN(n) || n < 0 || n > 4) {
+    throw new Error('คะแนนสอบแก้ตัวของนักเรียน ' + student_id + ' ต้องอยู่ระหว่าง 0 ถึง 4');
+  }
+  return n;
+}
+
 // Returns all data needed to render the summative scoring grid.
 // Returns: { students, weights, scores, subject_info, class_info, can_edit }
 // scores: map of student_id -> { coursework, midterm, final, total, computed_grade, makeup_grade, final_grade }
@@ -94,6 +127,8 @@ function serverSaveSummative(token, class_id, subject_id, rows) {
 
   if (!rows || rows.length === 0) return { ok: true };
 
+  var maxes = getSummativeScoreMaxes(subject_id);
+
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
@@ -116,10 +151,11 @@ function serverSaveSummative(token, class_id, subject_id, rows) {
     var now = new Date().toISOString();
 
     rows.forEach(function(row) {
-      var cw = row.coursework !== '' && row.coursework !== null && row.coursework !== undefined ? Number(row.coursework) : '';
-      var mid = row.midterm !== '' && row.midterm !== null && row.midterm !== undefined ? Number(row.midterm) : '';
-      var fin = row.final !== '' && row.final !== null && row.final !== undefined ? Number(row.final) : '';
-      var makeup = row.makeup_grade !== '' && row.makeup_grade !== null && row.makeup_grade !== undefined ? Number(row.makeup_grade) : '';
+      var student_id = row.student_id;
+      var cw = parseSummativeScore(row.coursework, maxes.coursework, 'ระหว่างเรียน', student_id);
+      var mid = parseSummativeScore(row.midterm, maxes.midterm, 'สอบกลางภาค', student_id);
+      var fin = parseSummativeScore(row.final, maxes.final, 'สอบปลายภาค', student_id);
+      var makeup = parseMakeupGrade(row.makeup_grade, student_id);
 
       var total = '';
       if (cw !== '' && mid !== '' && fin !== '') {
@@ -134,8 +170,6 @@ function serverSaveSummative(token, class_id, subject_id, rows) {
 
       var computed_grade = computeGrade(total);
       var final_grade = (makeup !== '' && !isNaN(makeup)) ? makeup : computed_grade;
-
-      var student_id = row.student_id;
 
       // Find existing row to update
       var found = false;

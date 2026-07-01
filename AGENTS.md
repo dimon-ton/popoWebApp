@@ -111,6 +111,7 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 Deployment settings are configured in `.clasp.json`:
 - `rootDir` is configured to `src/` to push files inside it directly to the root of the Google Apps Script project.
 - Redeployments should always target the **Production Deployment ID** to keep the application URL constant.
+- The Apps Script project has previously reached the 200-version project history limit. If `clasp redeploy` fails with `Cannot create more versions`, first delete unused versions from Apps Script **Project History**. Versions used by active deployments cannot be deleted until those deployments are archived or repointed. After cleanup, run the normal production redeploy command below.
 
 ```sh
 # Push code files to Google Apps Script
@@ -121,6 +122,13 @@ npx clasp redeploy AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkG
 ```
 
 **Production URL**: `https://script.google.com/macros/s/AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA/exec`
+
+**Current deployment state**:
+- Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
+- Stable production version: `208`
+- HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
+- The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
+- Latest verified production release: `Tighten approval checkbox labels`
 
 ---
 

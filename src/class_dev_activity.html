@@ -11,6 +11,12 @@
     th.name-col, td.name-col { text-align: left; min-width: 180px; }
     tbody td { padding: 6px 8px; border: 1px solid #eee; text-align: center; }
     .dev-result-select { width: 120px; }
+    .column-fill-select { margin-top: 4px; width: 130px; font-size: 12px; padding: 5px 6px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; font-family: inherit; }
+    .column-updated { animation: columnUpdated 1.2s ease-out; }
+    @keyframes columnUpdated {
+      0% { background: #e8f5e9; }
+      100% { background: transparent; }
+    }
   </style>
 </head>
 <body>
@@ -33,7 +39,7 @@
   <div class="card">
     <div class="loading-msg" id="loadingMsg">กำลังโหลด...</div>
     <table id="devTable" style="display:none">
-      <thead><tr><th style="width:54px">ที่</th><th class="name-col">ชื่อ-สกุล</th><th>ผลการประเมิน</th></tr></thead>
+      <thead id="devHead"></thead>
       <tbody id="devBody"></tbody>
     </table>
   </div>
@@ -98,6 +104,9 @@ function renderDevActivity(data) {
     'กิจกรรมพัฒนาผู้เรียน — ' + (cls.class_label || fmtCls(cls.level, cls.section)) + ' — ' + (subj.subject_name || '');
   document.getElementById('readonlyNotice').style.display = data.can_edit ? 'none' : 'block';
   document.getElementById('saveBar').style.display = data.can_edit ? 'flex' : 'none';
+  document.getElementById('devHead').innerHTML = data.can_edit
+    ? '<tr><th style="width:54px">ที่</th><th class="name-col">ชื่อ-สกุล</th><th>ผลการประเมิน<br>' + getColumnFillSelectHtml() + '</th></tr>'
+    : '<tr><th style="width:54px">ที่</th><th class="name-col">ชื่อ-สกุล</th><th>ผลการประเมิน</th></tr>';
   var body = document.getElementById('devBody');
   body.innerHTML = '';
   (data.dev_students || []).forEach(function(student) {
@@ -110,10 +119,50 @@ function renderDevActivity(data) {
         '</select>'
       : escHtml(student.result || '-');
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + escHtml(student.seq_no) + '</td><td class="name-col">' + escHtml(student.full_name) + '</td><td>' + resultHtml + '</td>';
+    tr.innerHTML = '<td>' + escHtml(student.seq_no) + '</td><td class="name-col">' + escHtml(student.full_name) + '</td><td class="dev-result-cell">' + resultHtml + '</td>';
     body.appendChild(tr);
   });
   document.getElementById('devTable').style.display = 'table';
+}
+
+function normalizeDevActivityResult(value) {
+  var result = String(value || '').trim();
+  var allowed = ['', 'ผ่าน', 'ไม่ผ่าน', 'ร', 'มส'];
+  return allowed.indexOf(result) >= 0 ? result : null;
+}
+
+function getColumnFillSelectHtml() {
+  return '<select class="column-fill-select" onchange="fillDevActivityColumn(this)">' +
+    '<option value="__noop">ใส่ทั้งคอลัมน์...</option>' +
+    '<option value="">ว่าง</option>' +
+    ['ผ่าน','ไม่ผ่าน','ร','มส'].map(function(opt) {
+      return '<option value="' + escHtml(opt) + '">' + escHtml(opt) + '</option>';
+    }).join('') +
+  '</select>';
+}
+
+function fillDevActivityColumn(control) {
+  var selects = document.querySelectorAll('#devBody .dev-result-select');
+  if (!selects.length) return;
+
+  var selected = control ? control.value : '__noop';
+  if (selected === '__noop') return;
+
+  var value = normalizeDevActivityResult(selected);
+  if (value === null) {
+    showToast('กรุณากรอกเฉพาะ ผ่าน, ไม่ผ่าน, ร หรือ มส', 'error');
+    if (control) control.value = '__noop';
+    return;
+  }
+
+  selects.forEach(function(sel) { sel.value = value; });
+  document.querySelectorAll('#devBody .dev-result-cell').forEach(function(cell) {
+    cell.classList.remove('column-updated');
+    void cell.offsetWidth;
+    cell.classList.add('column-updated');
+  });
+  if (control) control.value = '__noop';
+  showToast('อัปเดตคอลัมน์ผลการประเมินแล้ว อย่าลืมกดบันทึก', 'success');
 }
 
 function saveDevActivity() {
