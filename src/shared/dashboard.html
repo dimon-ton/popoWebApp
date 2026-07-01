@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>หน้าหลัก — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-dashboard">
+  <div class="navbar">
+    <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+    <? if (data.session && data.session.role === 'admin') { ?>
+    <a href="#" onclick="navigate('admin_enrollments'); return false;">จัดการผู้สอน</a>
+    <a href="#" onclick="navigate('admin_workload'); return false;">ภาระงานครู</a>
+    <a href="#" onclick="navigate('admin_users'); return false;">จัดการผู้ใช้</a>
+    <? } ?>
+    <div class="navbar-user">
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+    </div>
+  </div>
+  <div class="container" style="max-width:880px">
+    <div class="card" id="dashContent" style="display:none">
+      <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
+      <? if (data.session && data.session.role === 'admin') { ?>
+      <div class="admin-setup-steps">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--brand);border-bottom:2px solid var(--brand-light);padding-bottom:8px">ขั้นตอนการจัดการข้อมูลระบบ</h3>
+        
+        <!-- Step 1 -->
+        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>เพิ่มและจัดการชั้นเรียน</h4>
+            <p>สร้างรายชื่อห้องเรียนทั้งหมด (เช่น ป.1/1, ม.3/2) เพื่อลงทะเบียนข้อมูลนักเรียนและผู้สอนในภายหลัง</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 2 -->
+        <a class="step-card" href="#" onclick="navigate('admin_subjects'); return false;">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>สร้างและจัดการรายวิชา</h4>
+            <p>กำหนดรหัสวิชา ชื่อวิชา และจัดกลุ่มสาระการเรียนรู้ตามหลักสูตรแกนกลางของโรงเรียน</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 3 -->
+        <a class="step-card" href="#" onclick="navigate('admin_weights'); return false;">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>กำหนดสัดส่วนน้ำหนักคะแนน</h4>
+            <p>แบ่งสัดส่วนน้ำหนักคะแนนรายวิชา (เช่น คะแนนเก็บ, สอบกลางภาค, สอบปลายภาค) ให้แต่ละวิชา</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 4 -->
+        <a class="step-card" href="#" onclick="navigate('admin_indicators'); return false;">
+          <div class="step-badge">4</div>
+          <div class="step-content">
+            <h4>จัดเตรียมตัวชี้วัดและผลการเรียนรู้</h4>
+            <p>ใส่รายการตัวชี้วัดรายวิชาที่จำเป็นต้องประเมิน สำหรับนำไปใช้ตัดเกรดในคะแนนเก็บและคะแนนคุณลักษณะ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 5 -->
+        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge">5</div>
+          <div class="step-content">
+            <h4>ลงทะเบียนและอัปโหลดรายชื่อนักเรียน</h4>
+            <p>เข้าไปในแต่ละห้องเรียนเพื่อกรอกชื่อสกุล เลขที่ และข้อมูลนักเรียนทั้งหมดในห้องเรียนนั้นๆ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 6 -->
+        <a class="step-card" href="#" onclick="navigate('admin_users'); return false;">
+          <div class="step-badge">6</div>
+          <div class="step-content">
+            <h4>สร้างบัญชีผู้ใช้สำหรับผู้สอน</h4>
+            <p>สร้างชื่อผู้ใช้ รหัสผ่านเริ่มต้น และระดับสิทธิ์การทำงานให้กับคุณครูผู้ประเมินผลการเรียน</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 7 -->
+        <a class="step-card" href="#" onclick="navigate('admin_enrollments'); return false;">
+          <div class="step-badge">7</div>
+          <div class="step-content">
+            <h4>มอบหมายครูผู้สอนประจำรายวิชา</h4>
+            <p>ระบุว่าคุณครูท่านใดสอนรายวิชาใดในห้องเรียนใด (รองรับการมอบหมายแบบทีละวิชาและมอบหมายจำนวนมาก)</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 8 -->
+        <a class="step-card" href="#" onclick="navigate('admin_workload'); return false;">
+          <div class="step-badge">8</div>
+          <div class="step-content">
+            <h4>ตรวจสอบและควบคุมภาระงานครู</h4>
+            <p>ดูสรุปภาระงานสอนของคุณครูแต่ละท่าน จำนวนวิชาที่สอน และจำนวนนักเรียนรวมเพื่อความสมดุล</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+
+        <!-- Step 9 -->
+        <a class="step-card" href="#" onclick="navigate('admin_audit'); return false;">
+          <div class="step-badge">9</div>
+          <div class="step-content">
+            <h4>ตรวจสอบประวัติการแก้ไขข้อมูล</h4>
+            <p>ตรวจสอบและสืบค้นประวัติการแก้ไขคะแนนหรือข้อมูลสำคัญในฐานข้อมูลระบบ</p>
+          </div>
+          <div class="step-action-arrow">➔</div>
+        </a>
+      </div>
+      <? } ?>
+
+      <h3 style="font-size:15px;font-weight:600;margin-top:20px;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px">การจัดการทั่วไป</h3>
+      <div class="menu-grid">
+        <? if (data.session && data.session.role === 'admin') { ?>
+        <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
+        <? } ?>
+        <a class="menu-item" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
+        <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
+      </div>
+    </div>
+    <div class="card" id="welcomeSkeleton">
+      <div class="skeleton-line w50" style="height:24px;margin-bottom:12px"></div>
+      <div class="skeleton-line w40" style="height:14px"></div>
+    </div>
+    <? if (data.session && data.session.role === 'admin') { ?>
+    <div class="card" id="dashSkeleton">
+      <div class="admin-setup-steps">
+        <div class="skeleton-line w40" style="height:18px;margin-bottom:4px"></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w40"></div><div class="skeleton-line w70" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w60"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+        <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w45"></div><div class="skeleton-line w75" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
+      </div>
+    </div>
+    <? } ?>
+
+    <? if (data.session && data.session.role !== 'admin') { ?>
+    <div id="teacherSection" class="teacher-section">
+      <div class="card">
+        <h3>รายวิชาที่สอน</h3>
+        <div id="teacherLoading" class="loading-msg">
+          <div class="skeleton-list">
+            <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-action-grid"><div class="skeleton-action"></div><div class="skeleton-action"></div><div class="skeleton-action"></div></div></div><div class="skeleton-line" style="width:48px"></div></div></div>
+            <div class="skeleton-list-item"><div class="skeleton-row"><div style="flex:1"><div class="skeleton-line w45"></div><div class="skeleton-action-grid"><div class="skeleton-action"></div><div class="skeleton-action"></div><div class="skeleton-action"></div></div></div><div class="skeleton-line" style="width:48px"></div></div></div>
+          </div>
+        </div>
+        <div id="teacherPairs"></div>
+      </div>
+    </div>
+    <? } ?>
+  </div>
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var ROLE = '<?= data.session ? data.session.role : "" ?>';
+if (TOKEN) localStorage.setItem('popo_token', TOKEN);
+
+setTimeout(function() {
+  var welcomeSk = document.getElementById('welcomeSkeleton');
+  var sk = document.getElementById('dashSkeleton');
+  var ct = document.getElementById('dashContent');
+  if (welcomeSk) welcomeSk.style.display = 'none';
+  if (sk) sk.style.display = 'none';
+  if (ct) ct.style.display = 'block';
+}, 300);
+
+<? if (data.session && data.session.role !== 'admin') { ?>
+loadTeacherClasses();
+<? } ?>
+
+function loadTeacherClasses() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('teacherLoading').style.display = 'none';
+      if (result && result.error) {
+        document.getElementById('teacherPairs').innerHTML = '<p style="color:var(--red)">' + escHtml(result.error) + '</p>';
+        return;
+      }
+      renderTeacherPairs(result.pairs || []);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('teacherLoading').style.display = 'none';
+      document.getElementById('teacherPairs').innerHTML = '<p style="color:var(--red)">เกิดข้อผิดพลาด: ' + escHtml(err.message) + '</p>';
+    })
+    .clientGetTeacherOwnClasses(TOKEN);
+}
+
+function renderTeacherPairs(pairs) {
+  if (pairs.length === 0) {
+    document.getElementById('teacherPairs').innerHTML = '<p style="color:var(--text-muted)">ยังไม่มีรายวิชาที่สอน — กรุณาติดต่อผู้ดูแลระบบ</p>';
+    return;
+  }
+  var container = document.getElementById('teacherPairs');
+  var html = '';
+  pairs.forEach(function(p) {
+    var cid = encodeURIComponent(p.class_id);
+    var sid = encodeURIComponent(p.subject_id);
+    html += '<div class="pair-card">' +
+      '<div class="pair-card-header">' +
+        '<h3>' + escHtml(p.class_label) + ' — ' + escHtml(p.subject_name) + '</h3>' +
+        '<span class="student-count">' + p.student_count + ' คน</span>' +
+      '</div>' +
+      '<div class="pair-links">' +
+        '<a class="pair-link students" href="#" onclick="goPage(\'class_students\',\'' + escAttr(p.class_id) + '\'); return false;">ข้อมูลนักเรียน</a>' +
+        '<a class="pair-link attendance" href="#" onclick="goPage(\'class_attendance\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">เช็คชื่อ</a>' +
+        '<a class="pair-link formative" href="#" onclick="goPage(\'class_formative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">คะแนน1 ตัวชี้วัด</a>' +
+        '<a class="pair-link summative" href="#" onclick="goPage(\'class_summative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">คะแนน2 ผลการเรียน</a>' +
+        '<a class="pair-link characteristics" href="#" onclick="goPage(\'class_characteristics\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">คุณลักษณะ</a>' +
+        '<a class="pair-link readthinkwrite" href="#" onclick="goPage(\'class_readthinkwrite\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">อ่านคิดเขียน</a>' +
+        '<a class="pair-link report" href="#" onclick="goPage(\'class_dev_activity\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">กิจกรรมพัฒนาผู้เรียน</a>' +
+        '<a class="pair-link report" href="#" onclick="goPage(\'class_report\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">รายงานผลการเรียน</a>' +
+      '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function goPage(page, classId, subjectId) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtmlWithParams(TOKEN, page, classId || '', subjectId || '');
+}
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+
+function showNavLoading() {
+  var el = document.createElement('div');
+  el.className = 'nav-loading';
+  el.id = 'navLoading';
+  el.innerHTML = '<div class="skeleton-line w50" style="height:22px;width:260px"></div><div class="skeleton-line w40" style="width:190px;margin-top:10px"></div><div class="skeleton-menu"><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div><div class="skeleton-menu-item"></div></div>';
+  document.body.appendChild(el);
+}
+
+function hideNavLoading() {
+  var el = document.getElementById('navLoading');
+  if (el) el.remove();
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+</script>
+</body>
+</html>

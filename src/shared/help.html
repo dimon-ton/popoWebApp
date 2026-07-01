@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คู่มือการใช้งาน — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-help">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('weights_ref')">ตารางน้ำหนักคะแนน</a>
+  <div class="navbar-user">
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+  </div>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">คู่มือการใช้งานระบบบันทึกคะแนน</h2>
+
+  <!-- วิธีทำ1: วิธีการบันทึกคะแนนตามตัวชี้วัด -->
+  <div class="card">
+    <div class="section-title">วิธีทำ 1 — การบันทึกคะแนนตามตัวชี้วัด (คะแนน1)</div>
+
+    <h3>ขั้นตอนการบันทึกคะแนนตามตัวชี้วัด</h3>
+    <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+      <li>เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแลระบบ</li>
+      <li>เลือกชั้นเรียนและวิชาที่ต้องการบันทึกคะแนน</li>
+      <li>คลิกที่เมนู "คะแนนตามตัวชี้วัด" (คะแนน1)</li>
+      <li>กรอกคะแนนของนักเรียนแต่ละคนในช่องตัวชี้วัดแต่ละตัว (0–3 คะแนน)</li>
+      <li>ระบบจะคำนวณคะแนนรวมแถวอัตโนมัติ</li>
+      <li>คลิก "บันทึกคะแนน" เพื่อบันทึกข้อมูล</li>
+    </ol>
+
+    <h3>เกณฑ์การให้คะแนนตัวชี้วัด</h3>
+    <ul>
+      <li><strong>3 คะแนน</strong> — ผ่านตัวชี้วัดในระดับดีเยี่ยม</li>
+      <li><strong>2 คะแนน</strong> — ผ่านตัวชี้วัดในระดับดี</li>
+      <li><strong>1 คะแนน</strong> — ผ่านตัวชี้วัดในระดับพอใช้</li>
+      <li><strong>0 คะแนน</strong> — ไม่ผ่านตัวชี้วัด</li>
+    </ul>
+
+    <h3>การบันทึกการเข้าแถว (การเข้าเรียน)</h3>
+    <ul>
+      <li><strong>/</strong> — เข้าเรียน (มา)</li>
+      <li><strong>ล</strong> — ลา (ลาป่วย/กิจ)</li>
+      <li><strong>ข</strong> — ขาด (ขาดเรียนโดยไม่มีเหตุผล)</li>
+      <li><strong>ว่าง</strong> — ไม่ใช่วันเรียน</li>
+    </ul>
+    <p>คลิกที่ช่องการเข้าเรียนเพื่อวนระหว่างสถานะ ระบบจะบันทึกข้อมูลสะสมตลอดปีการศึกษา</p>
+  </div>
+
+  <!-- วิธีทำ2: วิธีการบันทึกคะแนนสรุป -->
+  <div class="card">
+    <div class="section-title">วิธีทำ 2 — การบันทึกคะแนนสรุปและการคำนวณผล (คะแนน2)</div>
+
+    <h3>ขั้นตอนการบันทึกคะแนนสรุป</h3>
+    <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+      <li>เลือกชั้นเรียนและวิชา คลิกเมนู "คะแนนสรุป" (คะแนน2)</li>
+      <li>กรอกคะแนน <strong>ระหว่างเรียน</strong> (coursework), <strong>สอบกลางภาค</strong>, <strong>สอบปลายภาค</strong></li>
+      <li>ระบบคำนวณ <strong>รวมทั้งหมด</strong> และ <strong>ผลการประเมิน</strong> อัตโนมัติ</li>
+      <li>หากนักเรียนสอบแก้ตัว ให้กรอกในช่อง <strong>สอบแก้ตัว</strong> เพื่อแทนที่ผลเดิม</li>
+      <li>คลิก "บันทึกคะแนน" เพื่อบันทึกข้อมูล</li>
+    </ol>
+
+    <h3>บันไดระดับผลการเรียน (เกรด)</h3>
+    <table class="scale-table">
+      <thead>
+        <tr>
+          <th>คะแนนรวม</th>
+          <th>ผลการเรียน</th>
+          <th>ความหมาย</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>80–100</td><td><span class="badge badge-4">4</span></td><td>ดีเยี่ยม</td></tr>
+        <tr><td>75–79</td><td><span class="badge badge-35">3.5</span></td><td>ดีมาก</td></tr>
+        <tr><td>70–74</td><td><span class="badge badge-3">3</span></td><td>ดี</td></tr>
+        <tr><td>65–69</td><td><span class="badge badge-3">2.5</span></td><td>ค่อนข้างดี</td></tr>
+        <tr><td>60–64</td><td><span class="badge badge-2">2</span></td><td>น่าพอใจ</td></tr>
+        <tr><td>55–59</td><td><span class="badge badge-2">1.5</span></td><td>พอใช้</td></tr>
+        <tr><td>50–54</td><td><span class="badge badge-1">1</span></td><td>ผ่านเกณฑ์ขั้นต่ำ</td></tr>
+        <tr><td>0–49</td><td><span class="badge badge-0">0</span></td><td>ต่ำกว่าเกณฑ์</td></tr>
+      </tbody>
+    </table>
+
+    <h3>คุณลักษณะอันพึงประสงค์ (8 ด้าน) — สูงสุด 80 คะแนน</h3>
+    <p>ประเมินแต่ละด้าน 0–10 คะแนน รวม 8 ด้าน = สูงสุด 80 คะแนน</p>
+    <table class="scale-table">
+      <thead><tr><th>คะแนนรวม</th><th>ระดับคุณภาพ</th></tr></thead>
+      <tbody>
+        <tr><td>70–80</td><td><span class="badge badge-diyiam">ดีเยี่ยม</span></td></tr>
+        <tr><td>60–69</td><td><span class="badge badge-di">ดี</span></td></tr>
+        <tr><td>50–59</td><td><span class="badge badge-pass">ผ่านเกณฑ์</span></td></tr>
+        <tr><td>0–49</td><td><span class="badge badge-fail">ไม่ผ่าน</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>การอ่าน คิดวิเคราะห์ และเขียน — สูงสุด 100 คะแนน</h3>
+    <p>ประเมิน 10 รายการ (อ่าน 3 รายการ, คิดวิเคราะห์ 4 รายการ, เขียน 3 รายการ) รายการละ 0–10 คะแนน</p>
+    <table class="scale-table">
+      <thead><tr><th>คะแนนรวม</th><th>ระดับคุณภาพ</th></tr></thead>
+      <tbody>
+        <tr><td>90–100</td><td><span class="badge badge-diyiam">ดีเยี่ยม</span></td></tr>
+        <tr><td>80–89</td><td><span class="badge badge-di">ดี</span></td></tr>
+        <tr><td>70–79</td><td><span class="badge badge-pass">ผ่านเกณฑ์</span></td></tr>
+        <tr><td>0–69</td><td><span class="badge badge-fail">ไม่ผ่าน</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>น้ำหนักคะแนนแต่ละวิชา</h3>
+    <ul>
+      <li><strong>กลุ่มที่ 1</strong> (ภาษาไทย, คณิตศาสตร์, วิทยาศาสตร์, สังคมศึกษา, ประวัติศาสตร์, ภาษาอังกฤษ): ระหว่างเรียน 70 คะแนน / ปลายภาค 30 คะแนน</li>
+      <li><strong>กลุ่มที่ 2</strong> (ศิลปะ, สุขศึกษาพลศึกษา, การงานอาชีพ, วิทยาการคำนวณ, การป้องกัน): ระหว่างเรียน 80 คะแนน / ปลายภาค 20 คะแนน</li>
+    </ul>
+    <p><a href="#" onclick="navigate('weights_ref'); return false;" style="color:#1a56a0">ดูตารางน้ำหนักคะแนนฉบับเต็ม →</a></p>
+  </div>
+</div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); alert('เกิดข้อผิดพลาด: ' + err.message); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
+}
+</script>
+</body>
+</html>

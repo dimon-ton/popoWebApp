@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ทะเบียนนักเรียน — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-class-students">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <?!= data.session && data.session.role === 'admin' ? '<a href="#" onclick="navigate(\'admin_classes\')">ชั้นเรียน</a>' : '' ?>
+  <div class="navbar-user">
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+  </div>
+</div>
+
+<div class="container">
+  <h2 id="pageHeading">ทะเบียนนักเรียน</h2>
+
+  <div id="addCard" class="card" style="display:none">
+    <h3>เพิ่มนักเรียน</h3>
+    <div class="form-row">
+      <div class="form-group" style="min-width:60px">
+        <label>เลขที่</label>
+        <input type="number" id="newSeqNo" min="1" placeholder="1">
+      </div>
+      <div class="form-group" style="min-width:110px">
+        <label>เลขประจำตัว</label>
+        <input type="text" id="newStudentCode" placeholder="รหัสนักเรียน">
+      </div>
+      <div class="form-group" style="min-width:140px">
+        <label>เลขประจำตัวประชาชน</label>
+        <input type="text" id="newCitizenId" placeholder="13 หลัก" maxlength="13">
+      </div>
+      <div class="form-group" style="min-width:110px">
+        <label>คำนำหน้า</label>
+        <input type="text" id="newPrefix" list="studentPrefixList" placeholder="คำนำหน้า">
+        <datalist id="studentPrefixList">
+          <option value="เด็กชาย">
+          <option value="เด็กหญิง">
+          <option value="นาย">
+          <option value="นาง">
+          <option value="นางสาว">
+        </datalist>
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label>ชื่อ</label>
+        <input type="text" id="newFirstName" placeholder="ชื่อ">
+      </div>
+      <div class="form-group" style="min-width:140px">
+        <label>นามสกุล</label>
+        <input type="text" id="newLastName" placeholder="นามสกุล">
+      </div>
+      <div class="form-group" style="min-width:110px">
+        <label>วันเกิด</label>
+        <div class="thai-date-picker" data-thai-date-picker>
+          <input type="hidden" id="newDob" data-thai-date-value>
+          <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันเกิด" readonly>
+        </div>
+      </div>
+      <div class="form-group" style="min-width:120px">
+        <label>หมายเหตุ</label>
+        <input type="text" id="newNote" placeholder="">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn-primary" id="addStudentBtn" onclick="addStudent()">เพิ่มนักเรียน</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="csvCard" class="card" style="display:none">
+    <h3>นำเข้ารายชื่อนักเรียนด้วย CSV</h3>
+    <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+      ใช้สำหรับเพิ่มหรืออัปเดตรายชื่อนักเรียนในชั้นเรียนนี้ คอลัมน์ <code>first_name*</code> และ <code>last_name*</code> ต้องกรอก ระบบจะรวมคำนำหน้า ชื่อ และนามสกุลให้ คอลัมน์ <code>student_id</code> ไม่บังคับ หากเว้นว่างระบบจะสร้างให้ใหม่
+    </div>
+    <div class="form-row" style="align-items:center;">
+      <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
+        <input type="file" id="studentsCsvInput" accept=".csv" style="padding:6px 11px; width:100%;">
+      </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-secondary" onclick="downloadStudentsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+      </div>
+      <div class="form-group" style="justify-content:flex-end; margin-bottom:0;">
+        <button class="btn-primary" id="importStudentsCsvBtn" onclick="importStudentsCSV()">นำเข้า CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 id="tableHeading">รายชื่อนักเรียน</h3>
+    <div id="readonlyNotice" class="readonly-notice" style="display:none">คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูประจำชั้นหรือผู้ดูแลระบบแก้ไขได้</div>
+    <div class="loading-msg" id="studentsLoading">
+      <div class="skeleton-table">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
+      </div>
+    </div>
+    <table id="studentsTable" style="display:none">
+      <thead>
+        <tr>
+          <th>เลขที่</th>
+          <th>เลขประจำตัว</th>
+          <th>เลขประจำตัวประชาชน</th>
+          <th>ชื่อ-สกุล</th>
+          <th>วันเกิด</th>
+          <th>หมายเหตุ</th>
+          <th id="actionHeader"></th>
+        </tr>
+      </thead>
+      <tbody id="studentsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var CAN_EDIT = false;
+
+function navigate(page, extra) {
+  showNavLoading();
+  var args = [TOKEN, page];
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var rows = [];
+  var row = [''];
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    var next = text[i + 1];
+    if (c === '"') {
+      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      row.push('');
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      rows.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += c;
+    }
+  }
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+
+function csvEscape(value) {
+  var s = String(value == null ? '' : value);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function downloadCSVFile(filename, rows) {
+  var csv = rows.map(function(row) { return row.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function normalizeCSVHeader(header) {
+  return String(header || '').trim().replace(/\s*\*$/, '').trim();
+}
+
+function findCSVHeaderIndex(headers, names) {
+  for (var i = 0; i < names.length; i++) {
+    var idx = headers.indexOf(names[i]);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function downloadStudentsCSVTemplate() {
+  downloadCSVFile('students_import_template_' + CLASS_ID + '.csv', [
+    ['student_id', 'seq_no', 'student_code', 'citizen_id', 'prefix', 'first_name*', 'last_name*', 'full_name', 'dob', 'note'],
+    ['', '1', '65001', '', 'เด็กชาย', 'ตัวอย่าง', 'นักเรียน', '', '01 ม.ค. 60', ''],
+    ['', '2', '65002', '', 'เด็กหญิง', 'ตัวอย่าง', 'เรียนดี', '', '02 ม.ค. 60', '']
+  ]);
+}
+
+function importStudentsCSV() {
+  var input = document.getElementById('studentsCsvInput');
+  if (!input.files || input.files.length === 0) {
+    showToast('กรุณาเลือกไฟล์ CSV', 'error');
+    return;
+  }
+  var btn = document.getElementById('importStudentsCsvBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังนำเข้า...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var csvRows = parseCSV(e.target.result);
+      var headers = (csvRows[0] || []).map(normalizeCSVHeader);
+      var idIdx = findCSVHeaderIndex(headers, ['student_id']);
+      var seqIdx = findCSVHeaderIndex(headers, ['seq_no', 'เลขที่']);
+      var codeIdx = findCSVHeaderIndex(headers, ['student_code', 'เลขประจำตัว']);
+      var citizenIdx = findCSVHeaderIndex(headers, ['citizen_id', 'เลขประจำตัวประชาชน']);
+      var prefixIdx = findCSVHeaderIndex(headers, ['prefix']);
+      var firstNameIdx = findCSVHeaderIndex(headers, ['first_name']);
+      var lastNameIdx = findCSVHeaderIndex(headers, ['last_name']);
+      var nameIdx = findCSVHeaderIndex(headers, ['full_name', 'ชื่อ-สกุล']);
+      var dobIdx = findCSVHeaderIndex(headers, ['dob', 'วันเกิด']);
+      var noteIdx = findCSVHeaderIndex(headers, ['note', 'หมายเหตุ']);
+      if (seqIdx === -1 || ((firstNameIdx === -1 || lastNameIdx === -1) && nameIdx === -1)) {
+        showToast('หัวตาราง CSV ไม่ถูกต้อง กรุณาใช้แม่แบบ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      var rows = [];
+      for (var i = 1; i < csvRows.length; i++) {
+        var r = csvRows[i];
+        var prefix = prefixIdx !== -1 && r[prefixIdx] ? r[prefixIdx].trim() : '';
+        var firstName = firstNameIdx !== -1 && r[firstNameIdx] ? r[firstNameIdx].trim() : '';
+        var lastName = lastNameIdx !== -1 && r[lastNameIdx] ? r[lastNameIdx].trim() : '';
+        var composedName = firstName || lastName ? (prefix + firstName + (lastName ? ' ' + lastName : '')).trim() : '';
+        var name = nameIdx !== -1 && r[nameIdx] ? r[nameIdx].trim() : composedName;
+        var code = r[codeIdx] ? r[codeIdx].trim() : '';
+        var seqNo = r[seqIdx] ? r[seqIdx].trim() : '';
+        if (!name && !code && !seqNo) continue;
+        rows.push({
+          student_id: idIdx !== -1 && r[idIdx] ? r[idIdx].trim() : '',
+          seq_no: seqNo,
+          student_code: code,
+          citizen_id: citizenIdx !== -1 && r[citizenIdx] ? r[citizenIdx].trim() : '',
+          full_name: name,
+          dob: dobIdx !== -1 && r[dobIdx] ? r[dobIdx].trim() : '',
+          note: noteIdx !== -1 && r[noteIdx] ? r[noteIdx].trim() : ''
+        });
+      }
+      if (rows.length === 0) {
+        showToast('ไม่พบข้อมูลนักเรียนในไฟล์ CSV', 'error');
+        btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          if (result && result.error) { showToast(result.error, 'error'); return; }
+          var msg = 'นำเข้า ' + result.success_count + ' รายการ (เพิ่มใหม่ ' + (result.created_count || 0) + ', อัปเดต ' + (result.updated_count || 0) + ')';
+          if (result.warnings && result.warnings.length) msg += ' พบข้อควรระวัง ' + result.warnings.length + ' รายการ';
+          showToast(msg, result.warnings && result.warnings.length ? 'error' : 'success');
+          input.value = '';
+          loadStudents();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+          showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .serverImportStudentsCSV(TOKEN, CLASS_ID, rows);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+      showToast('อ่านไฟล์ CSV ไม่สำเร็จ: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = function() {
+    btn.disabled = false; btn.textContent = 'นำเข้า CSV';
+    showToast('ไม่สามารถอ่านไฟล์ CSV ได้', 'error');
+  };
+  reader.readAsText(input.files[0], 'UTF-8');
+}
+
+function loadStudents() {
+  if (!CLASS_ID) {
+    document.getElementById('studentsLoading').textContent = 'ไม่พบรหัสชั้นเรียน — กรุณาเข้าผ่านเมนูชั้นเรียน';
+    return;
+  }
+  document.getElementById('studentsLoading').style.display = 'block';
+  document.getElementById('studentsTable').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        document.getElementById('studentsLoading').style.display = 'none';
+        showToast(result.error, 'error');
+        return;
+      }
+      CAN_EDIT = result.can_edit === true;
+      var info = result.class_info || {};
+      document.getElementById('pageHeading').textContent =
+        'ทะเบียนนักเรียน — ' + escHtml(info.class_label || fmtCls(info.level, info.section));
+      document.getElementById('tableHeading').textContent =
+        'รายชื่อนักเรียน (' + (result.students || []).length + ' คน)';
+      if (CAN_EDIT) {
+        document.getElementById('addCard').style.display = 'block';
+        document.getElementById('csvCard').style.display = 'block';
+        document.getElementById('actionHeader').textContent = 'จัดการ';
+        document.getElementById('readonlyNotice').style.display = 'none';
+      } else {
+        document.getElementById('addCard').style.display = 'none';
+        document.getElementById('csvCard').style.display = 'none';
+        document.getElementById('actionHeader').textContent = '';
+        document.getElementById('readonlyNotice').style.display = 'block';
+      }
+      renderStudents(result.students || []);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('studentsLoading').style.display = 'none';
+      showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getStudentsList(TOKEN, CLASS_ID);
+}
+
+function renderStudents(students) {
+  document.getElementById('studentsLoading').style.display = 'none';
+  var tbody = document.getElementById('studentsBody');
+  tbody.innerHTML = '';
+  students.forEach(function(s) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-student-id', s.student_id);
+    tr.setAttribute('data-dob-input', s.dob_input || '');
+    var actionCell = CAN_EDIT
+      ? '<td><div class="action-btns">' +
+          '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
+          '<button class="btn-danger" onclick="deleteStudent(\'' + escHtml(s.student_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
+        '</div></td>'
+      : '<td></td>';
+    tr.innerHTML =
+      '<td class="cell-seq_no">' + escHtml(s.seq_no) + '</td>' +
+      '<td class="cell-student_code">' + escHtml(s.student_code) + '</td>' +
+      '<td class="cell-citizen_id">' + escHtml(s.citizen_id) + '</td>' +
+      '<td class="cell-full_name">' + escHtml(s.full_name) + '</td>' +
+      '<td class="cell-dob">' + escHtml(s.dob) + '</td>' +
+      '<td class="cell-note">' + escHtml(s.note) + '</td>' +
+      actionCell;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('studentsTable').style.display = 'table';
+}
+
+function startEdit(student_id) {
+  var tr = document.querySelector('tr[data-student-id="' + student_id + '"]');
+  if (!tr) return;
+  var fields = ['seq_no','student_code','citizen_id','full_name','dob','note'];
+  fields.forEach(function(f) {
+    var td = tr.querySelector('.cell-' + f);
+    var val = f === 'dob' ? (tr.getAttribute('data-dob-input') || '') : td.textContent;
+    if (f === 'dob') {
+      td.innerHTML =
+        '<div class="thai-date-picker" data-thai-date-picker>' +
+          '<input type="hidden" data-field="' + f + '" data-thai-date-value value="' + escHtml(val) + '">' +
+          '<input type="text" class="edit-field thai-date-display" data-thai-date-display placeholder="เลือกวันเกิด" readonly>' +
+        '</div>';
+      if (typeof initThaiDatePickers === 'function') initThaiDatePickers(td);
+    } else {
+      td.innerHTML = '<input type="text" class="edit-field" data-field="' + f + '" value="' + escHtml(val) + '">';
+    }
+  });
+  var actionDiv = tr.querySelector('.action-btns');
+  actionDiv.innerHTML =
+    '<button class="btn-save" onclick="saveEdit(\'' + escHtml(student_id) + '\')">บันทึก</button>' +
+    '<button class="btn-secondary" onclick="cancelEdit(\'' + escHtml(student_id) + '\')">ยกเลิก</button>';
+}
+
+function cancelEdit(student_id) {
+  loadStudents();
+}
+
+function saveEdit(student_id) {
+  var tr = document.querySelector('tr[data-student-id="' + student_id + '"]');
+  if (!tr) return;
+  var get = function(f) {
+    var inp = tr.querySelector('input[data-field="' + f + '"]');
+    return inp ? inp.value : '';
+  };
+  var btn = tr.querySelector('.btn-save');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); if (btn) btn.disabled = false; return; }
+      showToast('บันทึกข้อมูลนักเรียนสำเร็จ', 'success');
+      loadStudents();
+    })
+    .withFailureHandler(function(err) {
+      if (btn) btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverUpdateStudent(TOKEN, student_id,
+      get('seq_no'), get('student_code'), get('citizen_id'),
+      get('full_name'), get('dob'), get('note'));
+}
+
+function addStudent() {
+  var seq_no = document.getElementById('newSeqNo').value.trim();
+  var student_code = document.getElementById('newStudentCode').value.trim();
+  var citizen_id = document.getElementById('newCitizenId').value.trim();
+  var prefix = document.getElementById('newPrefix').value.trim();
+  var firstName = document.getElementById('newFirstName').value.trim();
+  var lastName = document.getElementById('newLastName').value.trim();
+  var full_name = ((prefix ? prefix : '') + firstName + ' ' + lastName).trim();
+  var dob = document.getElementById('newDob').value.trim();
+  var note = document.getElementById('newNote').value.trim();
+
+  if (!firstName || !lastName) { showToast('กรุณากรอกชื่อและนามสกุล', 'error'); return; }
+
+  var btn = document.getElementById('addStudentBtn');
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('เพิ่มนักเรียนสำเร็จ', 'success');
+      document.getElementById('newSeqNo').value = '';
+      document.getElementById('newStudentCode').value = '';
+      document.getElementById('newCitizenId').value = '';
+      document.getElementById('newPrefix').value = '';
+      document.getElementById('newFirstName').value = '';
+      document.getElementById('newLastName').value = '';
+      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('newDob'), '');
+      else document.getElementById('newDob').value = '';
+      document.getElementById('newNote').value = '';
+      loadStudents();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverAddStudent(TOKEN, CLASS_ID, seq_no, student_code, citizen_id, full_name, dob, note);
+}
+
+function deleteStudent(student_id) {
+  if (!confirm('ยืนยันการลบนักเรียนนี้?')) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('ลบนักเรียนสำเร็จ', 'success');
+      loadStudents();
+    })
+    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .serverDeleteStudent(TOKEN, student_id);
+}
+
+loadStudents();
+</script>
+</body>
+</html>

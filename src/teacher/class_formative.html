@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คะแนนตัวชี้วัด — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-class-formative">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <div class="navbar-user">
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+  </div>
+</div>
+
+<div class="container wide">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="page-title" id="pageHeading" style="margin-bottom:0">คะแนนตัวชี้วัด (คะแนน1)</h2>
+    <button class="btn-primary" onclick="openIndicatorsManagement()" id="manageIndicatorsBtn" style="display:none;background:#1a56a0;padding:8px 16px;font-size:13px;border-radius:var(--radius-sm)">จัดการตัวชี้วัด</button>
+  </div>
+
+  <div id="readonlyNotice" class="readonly-notice" style="display:none">
+    คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้
+  </div>
+
+  <div class="card">
+    <div class="loading-msg" id="loadingMsg">
+      <div class="skeleton-table">
+        <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:15%"></div></div>
+      </div>
+    </div>
+    <p class="no-indicators" id="noIndicatorsMsg" style="display:none">
+      ยังไม่มีตัวชี้วัดสำหรับวิชานี้ — กรุณาเพิ่มตัวชี้วัดในหน้าจัดการก่อน
+    </p>
+    <div class="score-top-scroll" id="formativeTopScroll" aria-hidden="true">
+      <div class="score-top-scroll-inner" id="formativeTopScrollInner"></div>
+    </div>
+    <div class="score-table-scroll" id="formativeTableScroll" style="display:none">
+      <table id="formativeTable">
+        <thead id="formativeHead"></thead>
+        <tbody id="formativeBody"></tbody>
+        <tfoot id="formativeFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="save-bar" id="saveBar" style="display:none">
+    <button class="btn-save" id="saveBtn" onclick="saveFormative()">บันทึกคะแนน</button>
+    <span id="saveStatus" style="font-size:13px;color:#888"></span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
+
+var currentData = null;
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function loadFormative() {
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('formativeTableScroll').style.display = 'none';
+  document.getElementById('formativeTopScroll').style.display = 'none';
+  document.getElementById('noIndicatorsMsg').style.display = 'none';
+  document.getElementById('saveBar').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      currentData = result;
+      renderGrid(result);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingMsg').style.display = 'none';
+      showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getFormativeData(TOKEN, CLASS_ID, SUBJECT_ID);
+}
+
+function renderGrid(data) {
+  document.getElementById('loadingMsg').style.display = 'none';
+
+  var cls = data.class_info || {};
+  var subj = data.subject_info || {};
+  document.getElementById('pageHeading').textContent =
+    'คะแนนตัวชี้วัด — ' + (cls.class_label || fmtCls(cls.level, cls.section)) + ' — ' + (subj.subject_name || '');
+
+  var readonlyNotice = document.getElementById('readonlyNotice');
+  var saveBar = document.getElementById('saveBar');
+  if (data.can_edit) {
+    readonlyNotice.style.display = 'none';
+    saveBar.style.display = 'flex';
+    var btn = document.getElementById('manageIndicatorsBtn');
+    if (btn) btn.style.display = 'inline-block';
+  } else {
+    readonlyNotice.style.display = 'block';
+    saveBar.style.display = 'none';
+    var btn = document.getElementById('manageIndicatorsBtn');
+    if (btn) btn.style.display = 'none';
+  }
+
+  if (!data.indicators || data.indicators.length === 0) {
+    document.getElementById('noIndicatorsMsg').style.display = 'block';
+    return;
+  }
+
+  var indicators = data.indicators;
+  var students = data.students || [];
+  var scores = data.scores || {};
+
+  // Build header row
+  var thead = document.getElementById('formativeHead');
+  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
+  indicators.forEach(function(ind) {
+    var maxText = '/' + escHtml(ind.max_score);
+    var maxHtml = String(ind.max_score) === '3' && data.can_edit
+      ? '<span class="bulk-max-score" title="คลิกเพื่อใส่ 3 ทั้งคอลัมน์" data-fill-value="3" onclick="fillIndicatorColumn(this)">' + maxText + '</span>'
+      : '<span>' + maxText + '</span>';
+    headRow += '<th title="' + escHtml(ind.description || ind.code) + '">' +
+      escHtml(ind.code) + '<br><span style="font-weight:normal;font-size:11px" data-indicator="' + escHtml(ind.indicator_id) + '">' + maxHtml + '</span></th>';
+  });
+  headRow += '<th class="total-col">รวม</th></tr>';
+  thead.innerHTML = headRow;
+
+  // Build body
+  var tbody = document.getElementById('formativeBody');
+  tbody.innerHTML = '';
+
+  // Column sums for averages
+  var colSums = indicators.map(function() { return 0; });
+  var studentCount = students.length;
+
+  students.forEach(function(student) {
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-student-id', student.student_id);
+
+    var studentScores = scores[student.student_id] || {};
+    var rowTotal = 0;
+
+    var cells = '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
+                '<td class="name-col">' + escHtml(student.full_name) + '</td>';
+
+    indicators.forEach(function(ind, i) {
+      var score = studentScores[ind.indicator_id];
+      var scoreVal = (score !== undefined && score !== '') ? Number(score) : '';
+      if (scoreVal !== '') rowTotal += scoreVal;
+      if (scoreVal !== '') colSums[i] += scoreVal;
+
+      if (data.can_edit) {
+        cells += '<td><input class="score-input" type="number" min="0" max="' + escHtml(ind.max_score) + '" ' +
+          'step="1" value="' + (scoreVal !== '' ? escHtml(scoreVal) : '') + '" ' +
+          'data-student="' + escHtml(student.student_id) + '" ' +
+          'data-indicator="' + escHtml(ind.indicator_id) + '" ' +
+          'data-max="' + escHtml(ind.max_score) + '" ' +
+          'oninput="updateRowTotal(this)" ' +
+          'onchange="clampScore(this)"></td>';
+      } else {
+        cells += '<td>' + (scoreVal !== '' ? escHtml(scoreVal) : '') + '</td>';
+      }
+    });
+
+    cells += '<td class="total-col" id="row-total-' + escHtml(student.student_id) + '">' + rowTotal + '</td>';
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  // Build footer with column averages
+  var tfoot = document.getElementById('formativeFoot');
+  var footRow = '<tr><td colspan="2" style="text-align:right;font-size:12px">เฉลี่ย:</td>';
+  indicators.forEach(function(ind, i) {
+    var avg = studentCount > 0 ? (colSums[i] / studentCount).toFixed(1) : '-';
+    footRow += '<td class="avg-row" id="col-avg-' + escHtml(ind.indicator_id) + '">' + avg + '</td>';
+  });
+  footRow += '<td></td></tr>';
+  tfoot.innerHTML = footRow;
+
+  document.getElementById('formativeTableScroll').style.display = 'block';
+  initFormativeTopScroll();
+}
+
+// Live update row total when a score input changes
+function updateRowTotal(input) {
+  var tr = input.closest('tr');
+  if (!tr) return;
+  var studentId = tr.getAttribute('data-student-id');
+  var inputs = tr.querySelectorAll('input.score-input');
+  var total = 0;
+  inputs.forEach(function(inp) {
+    var v = parseFloat(inp.value);
+    if (!isNaN(v)) total += v;
+  });
+  var totalCell = document.getElementById('row-total-' + studentId);
+  if (totalCell) totalCell.textContent = total;
+
+  // Update column average
+  updateColAverage(input.getAttribute('data-indicator'));
+}
+
+function clampScore(input) {
+  var max = parseFloat(input.getAttribute('data-max'));
+  var v = parseFloat(input.value);
+  if (!isNaN(v)) {
+    if (v < 0) input.value = 0;
+    if (!isNaN(max) && v > max) input.value = max;
+  }
+  updateRowTotal(input);
+}
+
+function updateColAverage(indicatorId) {
+  if (!currentData) return;
+  var students = currentData.students || [];
+  var sum = 0; var count = 0;
+  students.forEach(function(student) {
+    var input = document.querySelector(
+      'input[data-student="' + student.student_id + '"][data-indicator="' + indicatorId + '"]'
+    );
+    if (input) {
+      var v = parseFloat(input.value);
+      if (!isNaN(v)) { sum += v; count++; }
+    }
+  });
+  var avgCell = document.getElementById('col-avg-' + indicatorId);
+  if (avgCell) avgCell.textContent = count > 0 ? (sum / count).toFixed(1) : '-';
+}
+
+function fillIndicatorColumn(el) {
+  var wrapper = el.closest('[data-indicator]');
+  if (!wrapper) return;
+  var indicatorId = wrapper.getAttribute('data-indicator');
+  var fillValue = el.getAttribute('data-fill-value') || '3';
+  var inputs = document.querySelectorAll('input.score-input[data-indicator="' + indicatorId + '"]');
+  if (!inputs.length) return;
+
+  inputs.forEach(function(input) {
+    input.value = fillValue;
+    clampScore(input);
+  });
+  updateColAverage(indicatorId);
+  showToast('ใส่คะแนน ' + fillValue + ' ให้คอลัมน์นี้แล้ว อย่าลืมกดบันทึก', 'success');
+}
+
+function initFormativeTopScroll() {
+  var topScroll = document.getElementById('formativeTopScroll');
+  var topInner = document.getElementById('formativeTopScrollInner');
+  var tableScroll = document.getElementById('formativeTableScroll');
+  var table = document.getElementById('formativeTable');
+  if (!topScroll || !topInner || !tableScroll || !table) return;
+
+  var updateWidth = function() {
+    topInner.style.width = table.scrollWidth + 'px';
+    topScroll.style.display = table.scrollWidth > tableScroll.clientWidth ? 'block' : 'none';
+  };
+  updateWidth();
+  setTimeout(updateWidth, 0);
+
+  if (!topScroll.getAttribute('data-sync-bound')) {
+    topScroll.addEventListener('scroll', function() {
+      tableScroll.scrollLeft = topScroll.scrollLeft;
+    });
+    tableScroll.addEventListener('scroll', function() {
+      topScroll.scrollLeft = tableScroll.scrollLeft;
+    });
+    window.addEventListener('resize', updateWidth);
+    topScroll.setAttribute('data-sync-bound', '1');
+  }
+}
+
+function saveFormative() {
+  if (!currentData) return;
+
+  var rows = [];
+  var inputs = document.querySelectorAll('input.score-input');
+  inputs.forEach(function(input) {
+    var studentId = input.getAttribute('data-student');
+    var indicatorId = input.getAttribute('data-indicator');
+    var score = input.value !== '' ? parseFloat(input.value) : 0;
+    if (studentId && indicatorId) {
+      rows.push({ student_id: studentId, indicator_id: indicatorId, score: isNaN(score) ? 0 : score });
+    }
+  });
+
+  if (rows.length === 0) {
+    showToast('ไม่มีข้อมูลที่จะบันทึก', 'success');
+    return;
+  }
+
+  var btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  document.getElementById('saveStatus').textContent = 'กำลังบันทึก...';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกคะแนนสำเร็จ', 'success');
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      document.getElementById('saveStatus').textContent = '';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveFormative(TOKEN, CLASS_ID, SUBJECT_ID, rows);
+}
+
+function openIndicatorsManagement() {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getIndicatorsPageHtml(TOKEN, SUBJECT_ID);
+}
+
+// Init
+loadFormative();
+</script>
+</body>
+</html>

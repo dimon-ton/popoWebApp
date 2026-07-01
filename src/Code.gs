@@ -4,6 +4,45 @@
 var APP_TITLE = 'ระบบจัดการ ปพ.5 ออนไลน์ — โรงเรียนบ้านโพนแท่น';
 var APP_FAVICON_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/new-circular-logo.png';
 
+var TEMPLATE_PATHS = {
+  'login': 'auth/login',
+  'change_password': 'auth/change_password',
+  'profile_edit': 'auth/profile_edit',
+  'setup_wizard': 'database/setup_wizard',
+  'dashboard': 'shared/dashboard',
+  'help': 'shared/help',
+  '403': 'shared/403',
+  '404': 'shared/404',
+  'subject_indicators_ref': 'shared/subject_indicators_ref',
+  'weights_ref': 'shared/weights_ref',
+  'admin_audit': 'admin/admin_audit',
+  'admin_classes': 'admin/admin_classes',
+  'admin_db_status': 'admin/admin_db_status',
+  'admin_enrollments': 'admin/admin_enrollments',
+  'admin_indicators': 'admin/admin_indicators',
+  'admin_school': 'admin/admin_school',
+  'admin_subjects': 'admin/admin_subjects',
+  'admin_users': 'admin/admin_users',
+  'admin_weights': 'admin/admin_weights',
+  'admin_workload': 'admin/admin_workload',
+  'class_attendance': 'teacher/class_attendance',
+  'class_characteristics': 'teacher/class_characteristics',
+  'class_dev_activity': 'teacher/class_dev_activity',
+  'class_formative': 'teacher/class_formative',
+  'class_readthinkwrite': 'teacher/class_readthinkwrite',
+  'class_report': 'teacher/class_report',
+  'class_students': 'teacher/class_students',
+  'class_summative': 'teacher/class_summative'
+};
+
+function getTemplatePath(pageName) {
+  return TEMPLATE_PATHS[pageName] || pageName;
+}
+
+function createTemplate(pageName) {
+  return HtmlService.createTemplateFromFile(getTemplatePath(pageName));
+}
+
 function doGet(e) {
   try {
     var params = e ? e.parameter : {};
@@ -193,7 +232,7 @@ function doPost(e) {
 }
 
 function buildPage(pageName, data) {
-  var template = HtmlService.createTemplateFromFile(pageName);
+  var template = createTemplate(pageName);
   template.data = data || {};
   return template.evaluate()
     .setTitle(APP_TITLE)
@@ -203,7 +242,7 @@ function buildPage(pageName, data) {
 }
 
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return HtmlService.createHtmlOutputFromFile(getTemplatePath(filename)).getContent();
 }
 
 function buildClassLevelCounts(classes) {
@@ -293,10 +332,10 @@ function sortClassRows(classes) {
 
 function getDashboardHtml(token) {
   var session = getSession(token);
-  if (!session) return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+  if (!session) return createTemplate('login').evaluate().getContent();
   var user = dbFindOne('Users', 'user_id', session.user_id);
   if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
-  var tmpl = HtmlService.createTemplateFromFile('dashboard');
+  var tmpl = createTemplate('dashboard');
   tmpl.data = { session: session, token: token };
   return tmpl.evaluate().getContent();
 }
@@ -306,7 +345,7 @@ function getPageHtml(token, page) {
   try {
     var session = getSession(token);
     if (!session) {
-      var loginTmpl = HtmlService.createTemplateFromFile('login');
+      var loginTmpl = createTemplate('login');
       loginTmpl.data = { error: null };
       return loginTmpl.evaluate().getContent();
     }
@@ -316,7 +355,7 @@ function getPageHtml(token, page) {
     }
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
-    var tmpl = HtmlService.createTemplateFromFile(page);
+    var tmpl = createTemplate(page);
     tmpl.data = { session: session, token: token };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -328,7 +367,7 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
   try {
     var session = getSession(token);
     if (!session) {
-      var loginTmpl = HtmlService.createTemplateFromFile('login');
+      var loginTmpl = createTemplate('login');
       loginTmpl.data = { error: null };
       return loginTmpl.evaluate().getContent();
     }
@@ -348,7 +387,7 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
     };
     var tmplName = templateMap[page];
     if (!tmplName) return getPageHtml(token, page);
-    var tmpl = HtmlService.createTemplateFromFile(tmplName);
+    var tmpl = createTemplate(tmplName);
     tmpl.data = { session: session, token: token, class_id: classId || '', subject_id: subjectId || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -361,9 +400,9 @@ function getClassStudentsPageHtml(token, class_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_students');
+    var tmpl = createTemplate('class_students');
     tmpl.data = { session: session, token: token, class_id: class_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -376,9 +415,9 @@ function getAttendancePageHtml(token, class_id, subject_id, week) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_attendance');
+    var tmpl = createTemplate('class_attendance');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '', week: parseInt(week) || 1 };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -391,9 +430,9 @@ function getSummativePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_summative');
+    var tmpl = createTemplate('class_summative');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -406,9 +445,9 @@ function getCharacteristicsPageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_characteristics');
+    var tmpl = createTemplate('class_characteristics');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -421,9 +460,9 @@ function getReadThinkWritePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_readthinkwrite');
+    var tmpl = createTemplate('class_readthinkwrite');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -436,9 +475,9 @@ function getReportPageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_report');
+    var tmpl = createTemplate('class_report');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -451,9 +490,9 @@ function getFormativePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('class_formative');
+    var tmpl = createTemplate('class_formative');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -466,7 +505,7 @@ function getIndicatorsPageHtml(token, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
     if (session.role !== 'admin') {
       var enrollment = dbGetAll('Enrollments').filter(function(e) {
@@ -484,7 +523,7 @@ function getIndicatorsPageHtml(token, subject_id) {
       if (cls) class_label = fmtClassLabel(cls.level, cls.section);
     }
     var subject_title = (subj && subj.subject_code ? subj.subject_code + ' - ' : '') + subject_name + (class_label ? ' - ' + class_label : '');
-    var tmpl = HtmlService.createTemplateFromFile('admin_indicators');
+    var tmpl = createTemplate('admin_indicators');
     tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -497,9 +536,9 @@ function getSubjectIndicatorsRefPageHtml(token, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return HtmlService.createTemplateFromFile('login').evaluate().getContent();
+      return createTemplate('login').evaluate().getContent();
     }
-    var tmpl = HtmlService.createTemplateFromFile('subject_indicators_ref');
+    var tmpl = createTemplate('subject_indicators_ref');
     tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {

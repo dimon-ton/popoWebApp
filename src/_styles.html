@@ -996,6 +996,1081 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .back-btn { display:inline-flex;align-items:center;gap:5px;padding:4px 0;background:none;color:var(--brand);border:none;border-radius:var(--radius-sm);font-size:13px;font-family:inherit;cursor:pointer;text-decoration:none;font-weight:500;transition:color 0.15s;margin-bottom:14px; }
 .back-btn:hover { color:var(--brand-dark);text-decoration:underline; }
 .back-btn svg { width:16px;height:16px;fill:currentColor; }
+/* ==========================================================================
+   Page styles: admin/admin_audit.html (page-admin-audit)
+   ========================================================================== */
+.page-admin-audit thead th { background: var(--brand); color: white; border-bottom: none; }
+    .page-admin-audit tbody td { vertical-align: top; }
+    .page-admin-audit #auditStatus { color: var(--text-muted); font-size: 14px; margin: 8px 0; }
+    .page-admin-audit .btn-secondary { background: #e5e7eb; color: #333; border: none; }
+    .page-admin-audit .json-val { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .page-admin-audit .json-val.collapsed { max-height: 58px; overflow: hidden; }
+    .page-admin-audit .expand-link { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--brand); cursor: pointer; background: none; border: none; padding: 0; }
+    .page-admin-audit .pagination { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+    .page-admin-audit .pagination button { padding: 5px 10px; font-size: 12.5px; }
+
+
+/* ==========================================================================
+   Page styles: admin/admin_db_status.html (page-admin-db-status)
+   ========================================================================== */
+.page-admin-db-status thead th { background: var(--brand); color: white; border-bottom: none; }
+    .page-admin-db-status .count { font-weight: 700; color: var(--brand); }
+
+
+/* ==========================================================================
+   Page styles: admin/admin_enrollments.html (page-admin-enrollments)
+   ========================================================================== */
+/* Two-panel layout fills viewport below navbar */
+.page-admin-enrollments .container { display: flex; height: calc(100vh - 52px); max-width: none; margin: 0; padding: 0; }
+
+    /* Left panel */
+.page-admin-enrollments .teacher-panel { width: 280px; min-width: 220px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .page-admin-enrollments .panel-header { padding: 14px 16px; background: var(--bg-table-head); border-bottom: 1px solid var(--border); font-weight: bold; font-size: 14px; }
+    .page-admin-enrollments .teacher-search-wrap { padding: 10px 12px; border-bottom: 1px solid var(--border); background: white; }
+    .page-admin-enrollments .teacher-search-wrap input { width: 100%; font-size: 13px; padding: 8px 10px; }
+    .page-admin-enrollments .tab-bar { display: flex; border-bottom: 1px solid var(--border); }
+    .page-admin-enrollments .tab-btn { flex: 1; padding: 10px; cursor: pointer; border: none; background: white; font-size: 13px; color: var(--text-muted); border-bottom: 2px solid transparent; font-family: inherit; }
+    .page-admin-enrollments .tab-btn.active { border-bottom-color: var(--brand); color: var(--brand); font-weight: bold; }
+    .page-admin-enrollments .teacher-list { flex: 1; overflow-y: auto; }
+    .page-admin-enrollments .teacher-item { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .page-admin-enrollments .teacher-item:hover { background: var(--brand-hover); }
+    .page-admin-enrollments .teacher-item.selected { background: #e3ecf8; border-left: 3px solid var(--brand); }
+    .page-admin-enrollments .pair-badge { background: var(--brand); color: white; border-radius: var(--radius-pill); padding: 2px 8px; font-size: 12px; min-width: 28px; text-align: center; }
+
+    /* Right panel */
+.page-admin-enrollments .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .page-admin-enrollments .right-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .page-admin-enrollments .right-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 15px; }
+    .page-admin-enrollments .detail-loading { min-height: 180px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; }
+    .page-admin-enrollments .all-pairs-panel { flex: 1; overflow-y: auto; padding: 20px; }
+
+    /* Inner cards */
+.page-admin-enrollments .add-pair-form { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px; }
+    .page-admin-enrollments .add-pair-form h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); }
+    .page-admin-enrollments .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .page-admin-enrollments .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+    .page-admin-enrollments .form-group label { font-size: 12px; color: var(--text-muted); }
+    .page-admin-enrollments .section-title { font-size: 16px; font-weight: bold; margin-bottom: 14px; color: var(--brand); }
+    .page-admin-enrollments .teacher-detail-header { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 16px; }
+    .page-admin-enrollments .teacher-name-big { font-size: 18px; font-weight: bold; }
+    .page-admin-enrollments .pair-count { color: var(--text-muted); font-size: 14px; }
+    .page-admin-enrollments .no-data { color: var(--text-muted); font-size: 14px; padding: 20px 0; }
+    .page-admin-enrollments .badge-unassigned { color: var(--text-muted); font-style: italic; }
+    .page-admin-enrollments .subject-code { display: inline-block; margin-left: 6px; color: var(--text-muted); font-size: 11px; }
+    .page-admin-enrollments .btn-danger { background: var(--red); color: white; padding: 5px 12px; font-size: 12px; }
+    .page-admin-enrollments .btn-danger:hover { background: var(--red-dark); }
+
+    /* All pairs overview */
+.page-admin-enrollments .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .page-admin-enrollments .summary-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .page-admin-enrollments .summary-value { display: block; color: var(--brand); font-size: 22px; line-height: 1; font-weight: 700; margin-bottom: 5px; }
+    .page-admin-enrollments .summary-label { color: var(--text-muted); font-size: 12px; }
+    .page-admin-enrollments .pair-filters { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) minmax(160px, 220px); gap: 10px; margin-bottom: 14px; }
+    .page-admin-enrollments .pair-filters input,
+.page-admin-enrollments .pair-filters select { width: 100%; }
+    .page-admin-enrollments .table-wrap { overflow-x: auto; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .page-admin-enrollments .table-wrap table { margin: 0; }
+    .page-admin-enrollments .filter-empty { padding: 28px 16px; text-align: center; color: var(--text-muted); }
+
+    /* Bulk panel */
+.page-admin-enrollments .bulk-panel { background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px; }
+    .page-admin-enrollments .bulk-panel h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); }
+    .page-admin-enrollments .bulk-result { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; background: #e8f5e9; color: #2e7d32; display: none; }
+    .page-admin-enrollments .bulk-result.show { display: block; }
+
+    /* Reassignment confirmation */
+.page-admin-enrollments .dialog-overlay { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 32, 52, 0.52); backdrop-filter: blur(3px); }
+    .page-admin-enrollments .dialog-overlay.open { display: flex; }
+    .page-admin-enrollments .dialog { width: min(440px, 100%); overflow: hidden; background: white; border: 1px solid rgba(26, 86, 160, 0.14); border-radius: 18px; box-shadow: 0 24px 70px rgba(16, 32, 52, 0.28); }
+    .page-admin-enrollments .dialog-header { display: flex; gap: 12px; align-items: center; padding: 20px 22px 14px; }
+    .page-admin-enrollments .dialog-icon { display: grid; flex: 0 0 40px; height: 40px; place-items: center; border-radius: 50%; background: #fff4df; color: #a85d00; font-size: 20px; font-weight: 700; }
+    .page-admin-enrollments .dialog h3 { margin: 0; color: var(--text); font-size: 18px; line-height: 1.35; }
+    .page-admin-enrollments .dialog-message { margin: 0; padding: 0 22px 20px 74px; color: var(--text-muted); font-size: 14px; line-height: 1.7; }
+    .page-admin-enrollments .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; background: var(--bg-table-head); border-top: 1px solid var(--border); }
+    .page-admin-enrollments .dialog-actions .btn { min-width: 92px; }
+
+    @media (max-width: 760px) {.page-admin-enrollments .container { display: block; height: auto; min-height: calc(100vh - 52px); }
+      .page-admin-enrollments .teacher-panel { width: 100%; min-width: 0; max-height: 310px; border-right: none; border-bottom: 1px solid var(--border); }
+      .page-admin-enrollments .teacher-list { max-height: 165px; }
+      .page-admin-enrollments .teacher-panel.compact { max-height: 48px; }
+      .page-admin-enrollments .teacher-panel.compact .panel-header,
+.page-admin-enrollments .teacher-panel.compact .teacher-search-wrap,
+.page-admin-enrollments .teacher-panel.compact .teacher-list { display: none; }
+      .page-admin-enrollments .right-panel { min-height: 560px; overflow: visible; }
+      .page-admin-enrollments .right-content,
+.page-admin-enrollments .all-pairs-panel { padding: 14px 12px; overflow: visible; }
+      .page-admin-enrollments .right-empty { min-height: 240px; }
+      .page-admin-enrollments .summary-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .page-admin-enrollments .summary-card { padding: 10px 8px; text-align: center; }
+      .page-admin-enrollments .summary-value { font-size: 19px; }
+      .page-admin-enrollments .pair-filters { grid-template-columns: 1fr; }
+      .page-admin-enrollments .form-row { align-items: stretch; }
+      .page-admin-enrollments .form-group { min-width: 100%; }
+      .page-admin-enrollments .form-row .btn { width: 100%; }
+      .page-admin-enrollments .dialog-overlay { align-items: flex-end; padding: 12px; }
+      .page-admin-enrollments .dialog { border-radius: 18px 18px 12px 12px; }
+      .page-admin-enrollments .dialog-header { padding: 18px 18px 12px; }
+      .page-admin-enrollments .dialog-message { padding: 0 18px 18px; }
+      .page-admin-enrollments .dialog-actions { padding: 12px 18px; }
+      .page-admin-enrollments .dialog-actions .btn { flex: 1; }}
+
+
+/* ==========================================================================
+   Page styles: admin/admin_indicators.html (page-admin-indicators)
+   ========================================================================== */
+.page-admin-indicators .subject-label { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+    .page-admin-indicators .indicator-form-row { align-items: flex-start; }
+    .page-admin-indicators .indicator-submit-group { padding-top: 23px; }
+
+
+/* ==========================================================================
+   Page styles: admin/admin_school.html (page-admin-school)
+   ========================================================================== */
+.page-admin-school .form-group { margin-bottom: 14px; }
+    .page-admin-school .form-group input,
+.page-admin-school .form-group select,
+.page-admin-school .form-group textarea { width: 100%; }
+
+
+/* ==========================================================================
+   Page styles: admin/admin_weights.html (page-admin-weights)
+   ========================================================================== */
+.page-admin-weights thead th,
+.page-admin-weights tbody td { text-align: center; }
+    .page-admin-weights thead th.left,
+.page-admin-weights tbody td.left { text-align: left; }
+    .page-admin-weights .col-group { background: #e8f0fa; }
+    .page-admin-weights input[type="number"] { width: 70px; text-align: center; }
+    .page-admin-weights .save-bar { margin-top: 16px; }
+    .page-admin-weights .legend { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .page-admin-weights .weights-toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+    .page-admin-weights .weights-filter { display: flex; flex-direction: column; gap: 4px; min-width: 190px; }
+    .page-admin-weights .weights-filter label,
+.page-admin-weights .quick-fill-label { font-size: 12px; color: var(--text-muted); }
+    .page-admin-weights .quick-fill { display: flex; align-items: flex-end; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+    .page-admin-weights .quick-fill-value { display: flex; flex-direction: column; gap: 4px; }
+    .page-admin-weights .quick-fill-value input { width: 84px; }
+    .page-admin-weights .quick-fill .btn { padding: 7px 10px; font-size: 12px; }
+    .page-admin-weights .weights-empty { padding: 24px; text-align: center; color: var(--text-muted); }
+    @media (max-width: 760px) {.page-admin-weights .weights-toolbar,
+.page-admin-weights .quick-fill { align-items: stretch; }
+      .page-admin-weights .weights-filter,
+.page-admin-weights .quick-fill-value { width: 100%; }
+      .page-admin-weights .quick-fill-value input,
+.page-admin-weights .weights-filter select { width: 100%; }
+      .page-admin-weights .quick-fill .btn { flex: 1 1 calc(50% - 6px); }}
+
+
+/* ==========================================================================
+   Page styles: admin/admin_workload.html (page-admin-workload)
+   ========================================================================== */
+.page-admin-workload tbody tr { cursor: pointer; }
+    .page-admin-workload tbody tr.active td { background: var(--brand-light); }
+
+
+/* ==========================================================================
+   Page styles: auth/change_password.html (page-change-password)
+   ========================================================================== */
+body.page-change-password { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .page-change-password .pw-card { background: white; border-radius: 10px; padding: 36px; width: 380px; box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
+    .page-change-password .pw-card h2 { font-size: 18px; color: var(--brand); margin-bottom: 6px; text-align: center; }
+    .page-change-password .pw-card .pw-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+    .page-change-password .pw-card .form-group { margin-bottom: 14px; }
+    .page-change-password .pw-card .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+    .page-change-password .pw-card .form-group input { width: 100%; padding: 10px 12px; }
+    .page-change-password .pw-card .pw-btn { width: 100%; padding: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 10px; font-weight: 600; transition: background 0.15s; }
+    .page-change-password .pw-card .pw-btn:hover { background: var(--brand-dark); }
+    .page-change-password .pw-card .pw-btn:disabled { background: #93b8d8; cursor: not-allowed; }
+    .page-change-password .pw-card .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 14px; display: none; border-left: 3px solid var(--red); }
+    .page-change-password .pw-card .error.show { display: block; }
+
+
+/* ==========================================================================
+   Page styles: auth/login.html (page-login)
+   ========================================================================== */
+body.page-login { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(180deg, #f6f9fe 0%, #eef4fb 100%); }
+    .page-login .login-card { background: white; border-radius: 18px; padding: 38px 36px 36px; width: min(440px, calc(100vw - 32px)); box-shadow: 0 18px 50px rgba(26,86,160,0.14); border: 1px solid rgba(26,86,160,0.08); }
+    .page-login .login-brand { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
+    .page-login .login-logo-image { width: 96px; height: 96px; object-fit: contain; margin-bottom: 14px; }
+    .page-login .login-logo { font-size: 24px; color: var(--brand); margin-bottom: 6px; text-align: center; font-weight: 700; line-height: 1.25; }
+    .page-login .login-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+    .page-login .form-group { margin-bottom: 16px; }
+    .page-login .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+    .page-login .form-group input { width: 100%; padding: 10px 12px; }
+    .page-login .password-wrap { position: relative; }
+    .page-login .password-wrap input { padding-right: 44px; }
+    .page-login .password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; padding: 0; border: none; background: transparent; color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: var(--radius-sm); }
+    .page-login .password-toggle:hover { background: var(--brand-hover); color: var(--brand); }
+    .page-login .password-toggle svg { width: 19px; height: 19px; stroke: currentColor; }
+    .page-login .login-btn { width: 100%; padding: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 8px; font-weight: 600; display: flex; justify-content: center; text-align: center; transition: background 0.15s; }
+    .page-login .login-btn:hover { background: var(--brand-dark); }
+    .page-login .login-btn:disabled { background: #93b8d8; cursor: not-allowed; }
+    .page-login .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 16px; display: none; border-left: 3px solid var(--red); }
+    .page-login .error.show { display: block; }
+    .page-login .login-card { display: none; }
+    .page-login .login-card.visible { display: block; }
+    .page-login .login-checking { display: none; position: fixed; inset: 0; background: var(--bg-page); z-index: 10000; flex-direction: column; align-items: center; padding-top: 120px; }
+    .page-login .login-checking.visible { display: block; }
+    .page-login .login-checking.visible.nav-loading { display: flex; }
+
+
+/* ==========================================================================
+   Page styles: auth/profile_edit.html (page-profile-edit)
+   ========================================================================== */
+/* ===== CROP MODAL ===== */
+.page-profile-edit .crop-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .page-profile-edit .crop-overlay.open { display: flex; }
+  .page-profile-edit .crop-dialog {
+    background: #1a1a2e;
+    border-radius: 16px;
+    width: 420px;
+    max-width: 94vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    overflow: hidden;
+    animation: cropFadeIn 0.25s ease-out;
+  }
+  @keyframes cropFadeIn {
+    from { opacity: 0; transform: scale(0.92) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .page-profile-edit .crop-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .page-profile-edit .crop-header h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .page-profile-edit .crop-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+  }
+  .page-profile-edit .crop-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  .page-profile-edit .crop-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0d0d1a;
+    cursor: grab;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .page-profile-edit .crop-canvas-wrap:active { cursor: grabbing; }
+  .page-profile-edit .crop-canvas-wrap canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .page-profile-edit .crop-controls {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .page-profile-edit .crop-zoom-label {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .page-profile-edit .crop-zoom-label svg {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+    fill: rgba(255,255,255,0.5);
+  }
+  .page-profile-edit .crop-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    outline: none;
+  }
+  .page-profile-edit .crop-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .page-profile-edit .crop-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .page-profile-edit .crop-actions {
+    padding: 14px 20px 18px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .page-profile-edit .crop-btn {
+    padding: 9px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .page-profile-edit .crop-btn:active { transform: scale(0.97); }
+  .page-profile-edit .crop-btn-cancel {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+  }
+  .page-profile-edit .crop-btn-cancel:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .page-profile-edit .crop-btn-ok {
+    background: var(--brand);
+    color: #fff;
+  }
+  .page-profile-edit .crop-btn-ok:hover { background: var(--brand-dark); }
+  .page-profile-edit .crop-btn-ok:disabled { background: #555; cursor: not-allowed; }
+
+  .page-profile-edit .crop-hint {
+    text-align: center;
+    color: rgba(255,255,255,0.35);
+    font-size: 11.5px;
+    padding: 0 20px 6px;
+  }
+
+  @media (max-width: 480px) {.page-profile-edit .crop-dialog { border-radius: 12px; }
+    .page-profile-edit .crop-actions { padding: 12px 16px 14px; }
+    .page-profile-edit .crop-controls { padding: 10px 16px; }}
+
+
+/* ==========================================================================
+   Page styles: database/setup_wizard.html (page-setup-wizard)
+   ========================================================================== */
+body.page-setup-wizard { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .page-setup-wizard .wizard-card { background: white; border-radius: var(--radius); padding: 40px; width: 420px; box-shadow: 0 4px 20px rgba(26,86,160,0.14); border: 1px solid rgba(26,86,160,0.08); }
+    .page-setup-wizard .wizard-title { font-size: 22px; color: var(--brand); margin-bottom: 8px; text-align: center; font-weight: 700; }
+    .page-setup-wizard .wizard-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+    .page-setup-wizard .step { display: none; }
+    .page-setup-wizard .step.active { display: block; }
+    .page-setup-wizard .step h2 { font-size: 15px; color: var(--text); margin-bottom: 16px; border-bottom: 2px solid var(--brand-light); padding-bottom: 8px; }
+    .page-setup-wizard .progress { display: flex; gap: 8px; margin-bottom: 24px; }
+    .page-setup-wizard .progress-dot { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+    .page-setup-wizard .progress-dot.done { background: var(--brand); }
+    .page-setup-wizard .info-box { background: var(--brand-light); color: var(--brand); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+    .page-setup-wizard .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+    .page-setup-wizard .error.show { display: block; }
+    .page-setup-wizard .success { background: #e8f5e9; color: #2e7d32; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+    .page-setup-wizard .success.show { display: block; }
+    .page-setup-wizard .btn { width: 100%; padding: 11px; font-size: 15px; margin-top: 10px; border-radius: var(--radius-sm); }
+    .page-setup-wizard .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+
+/* ==========================================================================
+   Page styles: shared/403.html (page-403)
+   ========================================================================== */
+body.page-403 { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .page-403 .block { background: white; border-radius: var(--radius); padding: 40px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(26,86,160,0.12); border: 1px solid rgba(26,86,160,0.08); }
+    .page-403 .icon { font-size: 48px; margin-bottom: 16px; }
+    .page-403 h1 { font-size: 20px; color: var(--red-dark); margin-bottom: 12px; }
+    .page-403 p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+    .page-403 a { color: var(--brand); text-decoration: none; font-weight: 500; }
+    .page-403 a:hover { text-decoration: underline; }
+
+
+/* ==========================================================================
+   Page styles: shared/404.html (page-404)
+   ========================================================================== */
+body.page-404 { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .page-404 .block { background: white; border-radius: var(--radius); padding: 40px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(26,86,160,0.12); border: 1px solid rgba(26,86,160,0.08); }
+    .page-404 h1 { font-size: 20px; color: var(--text-muted); margin-bottom: 12px; }
+    .page-404 p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+    .page-404 a { color: var(--brand); text-decoration: none; font-weight: 500; }
+    .page-404 a:hover { text-decoration: underline; }
+
+
+/* ==========================================================================
+   Page styles: shared/dashboard.html (page-dashboard)
+   ========================================================================== */
+.page-dashboard .pair-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; background: #fafcff; }
+    .page-dashboard .pair-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .page-dashboard .pair-card-header h3 { font-size: 15px; color: var(--brand); margin: 0; }
+    .page-dashboard .pair-card-header .student-count { font-size: 13px; color: var(--text-muted); }
+    .page-dashboard .pair-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px; }
+    .page-dashboard .pair-link { display: block; padding: 10px 12px; border-radius: var(--radius-sm); text-align: center; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s, transform 0.1s; border: 1px solid rgba(26,86,160,0.1); }
+    .page-dashboard .pair-link:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(26,86,160,0.1); }
+    .page-dashboard .pair-link.attendance { background: #e8f8f0; color: #1a7a4a; border-color: rgba(26,122,74,0.15); }
+    .page-dashboard .pair-link.attendance:hover { background: #d4f0e4; }
+    .page-dashboard .pair-link.formative { background: #fff8e1; color: #b8860b; border-color: rgba(184,134,11,0.15); }
+    .page-dashboard .pair-link.formative:hover { background: #fff0c2; }
+    .page-dashboard .pair-link.summative { background: #e8f0fe; color: var(--brand); border-color: rgba(26,86,160,0.15); }
+    .page-dashboard .pair-link.summative:hover { background: #d5e5f5; }
+    .page-dashboard .pair-link.characteristics { background: #f3e8fe; color: #7b2d9e; border-color: rgba(123,45,158,0.15); }
+    .page-dashboard .pair-link.characteristics:hover { background: #e6d4f7; }
+    .page-dashboard .pair-link.readthinkwrite { background: #fef0e8; color: #c0392b; border-color: rgba(192,57,43,0.15); }
+    .page-dashboard .pair-link.readthinkwrite:hover { background: #fde0d0; }
+    .page-dashboard .pair-link.report { background: #e8f4ec; color: #1a7a4a; border-color: rgba(26,122,74,0.15); }
+    .page-dashboard .pair-link.report:hover { background: #d0e8d8; }
+    .page-dashboard .pair-link.students { background: #f5f5f5; color: #555; border-color: rgba(85,85,85,0.15); }
+    .page-dashboard .pair-link.students:hover { background: #ebebeb; }
+    .page-dashboard .teacher-section { margin-top: 18px; }
+    .page-dashboard .teacher-section h3 { font-size: 15px; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--brand-light); }
+
+    /* ===== STEP CARDS ===== */
+.page-dashboard .admin-setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 24px;
+    }
+    .page-dashboard .step-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .page-dashboard .step-card:hover {
+      background-color: var(--brand-hover);
+      border-color: var(--brand);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(26,86,160,0.06);
+    }
+    .page-dashboard .step-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(26,86,160,0.25);
+    }
+    .page-dashboard .step-card:hover .step-badge {
+      background: var(--brand-dark);
+      transform: scale(1.05);
+    }
+    .page-dashboard .step-content {
+      flex: 1;
+    }
+    .page-dashboard .step-content h4 {
+      margin: 0 0 3px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .page-dashboard .step-card:hover .step-content h4 {
+      color: var(--brand);
+    }
+    .page-dashboard .step-content p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .page-dashboard .step-action-arrow {
+      font-size: 16px;
+      color: var(--text-muted);
+      transition: transform 0.15s, color 0.15s;
+    }
+    .page-dashboard .step-card:hover .step-action-arrow {
+      transform: translateX(4px);
+      color: var(--brand);
+    }
+
+
+/* ==========================================================================
+   Page styles: shared/help.html (page-help)
+   ========================================================================== */
+.page-help p { font-size: 14px; line-height: 1.8; margin-bottom: 10px; }
+    .page-help ul,
+.page-help ol { padding-left: 20px; margin-bottom: 10px; }
+    .page-help li { font-size: 14px; line-height: 1.8; margin-bottom: 4px; }
+    .page-help .scale-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    .page-help .scale-table th { background: var(--bg-table-head); padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+    .page-help .scale-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .page-help .scale-table tr:hover td { background: var(--brand-hover); }
+    .page-help h3 { font-size: 16px; color: var(--brand); margin-bottom: 10px; margin-top: 20px; }
+
+
+/* ==========================================================================
+   Page styles: shared/subject_indicators_ref.html (page-subject-indicators-ref)
+   ========================================================================== */
+.page-subject-indicators-ref th.center,
+.page-subject-indicators-ref td.center { text-align: center; }
+
+
+/* ==========================================================================
+   Page styles: shared/weights_ref.html (page-weights-ref)
+   ========================================================================== */
+.page-weights-ref thead th,
+.page-weights-ref tbody td { text-align: center; }
+    .page-weights-ref thead th.left,
+.page-weights-ref tbody td.left { text-align: left; }
+    .page-weights-ref .col-group { background: #e8f0fa; }
+    .page-weights-ref .legend { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+    .page-weights-ref .notice { background: var(--brand-light); border-left: 4px solid var(--brand); padding: 10px 14px; font-size: 13px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 16px; }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_attendance.html (page-class-attendance)
+   ========================================================================== */
+.page-class-attendance table { border-collapse: collapse; }
+    .page-class-attendance thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; }
+    .page-class-attendance th.name-col { text-align: left; min-width: 140px; }
+    .page-class-attendance tbody td { padding: 4px 3px; border: 1px solid #eee; }
+    .page-class-attendance tfoot td { background: var(--bg-table-head); font-weight: 700; font-size: 12px; border: 1px solid var(--border); padding: 4px 6px; }
+    .page-class-attendance tfoot td.present-count { color: #1a7a1a; }
+    .page-class-attendance tfoot td.leave-count { color: #856404; }
+    .page-class-attendance tfoot td.absent-count { color: #721c24; }
+    .page-class-attendance td.total-col { background: #f9f9f9; font-weight: 700; color: var(--text); }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_characteristics.html (page-class-characteristics)
+   ========================================================================== */
+.page-class-characteristics table { border-collapse: collapse; }
+    .page-class-characteristics thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; min-width: 52px; }
+    .page-class-characteristics th.name-col { text-align: left; min-width: 140px; }
+    .page-class-characteristics th.label-col { background: #e8f5e9; min-width: 80px; }
+    .page-class-characteristics tbody td { padding: 4px 3px; border: 1px solid #eee; text-align: center; }
+    .page-class-characteristics .trait-group-header { font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_dev_activity.html (page-class-dev-activity)
+   ========================================================================== */
+.page-class-dev-activity table { border-collapse: collapse; }
+    .page-class-dev-activity thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; }
+    .page-class-dev-activity th.name-col,
+.page-class-dev-activity td.name-col { text-align: left; min-width: 180px; }
+    .page-class-dev-activity tbody td { padding: 6px 8px; border: 1px solid #eee; text-align: center; }
+    .page-class-dev-activity .dev-result-select { width: 120px; }
+    .page-class-dev-activity .column-fill-select { margin-top: 4px; width: 130px; font-size: 12px; padding: 5px 6px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; font-family: inherit; }
+    .page-class-dev-activity .column-updated { animation: columnUpdated 1.2s ease-out; }
+    @keyframes columnUpdated {
+      0% { background: #e8f5e9; }
+      100% { background: transparent; }
+    }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_formative.html (page-class-formative)
+   ========================================================================== */
+.page-class-formative table { border-collapse: collapse; }
+    .page-class-formative thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; min-width: 46px; }
+    .page-class-formative th.name-col { text-align: left; min-width: 140px; }
+    .page-class-formative th.total-col { background: var(--brand-light); }
+    .page-class-formative tbody td { padding: 4px 3px; border: 1px solid #eee; }
+    .page-class-formative td.avg-col { font-style: italic; color: var(--text-muted); background: #f9f9f9; }
+    .page-class-formative tfoot td { background: var(--bg-table-head); font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 6px; }
+    .page-class-formative tfoot td.avg-row { font-style: italic; }
+    .page-class-formative .no-indicators { color: var(--text-muted); font-size: 14px; padding: 16px 0; }
+    .page-class-formative .score-table-scroll { overflow-x: auto; }
+    .page-class-formative .score-top-scroll { overflow-x: auto; overflow-y: hidden; height: 16px; margin-bottom: 4px; display: none; }
+    .page-class-formative .score-top-scroll-inner { height: 1px; }
+    .page-class-formative .bulk-max-score { color: var(--brand); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .page-class-formative .bulk-max-score:hover { color: var(--brand-dark); }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_readthinkwrite.html (page-class-readthinkwrite)
+   ========================================================================== */
+.page-class-readthinkwrite table { border-collapse: collapse; }
+    .page-class-readthinkwrite thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; min-width: 48px; }
+    .page-class-readthinkwrite th.name-col { text-align: left; min-width: 140px; }
+    .page-class-readthinkwrite th.label-col { background: #e8f5e9; min-width: 80px; }
+    .page-class-readthinkwrite th.group-header { background: #dce8fa; font-weight: 700; font-size: 11px; }
+    .page-class-readthinkwrite tbody td { padding: 4px 3px; border: 1px solid #eee; text-align: center; }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_report.html (page-class-report)
+   ========================================================================== */
+body.page-class-report {
+      --report-ink: #111;
+      --report-muted: #333;
+      --report-line: #111;
+      --report-soft: #fff;
+      --report-accent: #111;
+    }
+
+    .page-class-report .report-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .page-class-report .report-toolbar h2 { margin: 0; }
+    .page-class-report .report-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .page-class-report .report-status { font-size: 13px; color: var(--text-muted); }
+    .page-class-report .screen-panel { display: none; }
+    .page-class-report .dev-result-select,
+.page-class-report .column-fill-select {
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      padding: 4px 6px;
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+    }
+    .page-class-report .column-fill-select {
+      width: 130px;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .page-class-report .column-updated { animation: columnUpdated 1.2s ease-out; }
+    @keyframes columnUpdated {
+      0% { background: #e8f5e9; }
+      100% { background: transparent; }
+    }
+
+    .page-class-report .report-preview-shell {
+      background: #dfe3df;
+      margin: 0 calc(50% - 50vw);
+      padding: 24px 12px 48px;
+      overflow-x: auto;
+    }
+    .page-class-report .a4-report-book {
+      display: grid;
+      justify-content: center;
+      gap: 18px;
+    }
+    .page-class-report .a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      background: #fff;
+      color: var(--report-ink);
+      padding: 14mm 14mm 10mm;
+      box-shadow: 0 12px 30px rgba(0,0,0,.16);
+      box-sizing: border-box;
+      font-family: "TH Sarabun New", "Sarabun", "Noto Sans Thai", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.12;
+      position: relative;
+    }
+    .page-class-report .a4-page.compact { font-size: 13px; }
+    .page-class-report .a4-page.landscape-table { padding-left: 9mm; padding-right: 9mm; }
+    .page-class-report .page-number {
+      position: absolute;
+      right: 12mm;
+      bottom: 6mm;
+      color: #666;
+      font-size: 12px;
+    }
+    .page-class-report .report-page-title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 24px;
+      margin: 0 0 3mm;
+      line-height: 1.2;
+    }
+    .page-class-report .report-page-subtitle {
+      text-align: center;
+      font-weight: 600;
+      font-size: 19px;
+      margin: -1mm 0 4mm;
+    }
+    .page-class-report .report-cover-mark {
+      width: 26mm;
+      height: 26mm;
+      border: 1.4px solid var(--report-line);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 4mm auto 8mm;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--report-accent);
+      overflow: hidden;
+    }
+    .page-class-report .report-line-row {
+      display: grid;
+      grid-template-columns: 34mm 1fr 26mm 1fr;
+      gap: 3mm;
+      align-items: end;
+      margin-bottom: 4mm;
+      font-size: 15px;
+    }
+    .page-class-report .report-line-row.two { grid-template-columns: 34mm 1fr; }
+    .page-class-report .line-label { color: var(--report-muted); }
+    .page-class-report .line-value {
+      min-height: 7mm;
+      border-bottom: 1px dotted var(--report-line);
+      padding: 0 2mm 1mm;
+      font-weight: 600;
+    }
+    .page-class-report .report-section {
+      border: 0;
+      margin-bottom: 4mm;
+    }
+    .page-class-report .report-section-heading {
+      background: var(--report-soft);
+      border-bottom: 0;
+      font-weight: 700;
+      padding: 2mm 3mm;
+      font-size: 14px;
+    }
+    .page-class-report .report-section-body { padding: 3mm; }
+    .page-class-report .report-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
+    }
+    .page-class-report .report-table {
+      width: 100%;
+      border: 1.2px solid var(--report-line);
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin: 0;
+      box-shadow: inset 0 -1.2px 0 var(--report-line);
+    }
+    .page-class-report .report-table th,
+.page-class-report .report-table td {
+      border: 1.2px solid var(--report-line);
+      padding: 1mm 1.2mm;
+      text-align: center;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
+    }
+    .page-class-report .report-table th {
+      background: #fff;
+      font-weight: 700;
+    }
+    .page-class-report .report-table tbody tr:last-child > th,
+.page-class-report .report-table tbody tr:last-child > td {
+      border-bottom: 1.6px solid var(--report-line);
+    }
+    .page-class-report .report-table .left { text-align: left; }
+    .page-class-report .report-table .bold { font-weight: 700; }
+    .page-class-report .report-table.tight th,
+.page-class-report .report-table.tight td { padding: .9mm 1mm; }
+    .page-class-report .report-table.no-wrap th,
+.page-class-report .report-table.no-wrap td { white-space: nowrap; overflow-wrap: normal; }
+    .page-class-report .muted-note { color: #333; font-size: 15px; margin-top: 2mm; }
+    .page-class-report .form-page { padding-top: 15mm; }
+    .page-class-report .form-page .report-page-title,
+.page-class-report .form-page .report-page-subtitle,
+.page-class-report .form-page .page-number { display: none; }
+    .page-class-report .form-title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 19px;
+      margin-bottom: 2mm;
+    }
+    .page-class-report .form-subtitle {
+      text-align: center;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 3mm;
+    }
+    .page-class-report .form-meta {
+      display: grid;
+      grid-template-columns: 18mm 38mm 18mm 34mm 18mm 28mm;
+      justify-content: center;
+      gap: 1.2mm 3mm;
+      margin: 1mm auto 4mm;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .page-class-report .form-meta span { white-space: nowrap; }
+    .page-class-report .form-meta .meta-label {
+      text-align: right;
+      font-weight: 700;
+    }
+    .page-class-report .form-meta .meta-value {
+      text-align: left;
+      font-weight: 600;
+    }
+    .page-class-report .form-summary-table {
+      margin-top: 2mm;
+      font-size: 14px;
+    }
+    .page-class-report .form-grid-table {
+      font-size: 12px;
+      line-height: 1.05;
+    }
+    .page-class-report .form-grid-table th,
+.page-class-report .form-grid-table td {
+      height: 5.6mm;
+      padding: .5mm .8mm;
+    }
+    .page-class-report .form-grid-table .rot {
+      position: relative;
+      overflow: hidden;
+      height: 32mm;
+      min-width: 6mm;
+      padding: 0;
+      vertical-align: middle;
+    }
+    .page-class-report .form-grid-table .rot-text {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      display: block;
+      width: 30mm;
+      transform: translate(-50%, -50%) rotate(-90deg);
+      transform-origin: center center;
+      white-space: nowrap;
+      line-height: 1;
+      text-align: center;
+    }
+    .page-class-report .score-grid-table .rot {
+      height: 38mm;
+    }
+    .page-class-report .score-grid-table .rot-text {
+      width: 35mm;
+      font-size: 10px;
+    }
+    .page-class-report .form-note {
+      margin: 8mm 0 0 18mm;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .page-class-report .approval-layout {
+      display: block;
+      width: 112mm;
+      margin: 5mm auto 0;
+      font-size: 15px;
+    }
+    .page-class-report .approval-signature-block {
+      width: 82mm;
+    }
+    .page-class-report .approval-academic-block {
+      width: 82mm;
+      margin-top: 1.5mm;
+      margin-left: 22mm;
+    }
+    .page-class-report .approval-heading,
+.page-class-report .approval-intro {
+      font-weight: 700;
+      text-align: left;
+    }
+    .page-class-report .approval-heading {
+      font-size: 20px;
+      margin-top: 5mm;
+    }
+    .page-class-report .approval-intro {
+      margin: 0 0 1mm;
+    }
+    .page-class-report .approval-line {
+      display: grid;
+      grid-template-columns: 18mm 1fr;
+      align-items: end;
+      gap: 3mm;
+      margin: 4mm 0;
+    }
+    .page-class-report .approval-rule { border-bottom: 1.2px solid var(--report-line); height: 5mm; }
+    .page-class-report .approval-name,
+.page-class-report .approval-role {
+      display: grid;
+      grid-template-columns: 18mm 1fr;
+      gap: 3mm;
+      text-align: center;
+    }
+    .page-class-report .approval-role {
+      margin-bottom: 3mm;
+    }
+    .page-class-report .check-row {
+      display: flex;
+      gap: 14mm;
+      align-items: center;
+      margin-top: 5mm;
+      font-size: 15px;
+      width: 82mm;
+    }
+    .page-class-report .check-choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 2mm;
+      white-space: nowrap;
+    }
+    .page-class-report .tiny-blank-list {
+      width: 22mm;
+      margin: 36mm auto 0;
+      font-size: 12px;
+    }
+    .page-class-report .description-block {
+      width: 122mm;
+      margin: 18mm auto 0;
+      font-size: 13px;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .page-class-report .cover-page .form-title { font-size: 17px; }
+    .page-class-report .cover-page .form-meta { font-size: 13px; }
+    .page-class-report .cover-page .form-summary-table { font-size: 12px; }
+    .page-class-report .cover-page .approval-heading { font-size: 20px; }
+    .page-class-report .cover-page .approval-layout { font-size: 13px; margin-top: 3mm; }
+    .page-class-report .cover-page .approval-line { margin: 3mm 0; }
+    .page-class-report .attendance-table {
+      font-size: 8px;
+      line-height: 1;
+      table-layout: fixed;
+    }
+    .page-class-report .attendance-table th,
+.page-class-report .attendance-table td {
+      height: 4.2mm;
+      padding: .2mm .35mm;
+      white-space: nowrap;
+      overflow: hidden;
+      overflow-wrap: normal;
+    }
+    .page-class-report .signature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16mm;
+      margin-top: 16mm;
+    }
+    .page-class-report .signature-box {
+      text-align: center;
+      min-height: 34mm;
+    }
+    .page-class-report .signature-line {
+      border-bottom: 1px dotted var(--report-line);
+      height: 12mm;
+      margin-bottom: 2mm;
+    }
+    .page-class-report .appendix-list {
+      display: grid;
+      gap: 3mm;
+      margin-top: 4mm;
+    }
+    .page-class-report .appendix-item {
+      display: grid;
+      grid-template-columns: 8mm 1fr 24mm;
+      gap: 3mm;
+      align-items: center;
+      font-size: 14px;
+    }
+    .page-class-report .check-box {
+      width: 5mm;
+      height: 5mm;
+      border: 1.4px solid var(--report-line);
+      display: inline-block;
+    }
+
+    @media (max-width: 920px) {.page-class-report .a4-page {
+        transform: scale(.72);
+        transform-origin: top center;
+        margin-bottom: -84mm;
+      }}
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    @media print {html:has(body.page-class-report),
+body.page-class-report {
+        width: 210mm;
+        background: #fff !important;
+      }
+      .page-class-report .navbar,
+.page-class-report .container > .report-toolbar,
+.page-class-report .screen-panel,
+.page-class-report .loading-msg,
+.page-class-report .toast {
+        display: none !important;
+      }
+      .page-class-report .container {
+        width: auto !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .page-class-report .report-preview-shell {
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+      }
+      .page-class-report .a4-report-book {
+        display: block;
+        gap: 0;
+      }
+      .page-class-report .a4-page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+      .page-class-report .a4-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }}
+
+/* ==========================================================================
+   Page styles: teacher/class_students.html (page-class-students)
+   ========================================================================== */
+.page-class-students .edit-field { width: 100%; padding: 4px 6px; border: 1.5px solid var(--brand); border-radius: 3px; font-size: 12px; font-family: inherit; }
+    .page-class-students .action-btns { display: flex; gap: 4px; }
+    .page-class-students .btn-secondary { background: #6c757d; color: white; border: none; }
+    .page-class-students .btn-secondary:hover { background: #5a6268; }
+    .page-class-students .btn-save { background: var(--green); color: white; font-size: 12px; padding: 5px 12px; border: none; }
+    .page-class-students .btn-save:hover { background: var(--green-dark); }
+
+
+/* ==========================================================================
+   Page styles: teacher/class_summative.html (page-class-summative)
+   ========================================================================== */
+.page-class-summative table { border-collapse: collapse; }
+    .page-class-summative thead th { border: 1px solid var(--border); font-size: 12px; padding: 8px 6px; text-align: center; min-width: 60px; }
+    .page-class-summative th.name-col { text-align: left; min-width: 140px; }
+    .page-class-summative th.computed-col { background: var(--brand-light); }
+    .page-class-summative th.grade-col { background: #e8f4ec; }
+    .page-class-summative th.makeup-col { background: #fff3e0; }
+    .page-class-summative tbody td { padding: 4px 3px; border: 1px solid #eee; text-align: center; }
+    .page-class-summative td.final-grade-col { font-weight: 700; color: var(--brand); text-align: center; }
+    .page-class-summative .legend { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+
 </style>
 <script>
 var THAI_DATE_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าโรงเรียน — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-admin-school">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
+  <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
+  <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
+  <div class="navbar-user">
+  <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+  <div class="navbar-dropdown">
+    <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+    <div class="dropdown-divider"></div>
+    <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+  </div>
+  </div>
+</div>
+
+<div class="container narrow">
+  <h2 class="page-title" id="pageHeading">ข้อมูลโรงเรียน</h2>
+
+  <div class="card">
+    <h3>ตั้งค่าข้อมูลโรงเรียน</h3>
+    <div class="form-group">
+      <label>ชื่อโรงเรียน</label>
+      <input type="text" id="schoolName" placeholder="ชื่อโรงเรียน">
+    </div>
+    <div class="form-group">
+      <label>อำเภอ</label>
+      <input type="text" id="district" placeholder="อำเภอ">
+    </div>
+    <div class="form-group">
+      <label>จังหวัด</label>
+      <input type="text" id="province" placeholder="จังหวัด">
+    </div>
+    <div class="form-group">
+      <label>ปีการศึกษา</label>
+      <input type="text" id="academicYear" placeholder="เช่น 2567">
+    </div>
+    <div class="form-group">
+      <label>วันเปิดภาคเรียน / วันเริ่มนับเวลาเรียน</label>
+      <div class="thai-date-picker" data-thai-date-picker>
+        <input type="hidden" id="semesterStartDate" data-thai-date-value>
+        <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>จำนวนวันเรียนที่ต้องนับ</label>
+      <input type="number" id="requiredAttendanceDays" min="1" max="260" placeholder="เช่น 200">
+    </div>
+    <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  var btn = document.getElementById('logoutBtn');
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      localStorage.removeItem('popo_token');
+      google.script.run
+        .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function() { document.open(); document.write('<p>กำลังออกจากระบบ...</p>'); document.close(); })
+        .getLoginHtml();
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('popo_token');
+      location.reload();
+    })
+    .serverLogout(TOKEN);
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function loadSchoolInfo() {
+  google.script.run
+    .withSuccessHandler(function(info) {
+      if (!info) return;
+      document.getElementById('schoolName').value = info.school_name || '';
+      document.getElementById('district').value = info.district || '';
+      document.getElementById('province').value = info.province || '';
+      document.getElementById('academicYear').value = info.academic_year || '';
+      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('semesterStartDate'), info.semester_start_date || '');
+      else document.getElementById('semesterStartDate').value = info.semester_start_date || '';
+      document.getElementById('requiredAttendanceDays').value = info.required_attendance_days || '';
+    })
+    .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
+    .getSchoolInfo();
+}
+
+function saveSchoolInfo() {
+  var btn = document.getElementById('saveSchoolBtn');
+  btn.disabled = true;
+  var school_name = document.getElementById('schoolName').value.trim();
+  var district = document.getElementById('district').value.trim();
+  var province = document.getElementById('province').value.trim();
+  var academic_year = document.getElementById('academicYear').value.trim();
+  var semester_start_date = document.getElementById('semesterStartDate').value.trim();
+  var required_attendance_days = document.getElementById('requiredAttendanceDays').value.trim();
+  if (semester_start_date && !/^\d{4}-\d{2}-\d{2}$/.test(semester_start_date)) {
+    btn.disabled = false;
+    showToast('กรุณาเลือกวันเปิดภาคเรียนใหม่', 'error');
+    return;
+  }
+  var attendanceDays = Number(required_attendance_days);
+  if (required_attendance_days && (!Number.isInteger(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
+    btn.disabled = false;
+    showToast('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260', 'error');
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      btn.disabled = false;
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+      showToast('บันทึกข้อมูลโรงเรียนสำเร็จ', 'success');
+      loadSchoolInfo();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days);
+}
+
+loadSchoolInfo();
+</script>
+</body>
+</html>
