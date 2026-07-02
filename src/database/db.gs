@@ -5,7 +5,7 @@ var TABS = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance',
   'IndicatorScores', 'SummativeScores', 'Characteristics',
-  'ReadThinkWrite', 'AuditLog', 'DevActivity'
+  'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 
 function getSheet(tabName) {

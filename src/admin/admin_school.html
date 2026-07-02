@@ -11,6 +11,7 @@
   <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_holidays')">วันหยุด</a>
   <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
@@ -42,8 +43,26 @@
       <input type="text" id="province" placeholder="จังหวัด">
     </div>
     <div class="form-group">
+      <label>ที่อยู่โรงเรียน</label>
+      <input type="text" id="schoolAddress" placeholder="ที่อยู่โรงเรียน">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>เบอร์โทรศัพท์</label>
+        <input type="text" id="phoneNumber" placeholder="เบอร์โทรศัพท์">
+      </div>
+      <div class="form-group">
+        <label>เขตพื้นที่การศึกษา</label>
+        <input type="text" id="educationArea" placeholder="เช่น สพป.ร้อยเอ็ด เขต 2">
+      </div>
+    </div>
+    <div class="form-group">
       <label>ปีการศึกษา</label>
       <input type="text" id="academicYear" placeholder="เช่น 2567">
+    </div>
+    <div class="form-group">
+      <label>ภาคเรียน</label>
+      <input type="text" id="semester" placeholder="เช่น 1 หรือ 2">
     </div>
     <div class="form-group">
       <label>วันเปิดภาคเรียน / วันเริ่มนับเวลาเรียน</label>
@@ -55,6 +74,29 @@
     <div class="form-group">
       <label>จำนวนวันเรียนที่ต้องนับ</label>
       <input type="number" id="requiredAttendanceDays" min="1" max="260" placeholder="เช่น 200">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>หัวหน้างานวัดผลและประเมินผล</label>
+        <input type="text" id="measurementHeadName" placeholder="ชื่อ-สกุล">
+      </div>
+      <div class="form-group">
+        <label>หัวหน้างานวิชาการ</label>
+        <input type="text" id="academicHeadName" placeholder="ชื่อ-สกุล">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>ผู้อำนวยการโรงเรียน</label>
+      <input type="text" id="directorName" placeholder="ชื่อ-สกุล">
+    </div>
+    <div class="form-group">
+      <label>โลโก้โรงเรียน</label>
+      <input type="file" id="schoolLogoFile" accept="image/*">
+      <input type="hidden" id="schoolLogo">
+      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <img id="schoolLogoPreview" alt="ตัวอย่างโลโก้โรงเรียน" style="display:none;width:80px;height:80px;object-fit:contain;border:1px solid var(--border);border-radius:6px;background:#fff;padding:4px">
+        <button type="button" class="btn-secondary" onclick="clearSchoolLogo()">ลบโลโก้</button>
+      </div>
     </div>
     <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
   </div>
@@ -106,10 +148,18 @@ function loadSchoolInfo() {
       document.getElementById('schoolName').value = info.school_name || '';
       document.getElementById('district').value = info.district || '';
       document.getElementById('province').value = info.province || '';
+      document.getElementById('schoolAddress').value = info.school_address || '';
+      document.getElementById('phoneNumber').value = info.phone_number || '';
+      document.getElementById('educationArea').value = info.education_area || '';
       document.getElementById('academicYear').value = info.academic_year || '';
+      document.getElementById('semester').value = info.semester || '';
       if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('semesterStartDate'), info.semester_start_date || '');
       else document.getElementById('semesterStartDate').value = info.semester_start_date || '';
       document.getElementById('requiredAttendanceDays').value = info.required_attendance_days || '';
+      document.getElementById('measurementHeadName').value = info.measurement_head_name || '';
+      document.getElementById('academicHeadName').value = info.academic_head_name || '';
+      document.getElementById('directorName').value = info.director_name || '';
+      setLogoPreview(info.school_logo || '');
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSchoolInfo();
@@ -121,7 +171,11 @@ function saveSchoolInfo() {
   var school_name = document.getElementById('schoolName').value.trim();
   var district = document.getElementById('district').value.trim();
   var province = document.getElementById('province').value.trim();
+  var school_address = document.getElementById('schoolAddress').value.trim();
+  var phone_number = document.getElementById('phoneNumber').value.trim();
+  var education_area = document.getElementById('educationArea').value.trim();
   var academic_year = document.getElementById('academicYear').value.trim();
+  var semester = document.getElementById('semester').value.trim();
   var semester_start_date = document.getElementById('semesterStartDate').value.trim();
   var required_attendance_days = document.getElementById('requiredAttendanceDays').value.trim();
   if (semester_start_date && !/^\d{4}-\d{2}-\d{2}$/.test(semester_start_date)) {
@@ -136,6 +190,17 @@ function saveSchoolInfo() {
     return;
   }
 
+  var extra = {
+    semester: semester,
+    school_address: school_address,
+    phone_number: phone_number,
+    education_area: education_area,
+    school_logo: document.getElementById('schoolLogo').value,
+    measurement_head_name: document.getElementById('measurementHeadName').value.trim(),
+    academic_head_name: document.getElementById('academicHeadName').value.trim(),
+    director_name: document.getElementById('directorName').value.trim()
+  };
+
   google.script.run
     .withSuccessHandler(function(result) {
       btn.disabled = false;
@@ -147,8 +212,43 @@ function saveSchoolInfo() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days);
+    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days, extra);
 }
+
+function setLogoPreview(value) {
+  document.getElementById('schoolLogo').value = value || '';
+  var img = document.getElementById('schoolLogoPreview');
+  if (value) {
+    img.src = value;
+    img.style.display = 'block';
+  } else {
+    img.removeAttribute('src');
+    img.style.display = 'none';
+  }
+}
+
+function clearSchoolLogo() {
+  document.getElementById('schoolLogoFile').value = '';
+  setLogoPreview('');
+}
+
+document.getElementById('schoolLogoFile').addEventListener('change', function() {
+  var file = this.files && this.files[0];
+  if (!file) return;
+  if (!/^image\//.test(file.type)) {
+    showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+    this.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    google.script.run
+      .withSuccessHandler(function(result) { setLogoPreview(result.school_logo || e.target.result); })
+      .withFailureHandler(function(err) { showToast('อัปโหลดโลโก้ไม่สำเร็จ: ' + err.message, 'error'); })
+      .serverUploadSchoolLogo(TOKEN, e.target.result, file.name);
+  };
+  reader.readAsDataURL(file);
+});
 
 loadSchoolInfo();
 </script>

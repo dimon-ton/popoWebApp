@@ -10,7 +10,7 @@ function getStudentsList(token, class_id) {
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
 
   var isAdmin = session.role === 'admin';
-  var isHomeroom = String(cls.homeroom_teacher_user_id || '').trim() === session.user_id;
+  var isHomeroom = classHasHomeroomTeacher(cls, session.user_id);
 
   var students = dbFind('Students', 'class_id', class_id);
   students.sort(function(a, b) {
@@ -77,7 +77,7 @@ function serverAddStudent(token, class_id, seq_no, student_code, citizen_id, ful
   var cls = dbFindOne('Classes', 'class_id', class_id);
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
 
-  if (session.role !== 'admin' && String(cls.homeroom_teacher_user_id || '').trim() !== session.user_id) {
+  if (session.role !== 'admin' && !classHasHomeroomTeacher(cls, session.user_id)) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
@@ -119,7 +119,7 @@ function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id
   if (!student) throw new Error('ไม่พบนักเรียน');
 
   var cls = dbFindOne('Classes', 'class_id', student.class_id);
-  if (session.role !== 'admin' && (!cls || String(cls.homeroom_teacher_user_id || '').trim() !== session.user_id)) {
+  if (session.role !== 'admin' && (!cls || !classHasHomeroomTeacher(cls, session.user_id))) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
@@ -159,7 +159,7 @@ function serverDeleteStudent(token, student_id) {
   if (!student) throw new Error('ไม่พบนักเรียน');
 
   var cls = dbFindOne('Classes', 'class_id', student.class_id);
-  if (session.role !== 'admin' && (!cls || String(cls.homeroom_teacher_user_id || '').trim() !== session.user_id)) {
+  if (session.role !== 'admin' && (!cls || !classHasHomeroomTeacher(cls, session.user_id))) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
@@ -175,7 +175,7 @@ function serverImportStudentsCSV(token, class_id, rows) {
   var cls = dbFindOne('Classes', 'class_id', class_id);
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
 
-  if (session.role !== 'admin' && String(cls.homeroom_teacher_user_id || '').trim() !== session.user_id) {
+  if (session.role !== 'admin' && !classHasHomeroomTeacher(cls, session.user_id)) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
@@ -266,4 +266,11 @@ function serverImportStudentsCSV(token, class_id, rows) {
   });
 
   return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+}
+
+function classHasHomeroomTeacher(cls, userId) {
+  var ids = typeof parseHomeroomTeacherIds === 'function'
+    ? parseHomeroomTeacherIds(cls && cls.homeroom_teacher_user_ids, cls && cls.homeroom_teacher_user_id)
+    : [String(cls && cls.homeroom_teacher_user_id || '').trim()];
+  return ids.indexOf(String(userId || '').trim()) !== -1;
 }

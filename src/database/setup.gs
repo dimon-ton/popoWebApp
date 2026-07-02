@@ -13,8 +13,8 @@
 
 var TAB_SCHEMA = {
   'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'avatar', 'must_change_pwd', 'last_login_at', 'created_at'],
-  'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days'],
-  'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id'],
+  'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days', 'semester', 'school_address', 'phone_number', 'education_area', 'school_logo', 'measurement_head_name', 'academic_head_name', 'director_name'],
+  'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id', 'homeroom_teacher_user_ids'],
   'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group'],
   'Enrollments':      ['enrollment_id', 'class_id', 'subject_id', 'teacher_user_id', 'dev_activity_result'],
   'Students':         ['student_id', 'class_id', 'seq_no', 'student_code', 'citizen_id', 'full_name', 'dob', 'note'],
@@ -26,14 +26,15 @@ var TAB_SCHEMA = {
   'Characteristics':  ['id', 'student_id', 'subject_id', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 'total', 'label', 'updated_by', 'updated_at'],
   'ReadThinkWrite':   ['id', 'student_id', 'subject_id', 'r1', 'r2', 'r3', 't1', 't2', 't3', 't4', 'w1', 'w2', 'w3', 'total', 'label', 'updated_by', 'updated_at'],
   'AuditLog':         ['timestamp', 'user_id', 'entity', 'entity_id', 'old_value', 'new_value'],
-  'DevActivity':      ['id', 'student_id', 'class_id', 'subject_id', 'result', 'updated_by', 'updated_at']
+  'DevActivity':      ['id', 'student_id', 'class_id', 'subject_id', 'result', 'updated_by', 'updated_at'],
+  'Holidays':         ['holiday_id', 'start_date', 'end_date', 'name', 'type', 'description', 'created_by', 'updated_at']
 };
 
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance',
   'IndicatorScores', 'SummativeScores', 'Characteristics',
-  'ReadThinkWrite', 'AuditLog', 'DevActivity'
+  'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 
 function setupDatabase() {

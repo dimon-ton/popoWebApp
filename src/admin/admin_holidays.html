@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการวันหยุด — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-admin-holidays">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_holidays')">วันหยุด</a>
+  <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
+  <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
+  <div class="navbar-user">
+    <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+    <div class="navbar-dropdown">
+      <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+      <div class="dropdown-divider"></div>
+      <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+    </div>
+  </div>
+</div>
+
+<div class="container wide">
+  <h2 class="page-title">จัดการวันหยุดโรงเรียน</h2>
+
+  <div class="card">
+    <h3 id="formTitle">เพิ่มวันหยุด</h3>
+    <input type="hidden" id="holidayId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>วันที่เริ่มต้น</label>
+        <div class="thai-date-picker" data-thai-date-picker>
+          <input type="hidden" id="startDate" data-thai-date-value>
+          <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>วันที่สิ้นสุด</label>
+        <div class="thai-date-picker" data-thai-date-picker>
+          <input type="hidden" id="endDate" data-thai-date-value>
+          <input type="text" class="thai-date-display" data-thai-date-display placeholder="เว้นว่างถ้าหยุดวันเดียว" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ประเภท</label>
+        <select id="holidayType">
+          <option value="public">วันหยุดราชการ</option>
+          <option value="school">วันหยุดโรงเรียน</option>
+          <option value="activity">กิจกรรมพิเศษ</option>
+          <option value="custom">กำหนดเอง</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1;min-width:220px">
+        <label>ชื่อวันหยุด</label>
+        <input type="text" id="holidayName" placeholder="เช่น วันเฉลิมพระชนมพรรษา">
+      </div>
+      <div class="form-group" style="flex:1;min-width:220px">
+        <label>รายละเอียด</label>
+        <input type="text" id="holidayDescription" placeholder="รายละเอียดเพิ่มเติม">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-primary" id="saveHolidayBtn" onclick="saveHoliday()">บันทึกวันหยุด</button>
+      <button class="btn-secondary" type="button" onclick="resetHolidayForm()">ล้างฟอร์ม</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>รายการวันหยุด</h3>
+    <div class="loading-msg" id="holidaysLoading">กำลังโหลด...</div>
+    <table id="holidaysTable" style="display:none">
+      <thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ประเภท</th><th>รายละเอียด</th><th></th></tr></thead>
+      <tbody id="holidaysBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var holidays = [];
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  google.script.run.withSuccessHandler(function() {
+    localStorage.removeItem('popo_token');
+    location.reload();
+  }).serverLogout(TOKEN);
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 4000);
+}
+
+function setDateValue(id, value) {
+  var el = document.getElementById(id);
+  if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(el, value || '');
+  else el.value = value || '';
+}
+
+function loadHolidays() {
+  document.getElementById('holidaysLoading').style.display = 'block';
+  document.getElementById('holidaysTable').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      holidays = result.holidays || [];
+      renderHolidays();
+    })
+    .withFailureHandler(function(err) { showToast('โหลดวันหยุดไม่สำเร็จ: ' + err.message, 'error'); })
+    .getHolidaysList(TOKEN);
+}
+
+function renderHolidays() {
+  var tbody = document.getElementById('holidaysBody');
+  tbody.innerHTML = '';
+  holidays.forEach(function(row, index) {
+    var range = row.end_date && row.end_date !== row.start_date ? row.start_date + ' - ' + row.end_date : row.start_date;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + escHtml(range) + '</td>' +
+      '<td>' + escHtml(row.name) + '</td>' +
+      '<td>' + escHtml(row.type || '') + '</td>' +
+      '<td>' + escHtml(row.description || '') + '</td>' +
+      '<td><button class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="editHoliday(' + index + ')">แก้ไข</button>' +
+      '<button class="btn-danger" style="font-size:12px;padding:5px 12px" onclick="deleteHolidayByIndex(' + index + ')">ลบ</button></td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('holidaysLoading').style.display = 'none';
+  document.getElementById('holidaysTable').style.display = 'table';
+}
+
+function saveHoliday() {
+  var start = document.getElementById('startDate').value.trim();
+  var end = document.getElementById('endDate').value.trim() || start;
+  var name = document.getElementById('holidayName').value.trim();
+  if (!start || !name) { showToast('กรุณาระบุวันที่และชื่อวันหยุด', 'error'); return; }
+  var btn = document.getElementById('saveHolidayBtn');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      btn.disabled = false;
+      showToast('บันทึกวันหยุดสำเร็จ', 'success');
+      resetHolidayForm();
+      loadHolidays();
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error'); })
+    .serverSaveHoliday(TOKEN, {
+      holiday_id: document.getElementById('holidayId').value,
+      start_date: start,
+      end_date: end,
+      name: name,
+      type: document.getElementById('holidayType').value,
+      description: document.getElementById('holidayDescription').value.trim()
+    });
+}
+
+function editHoliday(index) {
+  var row = holidays[index];
+  document.getElementById('formTitle').textContent = 'แก้ไขวันหยุด';
+  document.getElementById('holidayId').value = row.holiday_id || '';
+  setDateValue('startDate', row.start_date || '');
+  setDateValue('endDate', row.end_date || row.start_date || '');
+  document.getElementById('holidayName').value = row.name || '';
+  document.getElementById('holidayType').value = row.type || 'custom';
+  document.getElementById('holidayDescription').value = row.description || '';
+}
+
+function resetHolidayForm() {
+  document.getElementById('formTitle').textContent = 'เพิ่มวันหยุด';
+  document.getElementById('holidayId').value = '';
+  setDateValue('startDate', '');
+  setDateValue('endDate', '');
+  document.getElementById('holidayName').value = '';
+  document.getElementById('holidayType').value = 'public';
+  document.getElementById('holidayDescription').value = '';
+}
+
+function deleteHoliday(id) {
+  if (!confirm('ยืนยันการลบวันหยุดนี้?')) return;
+  google.script.run
+    .withSuccessHandler(function() { showToast('ลบวันหยุดสำเร็จ', 'success'); loadHolidays(); })
+    .withFailureHandler(function(err) { showToast('ลบไม่สำเร็จ: ' + err.message, 'error'); })
+    .serverDeleteHoliday(TOKEN, id);
+}
+
+function deleteHolidayByIndex(index) {
+  if (holidays[index]) deleteHoliday(holidays[index].holiday_id);
+}
+
+loadHolidays();
+</script>
+</body>
+</html>

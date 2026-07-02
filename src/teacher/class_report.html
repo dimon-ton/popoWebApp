@@ -258,17 +258,22 @@ function gradeCountMap(d) {
 function approvalBlock(d) {
   var teacher = blank(d.teacher_name || '');
   var homeroom = blank(d.homeroom_teacher_name || '');
+  var school = d.school_info || {};
+  var measurementHead = blank(school.measurement_head_name || '........................................');
+  var academicHead = blank(school.academic_head_name || '........................................');
+  var director = blank(school.director_name || '........................................');
+  var schoolName = school.school_name || 'โรงเรียน';
   return '<div class="approval-layout">' +
     approvalSignature('ลงชื่อ', teacher, 'ครูผู้สอน', 'approval-signature-block') +
     approvalSignature('ลงชื่อ', homeroom, 'หัวหน้ากลุ่มสาระการเรียนรู้', 'approval-signature-block') +
-    approvalSignature('ลงชื่อ', '........................................', 'หัวหน้างานวัดผลและประเมินผล', 'approval-signature-block') +
+    approvalSignature('ลงชื่อ', measurementHead, 'หัวหน้างานวัดผลและประเมินผล', 'approval-signature-block') +
     '<div class="approval-academic-block">' +
       '<div class="approval-intro">เรียนเสนอ เพื่อโปรดพิจารณา</div>' +
-      approvalSignature('ลงชื่อ', '........................................', 'หัวหน้างานวิชาการ') +
+      approvalSignature('ลงชื่อ', academicHead, 'หัวหน้างานวิชาการ') +
     '</div>' +
     '<div class="check-row"><span class="check-choice"><span class="check-box"></span><span>อนุมัติ</span></span><span class="check-choice"><span class="check-box"></span><span>ไม่อนุมัติ</span></span></div>' +
     '<div style="height:3mm"></div>' +
-    approvalSignature('', '........................................', 'ผู้อำนวยการโรงเรียนบ้านโพนแท่น', 'approval-signature-block') +
+    approvalSignature('', director, 'ผู้อำนวยการ' + schoolName, 'approval-signature-block') +
   '</div>';
 }
 
@@ -290,7 +295,10 @@ function pageReferenceCover(d, n) {
   var gradeHeader = gradeKeys.map(function(g) { return '<th>' + g + '</th>'; }).join('');
   var countRow = gradeKeys.map(function(g) { return '<td>' + num(grades[g] && grades[g].count || 0) + '</td>'; }).join('');
   var pctRow = gradeKeys.map(function(g) { return '<td>' + num(grades[g] && grades[g].pct || '0.00') + '</td>'; }).join('');
-  var body = '<div class="report-cover-mark">ตรา</div>' +
+  var coverMark = m.school.school_logo
+    ? '<img class="report-school-logo" src="' + escHtml(m.school.school_logo) + '" alt="โลโก้โรงเรียน">'
+    : '<div class="report-cover-mark">ตรา</div>';
+  var body = coverMark +
     '<div class="form-title">แบบบันทึกผลการเรียนประจำรายวิชา ระดับประถมศึกษา</div>' +
     '<div class="form-meta">' +
       '<span class="meta-label">โรงเรียน</span><span class="meta-value">' + blank(m.school.school_name) + '</span>' +
@@ -310,8 +318,8 @@ function pageReferenceCover(d, n) {
     '<tbody><tr><td>' + num(totalForPct) + '</td>' + countRow + '<td>' + num(devCounts['ผ่าน'] || 0) + '</td><td>' + num(devCounts['ไม่ผ่าน'] || 0) + '</td><td>' + num(devCounts['ร'] || 0) + '</td><td>' + num(devCounts['มส'] || 0) + '</td></tr>' +
     '<tr><td class="bold">คิดเป็นร้อยละ</td>' + pctRow + '<td>' + num(percentOf(devCounts['ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ไม่ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ร'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['มส'] || 0, totalForPct)) + '</td></tr></tbody></table>' +
     '<div class="report-grid" style="margin-top:6mm">' +
-      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินคุณลักษณะอันพึงประสงค์</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + charSummary.counts + '</tr><tr>' + charSummary.pcts + '</tr></tbody></table>' +
-      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินการอ่านคิดวิเคราะห์และเขียน</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + rtwSummary.counts + '</tr><tr>' + rtwSummary.pcts + '</tr></tbody></table>' +
+      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินคุณลักษณะอันพึงประสงค์</th></tr><tr><th>70-80<br>ดีเยี่ยม</th><th>60-69<br>ดี</th><th>50-59<br>ผ่านเกณฑ์</th><th>00-49<br>ไม่ผ่าน</th></tr></thead><tbody><tr>' + charSummary.counts + '</tr><tr>' + charSummary.pcts + '</tr></tbody></table>' +
+      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินการอ่านคิดวิเคราะห์และเขียน</th></tr><tr><th>90-100<br>ดีเยี่ยม</th><th>80-89<br>ดี</th><th>70-79<br>ผ่านเกณฑ์</th><th>00-69<br>ไม่ผ่าน</th></tr></thead><tbody><tr>' + rtwSummary.counts + '</tr><tr>' + rtwSummary.pcts + '</tr></tbody></table>' +
     '</div>' +
     '<div class="approval-heading">การอนุมัติผลการเรียน</div>' +
     approvalBlock(d);
@@ -373,7 +381,7 @@ function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
-  var body = '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:28mm">เลขประจำตัว</th><th rowspan="3" style="width:48mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table><div class="form-note"><b>หมายเหตุ</b><br>2 มิถุนายน ' + blank(reportYear(d)) + ' เป็นวันหยุดราชการพิเศษ<br>3 มิถุนายน ' + blank(reportYear(d)) + ' หยุดชดเชยวันเฉลิมพระชนมพรรษา</div>';
+  var body = '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table><div class="form-note"><b>หมายเหตุ</b><br>2 มิถุนายน ' + blank(reportYear(d)) + ' เป็นวันหยุดราชการพิเศษ<br>3 มิถุนายน ' + blank(reportYear(d)) + ' หยุดชดเชยวันเฉลิมพระชนมพรรษา</div>';
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -420,8 +428,24 @@ function referenceRubricGrid(d, n, title, rowsData, fields) {
   var rows = rowsData.map(function(s, i) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + fields.map(function(f) { return '<td>' + rubricNum(s[f]) + '</td>'; }).join('') + '<td>' + rubricNum(s.total) + '</td><td>' + blank(s.label) + '</td></tr>';
   }).join('');
-  var body = '<table class="report-table form-grid-table"><thead><tr>' + rotatedTh('เลขที่', 'rowspan="2" style="width:8mm"') + '<th rowspan="2" style="width:24mm">เลขประจำตัว</th><th rowspan="2" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + fields.length + '">' + escHtml(title) + '</th><th rowspan="2">รวม</th><th rowspan="2">ผล</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  var body = '<table class="report-table form-grid-table"><thead><tr>' + rotatedTh('เลขที่', 'rowspan="2" style="width:8mm"') + '<th rowspan="2" style="width:24mm">เลขประจำตัว</th><th rowspan="2" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + fields.length + '">' + escHtml(title) + '</th><th rowspan="2">รวม</th><th rowspan="2">ผล</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>' + rubricExplanation(title);
   return referenceShell(n, body, 'landscape-table');
+}
+
+function rubricExplanation(title) {
+  return title.indexOf('อ่าน') !== -1 ? readThinkWriteRubricExplanation() : characteristicsRubricExplanation();
+}
+
+function characteristicsRubricExplanation() {
+  return '<div class="rubric-explanation"><b>เกณฑ์การแปลผลคุณลักษณะอันพึงประสงค์ (คะแนนเต็ม 80):</b> 70-80 = ดีเยี่ยม, 60-69 = ดี, 50-59 = ผ่านเกณฑ์, 00-49 = ไม่ผ่าน<br>' +
+    '<b>รายการประเมิน 1-8:</b> รักชาติ ศาสนา พระมหากษัตริย์; ซื่อสัตย์สุจริต; มีวินัย; ใฝ่เรียนรู้; อยู่อย่างพอเพียง; มุ่งมั่นในการทำงาน; รักความเป็นไทย; มีจิตสาธารณะ<br>' +
+    'คะแนนรวมแสดงระดับการประเมินผู้เรียนตามเกณฑ์การวัดและประเมินผลของสถานศึกษา</div>';
+}
+
+function readThinkWriteRubricExplanation() {
+  return '<div class="rubric-explanation"><b>เกณฑ์การแปลผลการอ่าน คิดวิเคราะห์และเขียน (คะแนนเต็ม 100):</b> 90-100 = ดีเยี่ยม, 80-89 = ดี, 70-79 = ผ่านเกณฑ์, 00-69 = ไม่ผ่าน<br>' +
+    '<b>กลุ่มรายการประเมิน:</b> ร1-ร3 = อ่าน, ค1-ค4 = คิดวิเคราะห์, ข1-ข3 = เขียน<br>' +
+    'คะแนนรวมแสดงระดับการประเมินผู้เรียนตามเกณฑ์การวัดและประเมินผลของสถานศึกษา</div>';
 }
 
 function rubricNum(value) {
@@ -444,7 +468,7 @@ function pageReferenceReadThinkWriteAssessment(d, n) {
 function pageReferenceFinalSummary(d, n) {
   var chars = d.char_dist || [];
   var rtw = d.rtw_dist || [];
-  var rows = ['ดีเยี่ยม','ดี','ผ่าน','ไม่ผ่าน'].map(function(label, i) {
+  var rows = ['ดีเยี่ยม','ดี','ผ่านเกณฑ์','ไม่ผ่าน'].map(function(label, i) {
     return '<tr><td>' + blank(label) + '</td><td>' + num(chars[i] && chars[i].count || 0) + '</td><td>' + num(rtw[i] && rtw[i].count || 0) + '</td></tr>';
   }).join('');
   var body = '<div class="description-block"><div style="font-weight:700;text-align:center">คะแนนสรุปผลการประเมิน</div><table class="report-table"><thead><tr><th>ระดับคุณภาพ</th><th>คุณลักษณะฯ</th><th>อ่าน คิดวิเคราะห์และเขียน</th></tr></thead><tbody>' + rows + '</tbody></table><br>' + gradeScaleTable() + '</div>';
@@ -453,7 +477,10 @@ function pageReferenceFinalSummary(d, n) {
 
 function pageCover(d, n) {
   var m = meta(d);
-  var body = '<div class="report-cover-mark">ป.พ.5</div>' +
+  var coverMark = m.school.school_logo
+    ? '<img class="report-school-logo" src="' + escHtml(m.school.school_logo) + '" alt="โลโก้โรงเรียน">'
+    : '<div class="report-cover-mark">ป.พ.5</div>';
+  var body = coverMark +
     lineRow('โรงเรียน', m.school.school_name, 'ปีการศึกษา', m.school.academic_year) +
     lineRow('อำเภอ/เขต', m.school.district, 'จังหวัด', m.school.province) +
     lineRow('ชั้น', m.classLabel, 'รหัสวิชา', m.subj.subject_code) +
@@ -531,7 +558,7 @@ function pageCharacteristicsScores(d, n) {
   var rows = (d.characteristics_students || []).map(function(s) {
     return '<tr><td>' + blank(s.seq_no) + '</td><td class="left">' + blank(s.full_name) + '</td>' + fields.map(function(f) { return '<td>' + num(s[f]) + '</td>'; }).join('') + '<td class="bold">' + num(s.total) + '</td><td>' + blank(s.label) + '</td></tr>';
   }).join('');
-  var body = '<table class="report-table tight no-wrap"><thead><tr><th style="width:8mm">ที่</th><th class="left" style="width:45mm">ชื่อ-สกุล</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>รวม</th><th>ระดับ</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  var body = '<table class="report-table tight no-wrap"><thead><tr><th style="width:8mm">ที่</th><th class="left" style="width:45mm">ชื่อ-สกุล</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>รวม</th><th>ระดับ</th></tr></thead><tbody>' + rows + '</tbody></table>' + rubricExplanation('คุณลักษณะอันพึงประสงค์');
   return pageShell(n, 'แบบประเมินคุณลักษณะอันพึงประสงค์', meta(d).subj.subject_name || '', body, 'compact landscape-table');
 }
 
@@ -549,7 +576,7 @@ function pageReadThinkWriteScores(d, n) {
   var rows = (d.readthinkwrite_students || []).map(function(s) {
     return '<tr><td>' + blank(s.seq_no) + '</td><td class="left">' + blank(s.full_name) + '</td>' + fields.map(function(f) { return '<td>' + num(s[f]) + '</td>'; }).join('') + '<td class="bold">' + num(s.total) + '</td><td>' + blank(s.label) + '</td></tr>';
   }).join('');
-  var body = '<table class="report-table tight no-wrap"><thead><tr><th style="width:8mm">ที่</th><th class="left" style="width:42mm">ชื่อ-สกุล</th><th>ร1</th><th>ร2</th><th>ร3</th><th>ค1</th><th>ค2</th><th>ค3</th><th>ค4</th><th>ข1</th><th>ข2</th><th>ข3</th><th>รวม</th><th>ระดับ</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  var body = '<table class="report-table tight no-wrap"><thead><tr><th style="width:8mm">ที่</th><th class="left" style="width:42mm">ชื่อ-สกุล</th><th>ร1</th><th>ร2</th><th>ร3</th><th>ค1</th><th>ค2</th><th>ค3</th><th>ค4</th><th>ข1</th><th>ข2</th><th>ข3</th><th>รวม</th><th>ระดับ</th></tr></thead><tbody>' + rows + '</tbody></table>' + rubricExplanation('อ่าน คิดวิเคราะห์และเขียน');
   return pageShell(n, 'แบบประเมินการอ่าน คิดวิเคราะห์ และเขียน', meta(d).subj.subject_name || '', body, 'compact landscape-table');
 }
 
@@ -581,9 +608,10 @@ function pageDevActivitySummary(d, n) {
 }
 
 function pageCertification(d, n) {
+  var school = d.school_info || {};
   var body = section('คำรับรองผลการประเมิน', '<div style="min-height:64mm;font-size:16px;text-indent:12mm">ข้าพเจ้าขอรับรองว่าข้อมูลผลการเรียน เวลาเรียน คุณลักษณะอันพึงประสงค์ การอ่าน คิดวิเคราะห์และเขียน และกิจกรรมพัฒนาผู้เรียนในเอกสารฉบับนี้ ถูกต้องตามข้อมูลที่บันทึกในระบบ</div>') +
     '<div class="signature-grid"><div class="signature-box"><div class="signature-line"></div>(' + blank(d.teacher_name) + ')<br>ครูผู้สอน</div><div class="signature-box"><div class="signature-line"></div>(' + blank(d.homeroom_teacher_name) + ')<br>ครูประจำชั้น</div></div>' +
-    '<div class="signature-grid"><div class="signature-box"><div class="signature-line"></div>หัวหน้างานวัดผล</div><div class="signature-box"><div class="signature-line"></div>ผู้บริหารสถานศึกษา</div></div>';
+    '<div class="signature-grid"><div class="signature-box"><div class="signature-line"></div>(' + blank(school.measurement_head_name || '') + ')<br>หัวหน้างานวัดผล</div><div class="signature-box"><div class="signature-line"></div>(' + blank(school.director_name || '') + ')<br>ผู้บริหารสถานศึกษา</div></div>';
   return pageShell(n, 'หน้ารับรองรายงาน', meta(d).classLabel, body);
 }
 

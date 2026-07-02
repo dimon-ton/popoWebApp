@@ -49,8 +49,8 @@ The application is divided into server-side controllers (`.gs`) and client-side 
 
 The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` property) contains the following tables:
 - **`Users`**: `user_id`, `username`, `password_hash`, `salt`, `full_name`, `role`, `avatar`, `created_at`
-- **`SchoolInfo`**: `school_name`, `district`, `province`, `academic_year`
-- **`Classes`**: `class_id`, `level`, `section`, `homeroom_teacher_user_id` (CSV import uses `homeroom_teacher_fullname` field, resolved to `user_id` server-side)
+- **`SchoolInfo`**: `school_name`, `district`, `province`, `academic_year`, `semester_start_date`, `required_attendance_days`, `semester`, `school_address`, `phone_number`, `education_area`, `school_logo`, `measurement_head_name`, `academic_head_name`, `director_name`
+- **`Classes`**: `class_id`, `level`, `section`, `homeroom_teacher_user_id`, `homeroom_teacher_user_ids` (CSV import uses `homeroom_teacher_fullname`, supports multiple comma-separated teacher names, resolved to `user_id` server-side)
 - **`Subjects`**: `subject_id`, `class_id`, `subject_name`, `subject_code`, `hours_per_year`, `weight_group`, `subject_group`
 - **`Enrollments`**: `enrollment_id`, `class_id`, `subject_id`, `teacher_user_id`, `dev_activity_result`
 - **`Students`**: `student_id`, `class_id`, `seq_no`, `student_code`, `citizen_id`, `full_name`, `dob`, `note`
@@ -62,6 +62,8 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 - **`Characteristics`**: `id`, `student_id`, `subject_id`, `t1`...`t8`, `total`, `label`, `updated_by`, `updated_at`
 - **`ReadThinkWrite`**: `id`, `student_id`, `subject_id`, `r1`...`r3`, `t1`...`t4`, `w1`...`w3`, `total`, `label`, `updated_by`, `updated_at`
 - **`AuditLog`**: `timestamp`, `user_id`, `entity`, `entity_id`, `old_value`, `new_value`
+- **`DevActivity`**: `id`, `student_id`, `class_id`, `subject_id`, `result`, `updated_by`, `updated_at`
+- **`Holidays`**: `holiday_id`, `start_date`, `end_date`, `name`, `type`, `description`, `created_by`, `updated_at`
 
 ---
 
@@ -86,10 +88,10 @@ Use this same URL as `WEB_APP_URL` when running production smoke tests.
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `238`
+- Stable production version: `241`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Fix grade report attendance marks`
+- Latest verified production release: `Use Excel-specific grade report rubrics`
 
 ---
 

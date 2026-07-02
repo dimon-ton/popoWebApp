@@ -31,7 +31,8 @@ function getAttendanceData(token, class_id, subject_id, week) {
   var weekNum = parseInt(week) || 1;
   if (weekNum < 1) weekNum = 1;
   var attendanceConfig = getAttendanceConfig();
-  var attendanceWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days);
+  var holidaySet = getHolidayDateSet();
+  var attendanceWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
   var maxWeeks = Math.max(1, attendanceWeeks.length);
   if (weekNum > maxWeeks) weekNum = maxWeeks;
   var dates = attendanceWeeks[weekNum - 1] || [];
@@ -59,6 +60,8 @@ function getAttendanceData(token, class_id, subject_id, week) {
   var yearlyMap = {};
   allAttendance.forEach(function(row) {
     if (row.subject_id !== subject_id) return;
+    var rowDate = formatDateISO(new Date(row.date));
+    if (holidaySet[rowDate]) return;
     var sid = row.student_id;
     if (!yearlyMap[sid]) yearlyMap[sid] = { present: 0, leave: 0, absent: 0 };
     var s = row.status;
@@ -224,7 +227,7 @@ function normalizeISODate(value) {
 
 function buildAttendanceDates(startDate, requiredDays) {
   var dates = [];
-  buildAttendanceWeeks(startDate, requiredDays).forEach(function(weekDates) {
+  buildAttendanceWeeks(startDate, requiredDays, getHolidayDateSet()).forEach(function(weekDates) {
     weekDates.forEach(function(date) {
       dates.push(date);
     });
@@ -235,16 +238,18 @@ function buildAttendanceDates(startDate, requiredDays) {
 // Week 1 begins on the semester opening date and contains weekdays through
 // Friday. Every following week contains Monday through Friday. Saturdays and
 // Sundays are excluded. The last week may be shorter when requiredDays is reached.
-function buildAttendanceWeeks(startDate, requiredDays) {
+function buildAttendanceWeeks(startDate, requiredDays, holidaySet) {
   var weeks = [];
   var dates = [];
   var cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
   var limit = Math.max(1, Math.min(parseInt(requiredDays, 10) || 200, 260));
   var total = 0;
+  holidaySet = holidaySet || {};
 
   while (total < limit) {
     var day = cursor.getDay();
-    if (day !== 0 && day !== 6) {
+    var iso = formatDateISO(cursor);
+    if (day !== 0 && day !== 6 && !holidaySet[iso]) {
       dates.push(new Date(cursor.getTime()));
       total++;
     }

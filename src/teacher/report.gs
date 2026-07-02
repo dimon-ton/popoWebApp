@@ -27,12 +27,9 @@ function getReportData(token, class_id, subject_id) {
     if (teacher) teacher_name = teacher.full_name || '';
   }
 
-  // Homeroom teacher
-  var homeroom_teacher_name = '';
-  if (cls.homeroom_teacher_user_id) {
-    var hroom = dbFindOne('Users', 'user_id', String(cls.homeroom_teacher_user_id).trim());
-    if (hroom) homeroom_teacher_name = hroom.full_name || '';
-  }
+  // Homeroom teachers. Supports the new JSON list and the old single-teacher field.
+  var homeroom_teacher_names = getHomeroomTeacherNames(cls);
+  var homeroom_teacher_name = homeroom_teacher_names.join(', ');
 
   // Students in this class
   var students = dbFind('Students', 'class_id', class_id);
@@ -131,6 +128,7 @@ function getReportData(token, class_id, subject_id) {
     subject_info: subj,
     teacher_name: teacher_name,
     homeroom_teacher_name: homeroom_teacher_name,
+    homeroom_teacher_names: homeroom_teacher_names,
     total_students: total_students,
     grade_dist: grade_dist,
     char_dist: char_dist,
@@ -214,6 +212,7 @@ function getReportBookData(token, class_id, subject_id) {
   });
 
   var attendanceConfig = getAttendanceConfig();
+  var holidaySet = getHolidayDateSet();
   var attendanceCalendar = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days)
     .map(function(date) { return formatDateISO(date); });
   var attendanceCalendarSet = {};
@@ -224,6 +223,7 @@ function getReportBookData(token, class_id, subject_id) {
     var status = reportNormalizeAttendanceStatus(row.status);
     if (row.subject_id !== subject_id || !studentSet[row.student_id] || !status) return;
     var dateStr = reportNormalizeAttendanceDate(row.date);
+    if (holidaySet[dateStr]) return;
     if (attendanceCalendarSet[dateStr] !== undefined && attendanceCalendarSet[dateStr] > lastAttendanceIndex) {
       lastAttendanceIndex = attendanceCalendarSet[dateStr];
     }
@@ -242,11 +242,12 @@ function getReportBookData(token, class_id, subject_id) {
     var bucket = attendance_totals[row.student_id];
     if (!bucket) return;
     var status = reportNormalizeAttendanceStatus(row.status);
+    var dateStr = reportNormalizeAttendanceDate(row.date);
+    if (holidaySet[dateStr]) return;
     if (status === '/') bucket.present++;
     else if (status === 'ล') bucket.leave++;
     else if (status === 'ข') bucket.absent++;
     bucket.total = bucket.present + bucket.leave + bucket.absent;
-    var dateStr = reportNormalizeAttendanceDate(row.date);
     if (attendanceDateSet[dateStr]) {
       attendance_by_student[row.student_id][dateStr] = status;
     }
@@ -313,6 +314,23 @@ function reportValueOrBlank(value) {
   return value === null || value === undefined ? '' : value;
 }
 
+function getHomeroomTeacherIds(row) {
+  if (typeof parseHomeroomTeacherIds === 'function') {
+    return parseHomeroomTeacherIds(row.homeroom_teacher_user_ids, row.homeroom_teacher_user_id);
+  }
+  var ids = [];
+  try { ids = JSON.parse(row.homeroom_teacher_user_ids || '[]'); } catch(e) {}
+  if ((!ids || !ids.length) && row.homeroom_teacher_user_id) ids = [row.homeroom_teacher_user_id];
+  return (ids || []).map(function(id) { return String(id || '').trim(); }).filter(String);
+}
+
+function getHomeroomTeacherNames(row) {
+  return getHomeroomTeacherIds(row).map(function(id) {
+    var user = dbFindOne('Users', 'user_id', id);
+    return user ? user.full_name || id : id;
+  }).filter(String);
+}
+
 function reportNormalizeAttendanceDate(value) {
   var iso = normalizeISODate(value);
   if (iso) return iso;
@@ -361,9 +379,13 @@ function serverExportReportPdf(token, class_id, subject_id) {
   rows.push(['รายงานผลการเรียน', '', '', '']);
   rows.push(['โรงเรียน', school.school_name || '-', 'ปีการศึกษา', school.academic_year || '-']);
   rows.push(['อำเภอ', school.district   || '-', 'จังหวัด',   school.province    || '-']);
+  rows.push(['ที่อยู่', school.school_address || '-', 'เขตพื้นที่', school.education_area || '-']);
+  rows.push(['โทรศัพท์', school.phone_number || '-', 'ภาคเรียน', school.semester || '-']);
   rows.push(['ชั้น',  fmtClassLabel(cls.level, cls.section), 'รหัสวิชา', subj.subject_code || '-']);
   rows.push(['เวลาเรียน (ชม./ปี)', subj.hours_per_year || '-', '', '']);
   rows.push(['ครูผู้สอน', d.teacher_name || '-', 'ครูประจำชั้น', d.homeroom_teacher_name || '-']);
+  rows.push(['หัวหน้างานวัดผล', school.measurement_head_name || '-', 'หัวหน้างานวิชาการ', school.academic_head_name || '-']);
+  rows.push(['ผู้อำนวยการ', school.director_name || '-', '', '']);
   rows.push(['จำนวนนักเรียน', d.total_students, '', '']);
   rows.push(['', '', '', '']);
 

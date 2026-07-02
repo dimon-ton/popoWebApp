@@ -5,15 +5,21 @@ var DEFAULT_WEIGHTS = {
   '2': { coursework_max: 80, final_max: 20, pre_mid_max: 30, mid_max: 20, post_mid_max: 30, final_exam_max: 20 }
 };
 
+var SCHOOL_INFO_COLUMNS = [
+  'semester_start_date', 'required_attendance_days', 'semester', 'school_address',
+  'phone_number', 'education_area', 'school_logo', 'measurement_head_name',
+  'academic_head_name', 'director_name'
+];
+var CLASS_EXTRA_COLUMNS = ['homeroom_teacher_user_ids'];
+var HOLIDAY_HEADERS = ['holiday_id', 'start_date', 'end_date', 'name', 'type', 'description', 'created_by', 'updated_at'];
+
 // ── School Info ───────────────────────────────────────────────────────────────
 
 function getSchoolInfo() {
-  ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
+  ensureSchoolInfoSchema();
   var sheet = getSheet('SchoolInfo');
   if (sheet.getLastRow() < 2) {
-    return {
-      school_name: '', district: '', province: '', academic_year: '', semester_start_date: '', required_attendance_days: ''
-    };
+    return emptySchoolInfo();
   }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var values = sheet.getRange(2, 1, 1, headers.length).getValues()[0];
@@ -22,18 +28,17 @@ function getSchoolInfo() {
     info[header] = values[index];
   });
   if (!Object.keys(info).length) {
-    info = {
-    school_name: '', district: '', province: '', academic_year: '', semester_start_date: '', required_attendance_days: ''
-    };
+    info = emptySchoolInfo();
   }
   info.semester_start_date = normalizeSchoolDateValue(info.semester_start_date);
   return info;
 }
 
-function serverSaveSchoolInfo(token, school_name, district, province, academic_year, semester_start_date, required_attendance_days) {
+function serverSaveSchoolInfo(token, school_name, district, province, academic_year, semester_start_date, required_attendance_days, extra) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  ensureColumns('SchoolInfo', ['semester_start_date', 'required_attendance_days']);
+  ensureSchoolInfoSchema();
+  extra = extra || {};
   var normalizedStartDate = normalizeSchoolDateValue(semester_start_date);
   if (semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
   var attendanceDays = required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10);
@@ -53,7 +58,15 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
       province: province,
       academic_year: academic_year,
       semester_start_date: normalizedStartDate,
-      required_attendance_days: attendanceDays
+      required_attendance_days: attendanceDays,
+      semester: extra.semester || '',
+      school_address: extra.school_address || '',
+      phone_number: extra.phone_number || '',
+      education_area: extra.education_area || '',
+      school_logo: extra.school_logo || '',
+      measurement_head_name: extra.measurement_head_name || '',
+      academic_head_name: extra.academic_head_name || '',
+      director_name: extra.director_name || ''
     };
     var values = headers.map(function(h) { return rowObj[h] !== undefined ? rowObj[h] : ''; });
     // Pad to header count
@@ -76,6 +89,31 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   return { ok: true };
 }
 
+function emptySchoolInfo() {
+  return {
+    school_name: '', district: '', province: '', academic_year: '',
+    semester_start_date: '', required_attendance_days: '', semester: '',
+    school_address: '', phone_number: '', education_area: '', school_logo: '',
+    measurement_head_name: '', academic_head_name: '', director_name: ''
+  };
+}
+
+function ensureSchoolInfoSchema() {
+  ensureColumns('SchoolInfo', SCHOOL_INFO_COLUMNS);
+}
+
+function serverUploadSchoolLogo(token, dataUrl, filename) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureSchoolInfoSchema();
+  var value = String(dataUrl || '');
+  if (!/^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(value)) {
+    throw new Error('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+  }
+  if (value.length > 700000) throw new Error('ไฟล์โลโก้มีขนาดใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกินประมาณ 500KB');
+  return { ok: true, school_logo: value, filename: filename || '' };
+}
+
 function normalizeSchoolDateValue(value) {
   if (!value) return '';
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
@@ -92,30 +130,164 @@ function normalizeSchoolDateValue(value) {
   return match[1] + '-' + match[2] + '-' + match[3];
 }
 
+// ── Holidays ─────────────────────────────────────────────────────────────────
+
+function ensureHolidaysSchema() {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  var ss = SpreadsheetApp.openById(id);
+  var sheet = ss.getSheetByName('Holidays');
+  if (!sheet) {
+    sheet = ss.insertSheet('Holidays');
+    sheet.getRange(1, 1, 1, HOLIDAY_HEADERS.length).setValues([HOLIDAY_HEADERS]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, HOLIDAY_HEADERS.length).setFontWeight('bold');
+  } else {
+    ensureColumns('Holidays', HOLIDAY_HEADERS);
+  }
+}
+
+function getHolidaysList(token) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureHolidaysSchema();
+  var rows = dbGetAll('Holidays').map(function(row) {
+    row.start_date = normalizeSchoolDateValue(row.start_date);
+    row.end_date = normalizeSchoolDateValue(row.end_date) || row.start_date;
+    return row;
+  });
+  rows.sort(function(a, b) { return String(a.start_date || '').localeCompare(String(b.start_date || '')); });
+  return { holidays: rows };
+}
+
+function serverSaveHoliday(token, holiday) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureHolidaysSchema();
+  holiday = holiday || {};
+  var start = normalizeSchoolDateValue(holiday.start_date);
+  var end = normalizeSchoolDateValue(holiday.end_date) || start;
+  if (!start) throw new Error('กรุณาระบุวันที่หยุด');
+  if (end < start) throw new Error('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น');
+  if (!String(holiday.name || '').trim()) throw new Error('กรุณาระบุชื่อวันหยุด');
+  var id = String(holiday.holiday_id || '').trim();
+  var row = {
+    holiday_id: id || generateId('holiday'),
+    start_date: start,
+    end_date: end,
+    name: String(holiday.name || '').trim(),
+    type: String(holiday.type || '').trim(),
+    description: String(holiday.description || '').trim(),
+    created_by: session.user_id,
+    updated_at: new Date().toISOString()
+  };
+  if (id && dbFindOne('Holidays', 'holiday_id', id)) dbUpdate('Holidays', 'holiday_id', id, row);
+  else dbInsert('Holidays', row);
+  appendAuditLog(session.user_id, 'Holidays', row.holiday_id, null, row);
+  return { ok: true, holiday_id: row.holiday_id };
+}
+
+function serverDeleteHoliday(token, holiday_id) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureHolidaysSchema();
+  var old = dbFindOne('Holidays', 'holiday_id', holiday_id);
+  dbDelete('Holidays', 'holiday_id', holiday_id);
+  appendAuditLog(session.user_id, 'Holidays', holiday_id, old, null);
+  return { ok: true };
+}
+
+function getHolidayDateSet() {
+  try { ensureHolidaysSchema(); } catch (e) { return {}; }
+  var set = {};
+  dbGetAll('Holidays').forEach(function(row) {
+    var start = parseISODate(normalizeSchoolDateValue(row.start_date));
+    var end = parseISODate(normalizeSchoolDateValue(row.end_date)) || start;
+    if (!start) return;
+    var cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    var last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    while (cursor.getTime() <= last.getTime()) {
+      set[formatDateISO(cursor)] = true;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+  return set;
+}
+
 // ── Classes ───────────────────────────────────────────────────────────────────
 
 function generateClassId(level, section) {
   return 'class_' + String(level || '').replace(/[\.\s]/g, '') + '_' + String(section || '').replace(/[\.\s]/g, '');
 }
 
+function ensureClassesSchema() {
+  ensureColumns('Classes', CLASS_EXTRA_COLUMNS);
+}
+
+function parseHomeroomTeacherIds(value, fallback) {
+  var ids = [];
+  if (Array.isArray(value)) {
+    ids = value;
+  } else {
+    var raw = String(value || '').trim();
+    if (raw) {
+      try {
+        var parsed = JSON.parse(raw);
+        ids = Array.isArray(parsed) ? parsed : raw.split(/[,\n;]/);
+      } catch (e) {
+        ids = raw.split(/[,\n;]/);
+      }
+    }
+  }
+  if ((!ids || ids.length === 0) && fallback) ids = [fallback];
+  var seen = {};
+  return (ids || []).map(function(id) { return String(id || '').trim(); }).filter(function(id) {
+    if (!id || seen[id]) return false;
+    seen[id] = true;
+    return true;
+  });
+}
+
+function encodeHomeroomTeacherIds(ids) {
+  return JSON.stringify(parseHomeroomTeacherIds(ids, ''));
+}
+
+function enrichClassHomerooms(row, usersById) {
+  var ids = parseHomeroomTeacherIds(row.homeroom_teacher_user_ids, row.homeroom_teacher_user_id);
+  row.homeroom_teacher_user_ids = encodeHomeroomTeacherIds(ids);
+  row.homeroom_teacher_ids = ids;
+  row.homeroom_teacher_names = ids.map(function(id) {
+    return usersById && usersById[id] ? usersById[id].full_name || id : id;
+  }).filter(function(name) { return !!name; });
+  row.homeroom_teacher_name = row.homeroom_teacher_names.join(', ');
+  if (!row.homeroom_teacher_user_id && ids.length) row.homeroom_teacher_user_id = ids[0];
+  return row;
+}
+
 function getClassesList(token) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  return { classes: sortClassRows(withClassLabels(dbGetAll('Classes'))) };
+  ensureClassesSchema();
+  var usersById = {};
+  dbGetAll('Users').forEach(function(user) { if (user.user_id) usersById[String(user.user_id).trim()] = user; });
+  var classes = withClassLabels(dbGetAll('Classes')).map(function(row) { return enrichClassHomerooms(row, usersById); });
+  return { classes: sortClassRows(classes) };
 }
 
 function serverAddClass(token, class_id, level, section, homeroom_teacher_user_id) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureClassesSchema();
   if (!level || !section) throw new Error('กรุณาระบุระดับชั้นและห้อง');
   var autoId = generateClassId(level, section);
   var existing = dbFindOne('Classes', 'class_id', autoId);
   if (existing) throw new Error('ชั้นเรียน ' + fmtClassLabel(level, section) + ' มีอยู่แล้ว');
+  var teacherIds = parseHomeroomTeacherIds(homeroom_teacher_user_id, '');
   dbInsert('Classes', {
     class_id: autoId,
     level: level,
     section: section,
-    homeroom_teacher_user_id: (homeroom_teacher_user_id || '').trim()
+    homeroom_teacher_user_id: teacherIds[0] || '',
+    homeroom_teacher_user_ids: encodeHomeroomTeacherIds(teacherIds)
   });
   return { ok: true, class_id: autoId };
 }
@@ -123,10 +295,13 @@ function serverAddClass(token, class_id, level, section, homeroom_teacher_user_i
 function serverUpdateClass(token, class_id, level, section, homeroom_teacher_user_id) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureClassesSchema();
+  var teacherIds = parseHomeroomTeacherIds(homeroom_teacher_user_id, '');
   dbUpdate('Classes', 'class_id', class_id, {
     level: level,
     section: section,
-    homeroom_teacher_user_id: (homeroom_teacher_user_id || '').trim()
+    homeroom_teacher_user_id: teacherIds[0] || '',
+    homeroom_teacher_user_ids: encodeHomeroomTeacherIds(teacherIds)
   });
   return { ok: true };
 }
@@ -141,6 +316,7 @@ function serverDeleteClass(token, class_id) {
 function serverImportClassesCSV(token, rows) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureClassesSchema();
 
   var users = dbGetAll('Users');
   var usersById = {};
@@ -178,28 +354,33 @@ function serverImportClassesCSV(token, rows) {
     }
     if (!classId) classId = generateClassId(level, section);
 
-    var teacherId = '';
+    var teacherIds = [];
     if (teacherFullname) {
-      var matched = usersByFullname[teacherFullname];
-      if (!matched) {
-        warnings.push('แถวที่ ' + lineNum + ': ไม่พบชื่อครู "' + teacherFullname + '" ในระบบ จึงเว้นว่าง');
-      } else if (matched === '__DUPLICATE__') {
-        warnings.push('แถวที่ ' + lineNum + ': พบชื่อครู "' + teacherFullname + '" ซ้ำหลายคน กรุณาระบุให้ชัดเจน จึงเว้นว่าง');
-      } else {
-        teacherId = matched.user_id;
-      }
+      teacherFullname.split(/[,;\n、]+/).map(function(name) { return name.trim(); }).filter(String).forEach(function(name) {
+        var matched = usersByFullname[name];
+        if (!matched) {
+          warnings.push('แถวที่ ' + lineNum + ': ไม่พบชื่อครู "' + name + '" ในระบบ จึงเว้นว่าง');
+        } else if (matched === '__DUPLICATE__') {
+          warnings.push('แถวที่ ' + lineNum + ': พบชื่อครู "' + name + '" ซ้ำหลายคน กรุณาระบุให้ชัดเจน จึงเว้นว่าง');
+        } else {
+          teacherIds.push(matched.user_id);
+        }
+      });
     }
+    teacherIds = parseHomeroomTeacherIds(teacherIds, '');
 
     if (byId[classId]) {
       var oldVal = JSON.parse(JSON.stringify(byId[classId]));
       dbUpdate('Classes', 'class_id', classId, {
         level: level,
         section: section,
-        homeroom_teacher_user_id: teacherId
+        homeroom_teacher_user_id: teacherIds[0] || '',
+        homeroom_teacher_user_ids: encodeHomeroomTeacherIds(teacherIds)
       });
       byId[classId].level = level;
       byId[classId].section = section;
-      byId[classId].homeroom_teacher_user_id = teacherId;
+      byId[classId].homeroom_teacher_user_id = teacherIds[0] || '';
+      byId[classId].homeroom_teacher_user_ids = encodeHomeroomTeacherIds(teacherIds);
       appendAuditLog(session.user_id, 'Classes', classId, oldVal, { imported: true, action: 'update' });
       updated++;
     } else {
@@ -207,7 +388,8 @@ function serverImportClassesCSV(token, rows) {
         class_id: classId,
         level: level,
         section: section,
-        homeroom_teacher_user_id: teacherId
+        homeroom_teacher_user_id: teacherIds[0] || '',
+        homeroom_teacher_user_ids: encodeHomeroomTeacherIds(teacherIds)
       };
       dbInsert('Classes', newClass);
       byId[classId] = newClass;
@@ -712,7 +894,8 @@ function serverImportSubjectsCSV(token, rows) {
           class_id: classId,
           level: level,
           section: section,
-          homeroom_teacher_user_id: ''
+          homeroom_teacher_user_id: '',
+          homeroom_teacher_user_ids: '[]'
         };
         dbInsert('Classes', newClass);
         classesById[classId] = newClass;

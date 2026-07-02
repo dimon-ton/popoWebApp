@@ -33,12 +33,14 @@ function handleTestApi(e) {
     switch (api) {
       case 'seed_class':
         ensureTestPrefix(params.class_id);
+        ensureColumns('Classes', ['homeroom_teacher_user_ids']);
         dbDelete('Classes', 'class_id', params.class_id);
         dbInsert('Classes', {
           class_id: params.class_id,
           level: params.level || 'ป.1',
           section: params.section || '1',
-          homeroom_teacher_user_id: params.homeroom || ''
+          homeroom_teacher_user_id: params.homeroom || '',
+          homeroom_teacher_user_ids: params.homeroom ? JSON.stringify([params.homeroom]) : '[]'
         });
         return jsonOk({ class_id: params.class_id });
 
@@ -170,7 +172,8 @@ function handleTestApi(e) {
           'Characteristics': 'id',
           'ReadThinkWrite': 'id',
           'AuditLog': 'user_id',
-          'DevActivity': 'id'
+          'DevActivity': 'id',
+          'Holidays': 'holiday_id'
         };
         Object.keys(tabIdFields).forEach(function(tab) {
           if (tab === 'Enrollments' || tab === 'AuditLog') return;

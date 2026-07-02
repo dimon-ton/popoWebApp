@@ -20,6 +20,7 @@ var TEMPLATE_PATHS = {
   'admin_db_status': 'admin/admin_db_status',
   'admin_enrollments': 'admin/admin_enrollments',
   'admin_indicators': 'admin/admin_indicators',
+  'admin_holidays': 'admin/admin_holidays',
   'admin_school': 'admin/admin_school',
   'admin_subjects': 'admin/admin_subjects',
   'admin_users': 'admin/admin_users',
@@ -71,7 +72,7 @@ function doGet(e) {
     }
 
     // Admin-only pages
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_weights', 'admin_audit'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1) {
       if (!session || session.role !== 'admin') {
         return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
@@ -112,6 +113,8 @@ function doGet(e) {
           subject_id: params.subject_id || '',
           subject_name: params.subject_name || params.subject_id || ''
         });
+      case 'admin_holidays':
+        return buildPage('admin_holidays', { session: session, token: token });
       case 'admin_weights':
         return buildPage('admin_weights', { session: session, token: token });
       case 'admin_audit':
@@ -349,7 +352,7 @@ function getPageHtml(token, page) {
       loginTmpl.data = { error: null };
       return loginTmpl.evaluate().getContent();
     }
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_weights', 'admin_audit'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }
@@ -552,6 +555,9 @@ function getDbStatus() {
   if (!id) throw new Error('DB_SHEET_ID not set. Run setupDatabase() first.');
   var ss = SpreadsheetApp.openById(id);
   return TAB_ORDER.map(function(tabName) {
+    if (!ss.getSheetByName(tabName) && TAB_SCHEMA && TAB_SCHEMA[tabName]) {
+      ensureTab(ss, tabName, TAB_SCHEMA[tabName]);
+    }
     var sheet = ss.getSheetByName(tabName);
     var count = sheet ? sheet.getLastRow() : 0;
     return { tab: tabName, count: count };

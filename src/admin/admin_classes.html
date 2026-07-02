@@ -11,6 +11,7 @@
   <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
   <a href="#" onclick="navigate('dashboard')">หน้าหลัก</a>
   <a href="#" onclick="navigate('admin_school')">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_holidays')">วันหยุด</a>
   <a href="#" onclick="navigate('admin_classes')">ชั้นเรียน</a>
   <a href="#" onclick="navigate('admin_subjects')">วิชา</a>
   <a href="#" onclick="navigate('admin_users')">ผู้ใช้</a>
@@ -51,8 +52,7 @@
       </div>
       <div class="form-group">
         <label>ครูประจำชั้น</label>
-        <select id="newHomeroomTeacher">
-          <option value="">— ไม่ระบุ —</option>
+        <select id="newHomeroomTeacher" multiple size="5">
         </select>
       </div>
       <div class="form-group" style="justify-content:flex-end">
@@ -64,7 +64,7 @@
   <div class="card">
     <h3>นำเข้าชั้นเรียนด้วย CSV</h3>
     <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
-      ใช้สำหรับเพิ่มหรืออัปเดตชั้นเรียนหลายรายการ คอลัมน์ <code>level*</code> และ <code>section*</code> ต้องกรอก หากเว้น <code>class_id</code> ระบบจะสร้างจากระดับชั้นและห้อง สามารถระบุครูประจำชั้นด้วยชื่อ-สกุลที่ตรงกับข้อมูลผู้ใช้ในระบบ
+      ใช้สำหรับเพิ่มหรืออัปเดตชั้นเรียนหลายรายการ คอลัมน์ <code>level*</code> และ <code>section*</code> ต้องกรอก หากเว้น <code>class_id</code> ระบบจะสร้างจากระดับชั้นและห้อง สามารถระบุครูประจำชั้นหลายคนด้วยชื่อ-สกุลคั่นด้วยเครื่องหมายจุลภาค
       <div style="margin-top:8px;">
         <strong>ลำดับคอลัมน์:</strong>
         <code>class_id</code>,
@@ -131,8 +131,7 @@
     </div>
     <div class="form-group">
       <label>ครูประจำชั้น</label>
-      <select id="editHomeroomTeacher">
-        <option value="">— ไม่ระบุ —</option>
+      <select id="editHomeroomTeacher" multiple size="6">
       </select>
     </div>
     <div class="modal-actions">
@@ -229,7 +228,7 @@ function downloadCSVFile(filename, rows) {
 function downloadClassesCSVTemplate() {
   downloadCSVFile('classes_import_template.csv', [
     ['class_id', 'level*', 'section*', 'homeroom_teacher_fullname'],
-    ['', 'ป.1', '1', 'นายสมชาย ใจดี'],
+    ['', 'ป.1', '1', 'นายสมชาย ใจดี, นางสาวมาลี รักเรียน'],
     ['', 'ป.2', '1', '']
   ]);
 }
@@ -301,7 +300,6 @@ function loadTeachers() {
       (result.teachers || []).forEach(function(t) {
         var cleanId = (t.user_id || '').trim();
         teachersMap[cleanId] = t.full_name;
-        
         var opt = document.createElement('option');
         opt.value = cleanId;
         opt.textContent = t.full_name;
@@ -333,8 +331,11 @@ function renderClasses(classes) {
   var tbody = document.getElementById('classesBody');
   tbody.innerHTML = '';
   classes.forEach(function(c) {
-    var rawTeacherId = (c.homeroom_teacher_user_id || '').trim();
-    var teacherName = teachersMap[rawTeacherId] || '—';
+    var teacherIds = getClassHomeroomIds(c);
+    var teacherName = (c.homeroom_teacher_names && c.homeroom_teacher_names.length)
+      ? c.homeroom_teacher_names.join(', ')
+      : (teacherIds.map(function(id) { return teachersMap[id] || id; }).filter(Boolean).join(', ') || '—');
+    var encodedTeacherIds = encodeURIComponent(JSON.stringify(teacherIds));
     var tr = document.createElement('tr');
     tr.setAttribute('data-class-id', c.class_id);
     tr.innerHTML =
@@ -343,7 +344,7 @@ function renderClasses(classes) {
       '<td>' + escHtml(teacherName) + '</td>' +
       '<td>' +
       '<button class="btn-secondary" onclick="viewStudents(\'' + escHtml(c.class_id) + '\')" style="margin-right:6px;background:#1a56a0;color:white;font-size:12px;padding:5px 12px">นักเรียน</button>' +
-      '<button class="btn-secondary" onclick="openEditModal(\'' + escHtml(c.class_id) + '\', \'' + escHtml(c.level) + '\', \'' + escHtml(c.section) + '\', \'' + escHtml(rawTeacherId) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
+      '<button class="btn-secondary" onclick="openEditModal(\'' + escHtml(c.class_id) + '\', \'' + escHtml(c.level) + '\', \'' + escHtml(c.section) + '\', \'' + encodedTeacherIds + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
       '<button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
       '</td>';
     tbody.appendChild(tr);
@@ -354,7 +355,7 @@ function renderClasses(classes) {
 function addClass() {
   var level = document.getElementById('newLevel').value;
   var section = document.getElementById('newSection').value.trim();
-  var homeroom = document.getElementById('newHomeroomTeacher').value;
+  var homeroom = getSelectedValues('newHomeroomTeacher');
 
   if (!level || !section) { showToast('กรุณาระบุระดับชั้นและห้อง', 'error'); return; }
 
@@ -367,6 +368,7 @@ function addClass() {
       if (result && result.error) { showToast(result.error, 'error'); return; }
       showToast('เพิ่มชั้นเรียนสำเร็จ (' + result.class_id + ')', 'success');
       document.getElementById('newSection').value = '';
+      setSelectedValues('newHomeroomTeacher', []);
       document.getElementById('classesLoading').style.display = 'block';
       document.getElementById('classesTable').style.display = 'none';
       loadClasses();
@@ -375,15 +377,17 @@ function addClass() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddClass(TOKEN, '', level, section, homeroom);
+    .serverAddClass(TOKEN, '', level, section, JSON.stringify(homeroom));
 }
 
-function openEditModal(classId, level, section, homeroomTeacherUserId) {
+function openEditModal(classId, level, section, encodedHomeroomTeacherIds) {
   document.getElementById('editTargetClassId').textContent = classId;
   document.getElementById('editClassId').value = classId;
   document.getElementById('editLevel').value = level;
   document.getElementById('editSection').value = section;
-  document.getElementById('editHomeroomTeacher').value = homeroomTeacherUserId || '';
+  var ids = [];
+  try { ids = JSON.parse(decodeURIComponent(encodedHomeroomTeacherIds || '%5B%5D')); } catch(e) {}
+  setSelectedValues('editHomeroomTeacher', ids);
   document.getElementById('editModal').classList.add('open');
   document.getElementById('confirmEditBtn').disabled = false;
 }
@@ -396,7 +400,7 @@ function confirmEdit() {
   var classId = document.getElementById('editClassId').value;
   var level = document.getElementById('editLevel').value;
   var section = document.getElementById('editSection').value.trim();
-  var homeroom = document.getElementById('editHomeroomTeacher').value;
+  var homeroom = getSelectedValues('editHomeroomTeacher');
 
   if (!level || !section) { showToast('กรุณาระบุระดับชั้นและห้อง', 'error'); return; }
 
@@ -420,7 +424,28 @@ function confirmEdit() {
       btn.textContent = 'บันทึก';
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverUpdateClass(TOKEN, classId, level, section, homeroom);
+    .serverUpdateClass(TOKEN, classId, level, section, JSON.stringify(homeroom));
+}
+
+function getSelectedValues(selectId) {
+  return Array.from(document.getElementById(selectId).selectedOptions).map(function(opt) { return opt.value; }).filter(Boolean);
+}
+
+function setSelectedValues(selectId, values) {
+  var set = {};
+  (values || []).forEach(function(value) { set[String(value)] = true; });
+  Array.from(document.getElementById(selectId).options).forEach(function(opt) {
+    opt.selected = !!set[opt.value];
+  });
+}
+
+function getClassHomeroomIds(c) {
+  if (Array.isArray(c.homeroom_teacher_ids)) return c.homeroom_teacher_ids;
+  try {
+    var parsed = JSON.parse(c.homeroom_teacher_user_ids || '[]');
+    if (Array.isArray(parsed)) return parsed;
+  } catch(e) {}
+  return c.homeroom_teacher_user_id ? [String(c.homeroom_teacher_user_id).trim()] : [];
 }
 
 function deleteClass(class_id) {
