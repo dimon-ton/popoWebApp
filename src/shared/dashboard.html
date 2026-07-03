@@ -23,121 +23,125 @@
   </div>
     </div>
   </div>
-  <div class="container" style="max-width:880px">
-    <div class="card" id="dashContent" style="display:none">
-      <h2 class="page-title" style="margin-bottom:18px">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
+  <div class="container max-w-5xl px-4 sm:px-6">
+    <div class="card rounded-lg border border-school-line bg-white p-5 shadow-panel sm:p-6" id="dashContent" style="display:none">
+      <div class="mb-5 border-b border-school-line pb-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-school-muted">PopoWebApp</p>
+        <h2 class="page-title !mb-1 !text-[22px] !font-bold !text-school-ink">ยินดีต้อนรับ, <?= data.session ? data.session.full_name : '' ?></h2>
+        <p class="text-sm text-school-muted">เลือกงานที่ต้องจัดการจากหน้าหลักของระบบ ป.พ.5 ออนไลน์</p>
+      </div>
       <? if (data.session && data.session.role === 'admin') { ?>
       <div class="admin-setup-steps">
-        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--brand);border-bottom:2px solid var(--brand-light);padding-bottom:8px">ขั้นตอนการจัดการข้อมูลระบบ</h3>
+        <h3 class="mb-4 border-b border-school-line pb-2 text-base font-bold text-school-blue">ขั้นตอนการจัดการข้อมูลระบบ</h3>
         
         <!-- Step 1 -->
-        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
-          <div class="step-badge">1</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge bg-school-blue text-white">1</div>
           <div class="step-content">
             <h4>เพิ่มและจัดการชั้นเรียน</h4>
             <p>สร้างรายชื่อห้องเรียนทั้งหมด (เช่น ป.1/1, ม.3/2) เพื่อลงทะเบียนข้อมูลนักเรียนและผู้สอนในภายหลัง</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 2 -->
-        <a class="step-card" href="#" onclick="navigate('admin_subjects'); return false;">
-          <div class="step-badge">2</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_subjects'); return false;">
+          <div class="step-badge bg-school-blue text-white">2</div>
           <div class="step-content">
             <h4>สร้างและจัดการรายวิชา</h4>
             <p>กำหนดรหัสวิชา ชื่อวิชา และจัดกลุ่มสาระการเรียนรู้ตามหลักสูตรแกนกลางของโรงเรียน</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 3 -->
-        <a class="step-card" href="#" onclick="navigate('admin_weights'); return false;">
-          <div class="step-badge">3</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_weights'); return false;">
+          <div class="step-badge bg-school-blue text-white">3</div>
           <div class="step-content">
             <h4>กำหนดสัดส่วนน้ำหนักคะแนน</h4>
             <p>แบ่งสัดส่วนน้ำหนักคะแนนรายวิชา (เช่น คะแนนเก็บ, สอบกลางภาค, สอบปลายภาค) ให้แต่ละวิชา</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 4 -->
-        <a class="step-card" href="#" onclick="navigate('admin_indicators'); return false;">
-          <div class="step-badge">4</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_indicators'); return false;">
+          <div class="step-badge bg-school-blue text-white">4</div>
           <div class="step-content">
             <h4>จัดเตรียมตัวชี้วัดและผลการเรียนรู้</h4>
             <p>ใส่รายการตัวชี้วัดรายวิชาที่จำเป็นต้องประเมิน สำหรับนำไปใช้ตัดเกรดในคะแนนเก็บและคะแนนคุณลักษณะ</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 5 -->
-        <a class="step-card" href="#" onclick="navigate('admin_classes'); return false;">
-          <div class="step-badge">5</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_classes'); return false;">
+          <div class="step-badge bg-school-blue text-white">5</div>
           <div class="step-content">
             <h4>ลงทะเบียนและอัปโหลดรายชื่อนักเรียน</h4>
             <p>เข้าไปในแต่ละห้องเรียนเพื่อกรอกชื่อสกุล เลขที่ และข้อมูลนักเรียนทั้งหมดในห้องเรียนนั้นๆ</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 6 -->
-        <a class="step-card" href="#" onclick="navigate('admin_users'); return false;">
-          <div class="step-badge">6</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_users'); return false;">
+          <div class="step-badge bg-school-blue text-white">6</div>
           <div class="step-content">
             <h4>สร้างบัญชีผู้ใช้สำหรับผู้สอน</h4>
             <p>สร้างชื่อผู้ใช้ รหัสผ่านเริ่มต้น และระดับสิทธิ์การทำงานให้กับคุณครูผู้ประเมินผลการเรียน</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 7 -->
-        <a class="step-card" href="#" onclick="navigate('admin_enrollments'); return false;">
-          <div class="step-badge">7</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_enrollments'); return false;">
+          <div class="step-badge bg-school-blue text-white">7</div>
           <div class="step-content">
             <h4>มอบหมายครูผู้สอนประจำรายวิชา</h4>
             <p>ระบุว่าคุณครูท่านใดสอนรายวิชาใดในห้องเรียนใด (รองรับการมอบหมายแบบทีละวิชาและมอบหมายจำนวนมาก)</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 8 -->
-        <a class="step-card" href="#" onclick="navigate('admin_workload'); return false;">
-          <div class="step-badge">8</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_workload'); return false;">
+          <div class="step-badge bg-school-blue text-white">8</div>
           <div class="step-content">
             <h4>ตรวจสอบและควบคุมภาระงานครู</h4>
             <p>ดูสรุปภาระงานสอนของคุณครูแต่ละท่าน จำนวนวิชาที่สอน และจำนวนนักเรียนรวมเพื่อความสมดุล</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
 
         <!-- Step 9 -->
-        <a class="step-card" href="#" onclick="navigate('admin_audit'); return false;">
-          <div class="step-badge">9</div>
+        <a class="step-card group rounded-lg border border-school-line bg-white p-4 shadow-control transition hover:-translate-y-0.5 hover:border-school-blue hover:bg-school-wash hover:shadow-panel" href="#" onclick="navigate('admin_audit'); return false;">
+          <div class="step-badge bg-school-blue text-white">9</div>
           <div class="step-content">
             <h4>ตรวจสอบประวัติการแก้ไขข้อมูล</h4>
             <p>ตรวจสอบและสืบค้นประวัติการแก้ไขคะแนนหรือข้อมูลสำคัญในฐานข้อมูลระบบ</p>
           </div>
-          <div class="step-action-arrow">➔</div>
+          <div class="step-action-arrow text-school-blue transition group-hover:translate-x-1">➔</div>
         </a>
       </div>
       <? } ?>
 
-      <h3 style="font-size:15px;font-weight:600;margin-top:20px;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:6px">การจัดการทั่วไป</h3>
-      <div class="menu-grid">
+      <h3 class="mt-6 mb-3 border-b border-school-line pb-2 text-[15px] font-bold text-school-ink">การจัดการทั่วไป</h3>
+      <div class="menu-grid gap-3">
         <? if (data.session && data.session.role === 'admin') { ?>
-        <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
-        <a class="menu-item" href="#" onclick="navigate('admin_holidays'); return false;">วันหยุดโรงเรียน</a>
+        <a class="menu-item rounded-lg border border-school-line bg-school-sky text-school-blue shadow-control transition hover:-translate-y-0.5 hover:bg-white hover:shadow-panel" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
+        <a class="menu-item rounded-lg border border-school-line bg-school-sky text-school-blue shadow-control transition hover:-translate-y-0.5 hover:bg-white hover:shadow-panel" href="#" onclick="navigate('admin_holidays'); return false;">วันหยุดโรงเรียน</a>
         <? } ?>
-        <a class="menu-item" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
-        <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
+        <a class="menu-item rounded-lg border border-school-line bg-school-sky text-school-blue shadow-control transition hover:-translate-y-0.5 hover:bg-white hover:shadow-panel" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
+        <a class="menu-item rounded-lg border border-school-line bg-school-sky text-school-blue shadow-control transition hover:-translate-y-0.5 hover:bg-white hover:shadow-panel" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
       </div>
     </div>
-    <div class="card" id="welcomeSkeleton">
+    <div class="card rounded-lg border border-school-line bg-white p-5 shadow-panel" id="welcomeSkeleton">
       <div class="skeleton-line w50" style="height:24px;margin-bottom:12px"></div>
       <div class="skeleton-line w40" style="height:14px"></div>
     </div>
     <? if (data.session && data.session.role === 'admin') { ?>
-    <div class="card" id="dashSkeleton">
+    <div class="card rounded-lg border border-school-line bg-white p-5 shadow-panel" id="dashSkeleton">
       <div class="admin-setup-steps">
         <div class="skeleton-line w40" style="height:18px;margin-bottom:4px"></div>
         <div class="skeleton-list-item"><div class="skeleton-row"><div class="skeleton-badge"></div><div style="flex:1"><div class="skeleton-line w50"></div><div class="skeleton-line w80" style="margin-top:8px"></div></div><div class="skeleton-line" style="width:16px"></div></div></div>
