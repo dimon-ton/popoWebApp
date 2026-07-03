@@ -1,29 +1,64 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  if (!window.POPO_DISABLE_TAILWIND) {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      important: true,
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'TH Sarabun New', 'sans-serif']
+          },
+          colors: {
+            school: {
+              ink: '#172033',
+              muted: '#667085',
+              blue: '#2456A6',
+              navy: '#163B73',
+              sky: '#EAF2FF',
+              line: '#D8E1EF',
+              paper: '#FFFFFF',
+              wash: '#F5F8FC',
+              green: '#24845E',
+              amber: '#B7791F',
+              red: '#C24135'
+            }
+          },
+          boxShadow: {
+            panel: '0 18px 40px rgba(22, 59, 115, 0.08)',
+            control: '0 1px 2px rgba(16, 24, 40, 0.06)'
+          }
+        }
+      }
+    };
+    document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+  }
+</script>
 <style>
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --brand: #1a56a0;
-  --brand-dark: #154880;
-  --brand-light: #e8f0fe;
-  --brand-hover: #f0f6ff;
-  --green: #27ae60;
-  --green-dark: #219150;
-  --red: #e74c3c;
-  --red-dark: #c0392b;
-  --amber: #f0a500;
-  --purple: #8e44ad;
-  --text: #2d3748;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --border-focus: #1a56a0;
-  --bg-page: #f3f6fb;
+  --brand: #2456a6;
+  --brand-dark: #163b73;
+  --brand-light: #eaf2ff;
+  --brand-hover: #f5f9ff;
+  --green: #24845e;
+  --green-dark: #1d6b4d;
+  --red: #d6493f;
+  --red-dark: #b8322b;
+  --amber: #b7791f;
+  --purple: #6d5bd0;
+  --text: #172033;
+  --text-muted: #667085;
+  --border: #d8e1ef;
+  --border-focus: #2456a6;
+  --bg-page: #f5f8fc;
   --bg-card: #ffffff;
-  --bg-table-head: #f0f4fa;
-  --shadow-card: 0 2px 10px rgba(26, 86, 160, 0.08);
-  --shadow-nav: 0 2px 8px rgba(0,0,0,0.15);
+  --bg-table-head: #eef4fb;
+  --shadow-card: 0 18px 40px rgba(22, 59, 115, 0.08);
+  --shadow-nav: 0 14px 34px rgba(12, 36, 74, 0.18);
   --radius: 8px;
   --radius-sm: 5px;
   --radius-pill: 20px;
@@ -31,7 +66,9 @@
 
 body {
   font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
-  background: var(--bg-page);
+  background:
+    linear-gradient(180deg, rgba(234, 242, 255, 0.84) 0, rgba(245, 248, 252, 0) 220px),
+    var(--bg-page);
   color: var(--text);
   font-size: 15px;
   line-height: 1.6;
@@ -43,7 +80,7 @@ body:has(.navbar) {
 
 /* ===== NAVBAR ===== */
 .navbar {
-  background: var(--brand);
+  background: linear-gradient(90deg, #163b73 0%, #2456a6 62%, #247c91 100%);
   color: white;
   padding: 0 20px;
   display: flex;
@@ -94,7 +131,7 @@ body:has(.navbar) {
   color: rgba(255,255,255,0.88);
   text-decoration: none;
   font-size: 13.5px;
-  font-weight: 400;
+  font-weight: 600;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   transition: background 0.15s, color 0.15s;
@@ -150,7 +187,7 @@ body:has(.navbar) {
   margin-top: 6px;
   background: white;
   border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   min-width: 200px;
   z-index: 1000;
   overflow: hidden;
@@ -249,7 +286,7 @@ body:has(.navbar) {
   padding: 24px;
   margin-bottom: 20px;
   box-shadow: var(--shadow-card);
-  border: 1px solid rgba(26,86,160,0.06);
+  border: 1px solid rgba(36,86,166,0.12);
   overflow-x: auto;
 }
 
@@ -292,25 +329,34 @@ button, .btn {
   font-family: inherit;
   cursor: pointer;
   font-weight: 500;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s, transform 0.12s, box-shadow 0.12s, border-color 0.12s;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+button:hover:not(:disabled), .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(22, 59, 115, 0.12);
+}
+button:focus-visible, .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(36, 86, 166, 0.22);
+  outline-offset: 2px;
 }
 
 .btn-primary, button.btn-primary {
   background: var(--brand);
   color: white;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 .btn-primary:hover { background: var(--brand-dark); }
 .btn-primary:disabled { background: #93b8d8; cursor: not-allowed; }
 
 .btn-secondary, button.btn-secondary {
-  background: var(--brand-light);
+  background: #fff;
   color: var(--brand);
-  border: 1px solid #c5d9f0;
+  border: 1px solid var(--border);
 }
-.btn-secondary:hover { background: #d5e5f5; }
+.btn-secondary:hover { background: var(--brand-light); border-color: #b9ccec; }
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-danger, button.btn-danger {
@@ -412,7 +458,7 @@ thead th {
   text-align: left;
   border-bottom: 2px solid var(--border);
   font-weight: 600;
-  color: #374151;
+  color: #25324a;
   font-size: 13px;
   white-space: nowrap;
 }
@@ -1631,6 +1677,25 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
    Page styles: teacher/class_report.html (page-class-report)
    ========================================================================== */
 body.page-class-report {
+      --brand: #1a56a0;
+      --brand-dark: #154880;
+      --brand-light: #e8f0fe;
+      --brand-hover: #f0f6ff;
+      --green: #27ae60;
+      --green-dark: #219150;
+      --red: #e74c3c;
+      --red-dark: #c0392b;
+      --amber: #f0a500;
+      --purple: #8e44ad;
+      --text: #2d3748;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --border-focus: #1a56a0;
+      --bg-page: #f3f6fb;
+      --bg-card: #ffffff;
+      --bg-table-head: #f0f4fa;
+      --shadow-card: 0 2px 10px rgba(26, 86, 160, 0.08);
+      --shadow-nav: 0 2px 8px rgba(0,0,0,0.15);
       --report-ink: #111;
       --report-muted: #333;
       --report-line: #111;
@@ -2439,6 +2504,71 @@ function injectBackBtn() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectBackBtn);
 else injectBackBtn();
+
+function addTailwindClasses(el, classes) {
+  if (!el || !classes) return;
+  classes.split(/\s+/).forEach(function(cls) {
+    if (cls) el.classList.add(cls);
+  });
+}
+function initTailwindPolish(root) {
+  root = root || document;
+  if (document.body && document.body.classList.contains('page-class-report')) return;
+
+  var scope = root.nodeType === 1 ? root : null;
+  function forEachMatch(selector, callback) {
+    if (scope && scope.matches && scope.matches(selector)) callback(scope);
+    root.querySelectorAll(selector).forEach(callback);
+  }
+
+  forEachMatch('.container', function(el) {
+    addTailwindClasses(el, 'mx-auto px-4 sm:px-6');
+  });
+  forEachMatch('.card', function(el) {
+    addTailwindClasses(el, 'rounded-lg border border-school-line bg-white shadow-panel');
+  });
+  forEachMatch('.page-title', function(el) {
+    addTailwindClasses(el, 'text-xl font-bold text-school-ink');
+  });
+  forEachMatch('.section-title', function(el) {
+    addTailwindClasses(el, 'border-b border-school-line pb-2 text-sm font-bold text-school-blue');
+  });
+  forEachMatch('button, .btn', function(el) {
+    addTailwindClasses(el, 'rounded-md font-semibold shadow-control transition disabled:cursor-not-allowed disabled:opacity-60');
+  });
+  forEachMatch('.btn-primary', function(el) {
+    addTailwindClasses(el, 'bg-school-blue text-white hover:bg-school-navy');
+  });
+  forEachMatch('.btn-secondary', function(el) {
+    addTailwindClasses(el, 'border border-school-line bg-white text-school-blue hover:bg-school-sky');
+  });
+  forEachMatch('.btn-danger', function(el) {
+    addTailwindClasses(el, 'bg-school-red text-white hover:bg-red-700');
+  });
+  forEachMatch('input[type="text"], input[type="password"], input[type="number"], input[type="date"], input[type="email"], select, textarea', function(el) {
+    addTailwindClasses(el, 'rounded-md border-school-line bg-white shadow-control focus:border-school-blue focus:ring-2 focus:ring-blue-100');
+  });
+  forEachMatch('table:not(.report-table)', function(el) {
+    addTailwindClasses(el, 'overflow-hidden rounded-lg border border-school-line bg-white shadow-control');
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { initTailwindPolish(document); });
+else initTailwindPolish(document);
+
+if (typeof MutationObserver !== 'undefined') {
+  var tailwindPolishObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(function(node) {
+        if (node && node.nodeType === 1) initTailwindPolish(node);
+      });
+    });
+  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { tailwindPolishObserver.observe(document.body, { childList: true, subtree: true }); });
+  } else if (document.body) {
+    tailwindPolishObserver.observe(document.body, { childList: true, subtree: true });
+  }
+}
 
 function initNavbarDropdown() {
   var trigger = document.querySelector('.navbar-user-trigger');
