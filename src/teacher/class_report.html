@@ -315,12 +315,12 @@ function pageReferenceCover(d, n) {
       '<span class="meta-label">ครูประจำชั้น</span><span class="meta-value" style="grid-column:2/7">' + blank(d.homeroom_teacher_name) + '</span>' +
     '</div>' +
     '<div style="font-weight:700;font-size:20px;margin-bottom:1mm">สรุปผลการประเมิน</div>' +
-    '<table class="report-table form-summary-table"><colgroup><col style="width:26mm"><col span="8" style="width:8mm"><col style="width:22mm"><col style="width:22mm"><col style="width:11mm"><col style="width:11mm"></colgroup><thead><tr><th rowspan="2">จำนวนนักเรียน</th><th colspan="8">ระดับผลการเรียน</th><th colspan="2">กิจกรรมพัฒนาผู้เรียน</th><th colspan="2">ผลการประเมิน</th></tr><tr>' + gradeHeader + '<th>ผ่าน</th><th>ไม่ผ่าน</th><th>ร</th><th>มส</th></tr></thead>' +
+    '<table class="report-table form-summary-table"><thead><tr><th rowspan="2" style="width:28mm">จำนวนนักเรียน</th><th colspan="6">ระดับผลการเรียน</th><th colspan="4">กิจกรรมพัฒนาผู้เรียน</th><th colspan="2">ผลการประเมิน</th></tr><tr>' + gradeHeader + '<th>ผ่าน</th><th>ไม่ผ่าน</th><th>ร</th><th>มส</th></tr></thead>' +
     '<tbody><tr><td>' + num(totalForPct) + '</td>' + countRow + '<td>' + num(devCounts['ผ่าน'] || 0) + '</td><td>' + num(devCounts['ไม่ผ่าน'] || 0) + '</td><td>' + num(devCounts['ร'] || 0) + '</td><td>' + num(devCounts['มส'] || 0) + '</td></tr>' +
     '<tr><td class="bold">คิดเป็นร้อยละ</td>' + pctRow + '<td>' + num(percentOf(devCounts['ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ไม่ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ร'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['มส'] || 0, totalForPct)) + '</td></tr></tbody></table>' +
     '<div class="report-grid" style="margin-top:6mm">' +
-      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินคุณลักษณะอันพึงประสงค์</th></tr><tr><th>70-80<br>ดีเยี่ยม</th><th>60-69<br>ดี</th><th>50-59<br>ผ่านเกณฑ์</th><th>00-49<br>ไม่ผ่าน</th></tr></thead><tbody><tr>' + charSummary.counts + '</tr><tr>' + charSummary.pcts + '</tr></tbody></table>' +
-      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินการอ่านคิดวิเคราะห์และเขียน</th></tr><tr><th>90-100<br>ดีเยี่ยม</th><th>80-89<br>ดี</th><th>70-79<br>ผ่านเกณฑ์</th><th>00-69<br>ไม่ผ่าน</th></tr></thead><tbody><tr>' + rtwSummary.counts + '</tr><tr>' + rtwSummary.pcts + '</tr></tbody></table>' +
+      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินคุณลักษณะอันพึงประสงค์</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + charSummary.counts + '</tr><tr>' + charSummary.pcts + '</tr></tbody></table>' +
+      '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินการอ่านคิดวิเคราะห์และเขียน</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + rtwSummary.counts + '</tr><tr>' + rtwSummary.pcts + '</tr></tbody></table>' +
     '</div>' +
     '<div class="approval-heading">การอนุมัติผลการเรียน</div>' +
     approvalBlock(d);
