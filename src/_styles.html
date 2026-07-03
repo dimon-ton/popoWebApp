@@ -1,38 +1,40 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script>
-  window.tailwind = window.tailwind || {};
-  window.tailwind.config = {
-    important: true,
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['Sarabun', 'TH Sarabun New', 'sans-serif']
-        },
-        colors: {
-          school: {
-            ink: '#172033',
-            muted: '#667085',
-            blue: '#2456A6',
-            navy: '#163B73',
-            sky: '#EAF2FF',
-            line: '#D8E1EF',
-            paper: '#FFFFFF',
-            wash: '#F5F8FC',
-            green: '#24845E',
-            amber: '#B7791F',
-            red: '#C24135'
+  if (!window.POPO_DISABLE_TAILWIND) {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      important: true,
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'TH Sarabun New', 'sans-serif']
+          },
+          colors: {
+            school: {
+              ink: '#172033',
+              muted: '#667085',
+              blue: '#2456A6',
+              navy: '#163B73',
+              sky: '#EAF2FF',
+              line: '#D8E1EF',
+              paper: '#FFFFFF',
+              wash: '#F5F8FC',
+              green: '#24845E',
+              amber: '#B7791F',
+              red: '#C24135'
+            }
+          },
+          boxShadow: {
+            panel: '0 18px 40px rgba(22, 59, 115, 0.08)',
+            control: '0 1px 2px rgba(16, 24, 40, 0.06)'
           }
-        },
-        boxShadow: {
-          panel: '0 18px 40px rgba(22, 59, 115, 0.08)',
-          control: '0 1px 2px rgba(16, 24, 40, 0.06)'
         }
       }
-    }
-  };
+    };
+    document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+  }
 </script>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1674,6 +1676,25 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
    Page styles: teacher/class_report.html (page-class-report)
    ========================================================================== */
 body.page-class-report {
+      --brand: #1a56a0;
+      --brand-dark: #154880;
+      --brand-light: #e8f0fe;
+      --brand-hover: #f0f6ff;
+      --green: #27ae60;
+      --green-dark: #219150;
+      --red: #e74c3c;
+      --red-dark: #c0392b;
+      --amber: #f0a500;
+      --purple: #8e44ad;
+      --text: #2d3748;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --border-focus: #1a56a0;
+      --bg-page: #f3f6fb;
+      --bg-card: #ffffff;
+      --bg-table-head: #f0f4fa;
+      --shadow-card: 0 2px 10px rgba(26, 86, 160, 0.08);
+      --shadow-nav: 0 2px 8px rgba(0,0,0,0.15);
       --report-ink: #111;
       --report-muted: #333;
       --report-line: #111;
