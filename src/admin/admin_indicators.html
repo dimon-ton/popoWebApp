@@ -66,9 +66,9 @@
       <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
         ใช้สำหรับเพิ่มหรืออัปเดตตัวชี้วัดของวิชาที่เลือกอยู่ คอลัมน์ <code>code*</code> ต้องกรอก ระบบจะใช้วิชาที่เลือกอยู่และอัปเดตจาก <code>indicator_id</code> หรือรหัสตัวชี้วัดเดิม หากไม่ระบุคะแนนเต็มจะใช้ 3 คะแนน
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <button class="btn-secondary" onclick="downloadIndicatorsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+      <div class="csv-import-row" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <input type="file" id="indicatorsCsvInput" accept=".csv" style="padding:6px 11px;">
+        <button class="btn-secondary" onclick="downloadIndicatorsCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
         <button class="btn-primary" id="importIndicatorsCsvBtn" onclick="importIndicatorsCSV()">นำเข้า CSV</button>
       </div>
     </div>

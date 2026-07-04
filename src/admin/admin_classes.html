@@ -28,7 +28,7 @@
 <div class="container">
   <h2 class="page-title" id="pageHeading">จัดการชั้นเรียน</h2>
 
-  <div class="card">
+  <div class="card dropdown-card">
     <h3>เพิ่มชั้นเรียนใหม่</h3>
     <div class="form-row">
       <div class="form-group">
@@ -52,8 +52,14 @@
       </div>
       <div class="form-group">
         <label>ครูประจำชั้น</label>
-        <select id="newHomeroomTeacher" multiple size="5">
-        </select>
+        <select id="newHomeroomTeacher" class="multi-checkbox-source" multiple hidden></select>
+        <div class="multi-checkbox-dropdown" data-multi-select="newHomeroomTeacher">
+          <button type="button" class="multi-checkbox-trigger flex w-full items-center justify-between gap-2 rounded-lg border border-school-line bg-white px-3 py-2 text-left text-sm font-medium text-school-ink shadow-control focus:outline-none focus:ring-4 focus:ring-blue-100" onclick="toggleMultiCheckboxDropdown('newHomeroomTeacher')">
+            <span class="multi-checkbox-label truncate" data-placeholder="เลือกครูประจำชั้น">เลือกครูประจำชั้น</span>
+            <span class="multi-checkbox-caret text-school-muted" aria-hidden="true">⌄</span>
+          </button>
+          <div class="multi-checkbox-menu hidden rounded-lg border border-school-line bg-white p-1 shadow-panel" id="newHomeroomTeacherMenu"></div>
+        </div>
       </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addClassBtn" onclick="addClass()">เพิ่มชั้นเรียน</button>
@@ -73,9 +79,9 @@
         <code>homeroom_teacher_fullname</code>
       </div>
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
-      <button class="btn-secondary" onclick="downloadClassesCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+    <div class="csv-import-row" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <input type="file" id="classesCsvInput" accept=".csv" style="padding:6px 11px;">
+      <button class="btn-secondary" onclick="downloadClassesCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       <button class="btn-primary" id="importClassesCsvBtn" onclick="importClassesCSV()">นำเข้า CSV</button>
     </div>
   </div>
@@ -131,8 +137,14 @@
     </div>
     <div class="form-group">
       <label>ครูประจำชั้น</label>
-      <select id="editHomeroomTeacher" multiple size="6">
-      </select>
+      <select id="editHomeroomTeacher" class="multi-checkbox-source" multiple hidden></select>
+      <div class="multi-checkbox-dropdown" data-multi-select="editHomeroomTeacher">
+        <button type="button" class="multi-checkbox-trigger flex w-full items-center justify-between gap-2 rounded-lg border border-school-line bg-white px-3 py-2 text-left text-sm font-medium text-school-ink shadow-control focus:outline-none focus:ring-4 focus:ring-blue-100" onclick="toggleMultiCheckboxDropdown('editHomeroomTeacher')">
+          <span class="multi-checkbox-label truncate" data-placeholder="เลือกครูประจำชั้น">เลือกครูประจำชั้น</span>
+          <span class="multi-checkbox-caret text-school-muted" aria-hidden="true">⌄</span>
+        </button>
+        <div class="multi-checkbox-menu hidden rounded-lg border border-school-line bg-white p-1 shadow-panel" id="editHomeroomTeacherMenu"></div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="confirmEditBtn" onclick="confirmEdit()">บันทึก</button>
@@ -310,10 +322,117 @@ function loadTeachers() {
         optEdit.textContent = t.full_name;
         editSel.appendChild(optEdit);
       });
+      initMultiCheckboxDropdown('newHomeroomTeacher', 'เลือกครูประจำชั้น');
+      initMultiCheckboxDropdown('editHomeroomTeacher', 'เลือกครูประจำชั้น');
       loadClasses();
     })
-    .withFailureHandler(function() { loadClasses(); })
+    .withFailureHandler(function() {
+      initMultiCheckboxDropdown('newHomeroomTeacher', 'เลือกครูประจำชั้น');
+      initMultiCheckboxDropdown('editHomeroomTeacher', 'เลือกครูประจำชั้น');
+      loadClasses();
+    })
     .getTeachersList(TOKEN);
+}
+
+function initMultiCheckboxDropdown(selectId, placeholder) {
+  var select = document.getElementById(selectId);
+  var wrapper = document.querySelector('[data-multi-select="' + selectId + '"]');
+  if (!select || !wrapper) return;
+  wrapper.setAttribute('data-placeholder', placeholder || '');
+  renderMultiCheckboxOptions(selectId);
+  updateMultiCheckboxLabel(selectId);
+}
+
+function renderMultiCheckboxOptions(selectId) {
+  var select = document.getElementById(selectId);
+  var wrapper = document.querySelector('[data-multi-select="' + selectId + '"]');
+  if (!select || !wrapper) return;
+  var menu = wrapper.querySelector('.multi-checkbox-menu');
+  if (!menu) return;
+  menu.innerHTML = '';
+
+  var options = Array.from(select.options);
+  if (!options.length) {
+    var empty = document.createElement('div');
+    empty.className = 'px-3 py-2 text-sm text-school-muted';
+    empty.textContent = 'ยังไม่มีตัวเลือก';
+    menu.appendChild(empty);
+    return;
+  }
+
+  options.forEach(function(opt) {
+    var item = document.createElement('label');
+    item.className = 'multi-checkbox-option' + (opt.selected ? ' selected' : '');
+    item.title = opt.textContent || opt.value;
+
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = opt.value;
+    checkbox.checked = opt.selected;
+    checkbox.className = 'multi-checkbox-box';
+    checkbox.addEventListener('change', function() {
+      opt.selected = checkbox.checked;
+      item.classList.toggle('selected', checkbox.checked);
+      updateMultiCheckboxLabel(selectId);
+    });
+
+    var text = document.createElement('span');
+    text.className = 'multi-checkbox-option-text';
+    text.textContent = opt.textContent || opt.value;
+    text.title = text.textContent;
+
+    item.appendChild(checkbox);
+    item.appendChild(text);
+    menu.appendChild(item);
+  });
+}
+
+function toggleMultiCheckboxDropdown(selectId) {
+  var wrapper = document.querySelector('[data-multi-select="' + selectId + '"]');
+  if (!wrapper) return;
+  var menu = wrapper.querySelector('.multi-checkbox-menu');
+  if (!menu) return;
+  var willOpen = menu.classList.contains('hidden');
+  closeMultiCheckboxDropdowns(selectId);
+  menu.classList.toggle('hidden', !willOpen);
+}
+
+function closeMultiCheckboxDropdowns(exceptId) {
+  document.querySelectorAll('.multi-checkbox-dropdown').forEach(function(wrapper) {
+    if (exceptId && wrapper.getAttribute('data-multi-select') === exceptId) return;
+    var menu = wrapper.querySelector('.multi-checkbox-menu');
+    if (menu) menu.classList.add('hidden');
+  });
+}
+
+function updateMultiCheckboxLabel(selectId) {
+  var select = document.getElementById(selectId);
+  var wrapper = document.querySelector('[data-multi-select="' + selectId + '"]');
+  if (!select || !wrapper) return;
+  var label = wrapper.querySelector('.multi-checkbox-label');
+  if (!label) return;
+  var selected = Array.from(select.selectedOptions).map(function(opt) {
+    return (opt.textContent || opt.value).trim();
+  }).filter(Boolean);
+  var placeholder = wrapper.getAttribute('data-placeholder') || label.getAttribute('data-placeholder') || 'เลือกตัวเลือก';
+  var text = selected.length ? selected.join(', ') : placeholder;
+  label.textContent = text;
+  label.title = text;
+  wrapper.classList.toggle('has-selection', selected.length > 0);
+}
+
+function syncMultiCheckboxDropdown(selectId) {
+  var select = document.getElementById(selectId);
+  var wrapper = document.querySelector('[data-multi-select="' + selectId + '"]');
+  if (!select || !wrapper) return;
+  var selected = {};
+  Array.from(select.selectedOptions).forEach(function(opt) { selected[opt.value] = true; });
+  wrapper.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+    checkbox.checked = !!selected[checkbox.value];
+    var item = checkbox.closest('.multi-checkbox-option');
+    if (item) item.classList.toggle('selected', checkbox.checked);
+  });
+  updateMultiCheckboxLabel(selectId);
 }
 
 function loadClasses() {
@@ -437,6 +556,7 @@ function setSelectedValues(selectId, values) {
   Array.from(document.getElementById(selectId).options).forEach(function(opt) {
     opt.selected = !!set[opt.value];
   });
+  syncMultiCheckboxDropdown(selectId);
 }
 
 function getClassHomeroomIds(c) {
@@ -468,6 +588,12 @@ function viewStudents(class_id) {
 }
 
 loadTeachers();
+
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.multi-checkbox-dropdown')) {
+    closeMultiCheckboxDropdowns();
+  }
+});
 </script>
 </body>
 </html>

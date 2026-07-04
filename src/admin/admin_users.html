@@ -73,9 +73,9 @@
     <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
       ใช้สำหรับเพิ่มหรืออัปเดตบัญชีครูและผู้ดูแลระบบ คอลัมน์ <code>username*</code>, <code>first_name*</code>, <code>last_name*</code>, <code>role*</code> ต้องกรอก และ <code>initial_password</code> ต้องกรอกสำหรับผู้ใช้ใหม่ หรือกรอกเมื่อต้องการเปลี่ยนรหัสผ่านของผู้ใช้เดิม
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
-      <button class="btn-secondary" onclick="downloadUsersCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
+    <div class="csv-import-row" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
       <input type="file" id="usersCsvInput" accept=".csv" style="padding:6px 11px;">
+      <button class="btn-secondary" onclick="downloadUsersCSVTemplate()">ดาวน์โหลดแม่แบบ CSV</button>
       <button class="btn-primary" id="importUsersCsvBtn" onclick="importUsersCSV()">นำเข้า CSV</button>
     </div>
   </div>
