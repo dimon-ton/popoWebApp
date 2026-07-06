@@ -28,6 +28,7 @@ test.describe('US-007: Attendance grid view and edit', () => {
     subjectId = await seedTestSubject({ suffix: 'us007_eng', name: 'ภาษาอังกฤษทดสอบ', code: 'TST007', group: 1 });
     // Seed a student in the class
     studentId = await seedTestStudent({ class_suffix: 'us007_c1', seq: 1, full_name: 'test_นักเรียนUS007' });
+    await seedTestStudent({ class_suffix: 'us007_c1', seq: 2, full_name: 'test_นักเรียนUS007_2' });
     // Seed teacher and enroll them for this class/subject
     teacherId = await seedTestUser({ suffix: 'us007_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS007' });
     await seedTestEnrollment({
@@ -88,6 +89,42 @@ test.describe('US-007: Attendance grid view and edit', () => {
     const reloadedSecond = page.locator('#attBody .att-cell').nth(1);
     await expect(reloadedFirst).toHaveText('/', { timeout: 15_000 });
     await expect(reloadedSecond).toHaveText('ล', { timeout: 15_000 });
+  });
+
+  test('US-007: date heading tooltip and click fills blank cells in that column', async ({ page }) => {
+    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${subjectId}&week=1`);
+
+    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#attBody')).toContainText('test_นักเรียนUS007_2', { timeout: 15_000 });
+
+    const secondDateLink = page.locator('.attendance-date-fill-link').nth(1);
+    await expect(secondDateLink).toHaveAttribute('data-tooltip', 'คลิกเพื่อเช็คช่องว่างของวันนี้เป็นมาเรียน');
+
+    await secondDateLink.hover();
+    await page.waitForTimeout(200);
+    const tooltipState = await secondDateLink.evaluate((el) => {
+      const style = el.ownerDocument.defaultView!.getComputedStyle(el, '::after');
+      return { content: style.content, opacity: style.opacity };
+    });
+    expect(tooltipState.content).toContain('คลิกเพื่อเช็คช่องว่างของวันนี้เป็นมาเรียน');
+    expect(Number(tooltipState.opacity)).toBeGreaterThan(0);
+
+    const firstStudentSecondDate = page.locator('#attBody tr').first().locator('.att-cell').nth(1);
+    const secondStudentSecondDate = page.locator('#attBody tr').nth(1).locator('.att-cell').nth(1);
+    await expect(firstStudentSecondDate).toHaveText('ล');
+    await expect(secondStudentSecondDate).toHaveText('');
+
+    await secondDateLink.click();
+    await expect(firstStudentSecondDate).toHaveText('ล');
+    await expect(secondStudentSecondDate).toHaveText('/');
+    await expect(page.locator('#attFoot td').nth(2)).toContainText('1/1/0');
+
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกการเข้าเรียนสำเร็จ', { timeout: 20_000 });
+
+    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${subjectId}&week=1`);
+    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#attBody tr').nth(1).locator('.att-cell').nth(1)).toHaveText('/', { timeout: 15_000 });
   });
 
   test('US-007: footer shows presence and leave counts for student', async ({ page }) => {

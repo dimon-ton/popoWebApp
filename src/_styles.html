@@ -742,7 +742,8 @@ td.grade-col, th.grade-col {
   text-align: center;
 }
 td.makeup-col { background: #fffaf0; text-align: center; }
-td.seq-col { text-align: center; color: var(--text-muted); width: 36px; }
+th.seq-col,
+td.seq-col { text-align: center; color: var(--text-muted); width: 36px; min-width: 46px; }
 td.name-col { text-align: left; white-space: nowrap; }
 td.label-col { font-weight: 700; background: #f1f8f1; text-align: center; }
 td.label-col.diyiam { color: #1a7a40; }
@@ -778,6 +779,58 @@ input.makeup-input {
 }
 input.makeup-input:focus { border-color: #e67e22; outline: none; }
 
+.page-class-attendance th.seq-col,
+.page-class-attendance td.seq-col,
+.page-class-formative th.seq-col,
+.page-class-formative td.seq-col,
+.page-class-summative th.seq-col,
+.page-class-summative td.seq-col,
+.page-class-characteristics th.seq-col,
+.page-class-characteristics td.seq-col,
+.page-class-readthinkwrite th.seq-col,
+.page-class-readthinkwrite td.seq-col,
+.page-class-dev-activity th:first-child,
+.page-class-dev-activity td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background: var(--bg-card);
+  box-shadow: 2px 0 5px -4px rgba(16, 24, 40, 0.28);
+}
+.page-class-attendance th.name-col,
+.page-class-attendance td.name-col,
+.page-class-formative th.name-col,
+.page-class-formative td.name-col,
+.page-class-summative th.name-col,
+.page-class-summative td.name-col,
+.page-class-characteristics th.name-col,
+.page-class-characteristics td.name-col,
+.page-class-readthinkwrite th.name-col,
+.page-class-readthinkwrite td.name-col,
+.page-class-dev-activity th.name-col,
+.page-class-dev-activity td.name-col {
+  position: sticky;
+  left: 46px;
+  z-index: 12;
+  background: var(--bg-card);
+  box-shadow: 2px 0 5px -4px rgba(16, 24, 40, 0.28);
+}
+.page-class-attendance thead th.seq-col,
+.page-class-attendance thead th.name-col,
+.page-class-formative thead th.seq-col,
+.page-class-formative thead th.name-col,
+.page-class-summative thead th.seq-col,
+.page-class-summative thead th.name-col,
+.page-class-characteristics thead th.seq-col,
+.page-class-characteristics thead th.name-col,
+.page-class-readthinkwrite thead th.seq-col,
+.page-class-readthinkwrite thead th.name-col,
+.page-class-dev-activity thead th:first-child,
+.page-class-dev-activity thead th.name-col {
+  z-index: 18;
+  background: var(--bg-table-head);
+}
+
 /* Attendance cells */
 .att-cell {
   display: inline-flex;
@@ -797,6 +850,63 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .att-cell.status-kho { background: #f8d7da; color: #721c24; }
 .att-cell.status-empty { background: #f0f0f0; color: #ccc; }
 .att-cell.readonly { cursor: default; }
+.attendance-date-fill-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2px 0 0;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.attendance-date-fill-link:hover,
+.attendance-date-fill-link:focus {
+  background: rgba(26, 86, 160, 0.08);
+  color: var(--brand-dark);
+  outline: none;
+}
+.attendance-date-fill-link:focus-visible {
+  box-shadow: 0 0 0 2px rgba(26, 86, 160, 0.22);
+}
+.attendance-date-fill-link::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: 190px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -3px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+.attendance-date-fill-link:hover::after,
+.attendance-date-fill-link:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 
 /* ===== BADGES ===== */
 .role-badge {
@@ -1852,6 +1962,10 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
       transform: translateX(4px);
       box-shadow: 0 4px 12px rgba(26,86,160,0.06);
     }
+    .page-dashboard .step-card.completed {
+      border-color: rgba(36, 132, 94, 0.28);
+      background: linear-gradient(180deg, #ffffff 0%, #f6fbf8 100%);
+    }
     .page-dashboard .step-badge {
       width: 32px;
       height: 32px;
@@ -1870,6 +1984,10 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
       background: var(--brand-dark);
       transform: scale(1.05);
     }
+    .page-dashboard .step-card.completed .step-badge {
+      background: var(--green);
+      box-shadow: 0 2px 6px rgba(36,132,94,0.24);
+    }
     .page-dashboard .step-content {
       flex: 1;
     }
@@ -1878,6 +1996,10 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
       font-size: 14px;
       font-weight: 600;
       color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .page-dashboard .step-card:hover .step-content h4 {
       color: var(--brand);
@@ -1887,6 +2009,27 @@ body.page-404 { display: flex; align-items: center; justify-content: center; min
       font-size: 12.5px;
       color: var(--text-muted);
       line-height: 1.4;
+    }
+    .page-dashboard .step-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .page-dashboard .step-status.done {
+      background: #e8f5ee;
+      color: var(--green);
+      border: 1px solid rgba(36, 132, 94, 0.24);
+    }
+    .page-dashboard .step-status.pending {
+      background: #fff7e8;
+      color: var(--amber);
+      border: 1px solid rgba(183, 121, 31, 0.24);
     }
     .page-dashboard .step-action-arrow {
       font-size: 16px;

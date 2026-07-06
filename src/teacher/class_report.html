@@ -215,12 +215,90 @@ function reportYear(d) {
 
 var THAI_MONTH_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
+function padReportDatePart(value) {
+  value = Number(value);
+  return value < 10 ? '0' + value : String(value);
+}
+
+function shortBuddhistYear(year) {
+  return padReportDatePart((Number(year) + 543) % 100);
+}
+
+function formatReportThaiShortDate(day, month, year) {
+  day = Number(day);
+  month = Number(month);
+  year = Number(year);
+  if (!day || month < 1 || month > 12 || !year) return '';
+  return padReportDatePart(day) + ' ' + THAI_MONTH_ABBR[month - 1] + shortBuddhistYear(year);
+}
+
+function formatStudentDob(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return formatReportThaiShortDate(value.getDate(), value.getMonth() + 1, value.getFullYear());
+  }
+
+  var text = String(value || '').trim();
+  if (!text) return '';
+  if (/^\d{1,2}\s+[^\s]+\s*\d{2,4}$/.test(text)) return text;
+
+  var ymd = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) {
+    return formatReportThaiShortDate(ymd[3], ymd[2], ymd[1]) || text;
+  }
+
+  var dmy = text.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    var year = Number(dmy[3]);
+    if (year > 2400) year -= 543;
+    if (year < 100) year += year >= 60 ? 2500 - 543 : 2000;
+    return formatReportThaiShortDate(dmy[1], dmy[2], year) || text;
+  }
+
+  var parsed = new Date(text);
+  if (!isNaN(parsed.getTime())) {
+    return formatReportThaiShortDate(parsed.getDate(), parsed.getMonth() + 1, parsed.getFullYear());
+  }
+
+  return text;
+}
+
 function parseReportIsoDate(value) {
   var parts = String(value || '').split('-');
   if (parts.length !== 3) return null;
   var date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
   if (isNaN(date.getTime())) return null;
   return date;
+}
+
+var THAI_MONTH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+function formatReportThaiFullDate(value) {
+  var date = parseReportIsoDate(value);
+  if (!date) return '';
+  return date.getDate() + ' ' + THAI_MONTH_FULL[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+}
+
+function formatReportHolidayRange(startValue, endValue) {
+  var start = parseReportIsoDate(startValue);
+  var end = parseReportIsoDate(endValue || startValue);
+  if (!start) return '';
+  if (!end || start.getTime() === end.getTime()) return formatReportThaiFullDate(startValue);
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return start.getDate() + '-' + end.getDate() + ' ' + THAI_MONTH_FULL[start.getMonth()] + ' ' + (start.getFullYear() + 543);
+  }
+  return formatReportThaiFullDate(startValue) + ' - ' + formatReportThaiFullDate(endValue);
+}
+
+function attendanceHolidayNote(d) {
+  var notes = d.attendance_holiday_notes || [];
+  if (!notes.length) return '<div class="form-note"><b>หมายเหตุ</b></div>';
+  var lines = notes.map(function(row) {
+    var range = formatReportHolidayRange(row.start_date, row.end_date);
+    var text = row.description || row.name || '';
+    return blank(range + (text ? ' ' + text : ''));
+  }).join('<br>');
+  return '<div class="form-note"><b>หมายเหตุ</b><br>' + lines + '</div>';
 }
 
 function attendanceDayHeaders(dates) {
@@ -355,7 +433,7 @@ function pageReferenceBlankRoster(d, n) {
 
 function pageReferenceStudentRoster(d, n) {
   var rows = studentRows(d).map(function(s, i) {
-    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td>' + blank(s.citizen_id || '') + '</td><td class="left">' + blank(studentName(s)) + '</td><td>' + blank(s.dob || '') + '</td><td class="left">' + blank(s.note || '') + '</td></tr>';
+    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td>' + blank(s.citizen_id || '') + '</td><td class="left">' + blank(studentName(s)) + '</td><td>' + blank(formatStudentDob(s.dob)) + '</td><td class="left">' + blank(s.note || '') + '</td></tr>';
   }).join('');
   var body = '<div class="form-title">บัญชีรายชื่อนักเรียน</div><table class="report-table form-grid-table" style="width:176mm;margin-left:auto;margin-right:auto"><thead><tr><th style="width:9mm">ที่</th><th style="width:24mm">เลขประจำตัว</th><th style="width:38mm">หมายเลขบัตรประชาชน</th><th>ชื่อ - สกุล</th><th style="width:26mm">วันเดือนปีเกิด</th><th style="width:24mm">หมายเหตุ</th></tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body);
@@ -382,7 +460,7 @@ function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
-  var body = '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table><div class="form-note"><b>หมายเหตุ</b><br>2 มิถุนายน ' + blank(reportYear(d)) + ' เป็นวันหยุดราชการพิเศษ<br>3 มิถุนายน ' + blank(reportYear(d)) + ' หยุดชดเชยวันเฉลิมพระชนมพรรษา</div>';
+  var body = '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -504,7 +582,7 @@ function pageSubjectProfile(d, n) {
 
 function pageStudentRoster(d, n) {
   var rows = (d.students || []).map(function(s) {
-    return '<tr><td>' + blank(s.seq_no) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(s.full_name) + '</td><td>' + blank(s.citizen_id) + '</td><td>' + blank(s.dob) + '</td><td class="left">' + blank(s.note) + '</td></tr>';
+    return '<tr><td>' + blank(s.seq_no) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(s.full_name) + '</td><td>' + blank(s.citizen_id) + '</td><td>' + blank(formatStudentDob(s.dob)) + '</td><td class="left">' + blank(s.note) + '</td></tr>';
   }).join('');
   var body = '<table class="report-table tight"><thead><tr><th style="width:10mm">ที่</th><th style="width:24mm">เลขประจำตัว</th><th>ชื่อ-สกุล</th><th style="width:30mm">เลขประชาชน</th><th style="width:24mm">วันเกิด</th><th style="width:32mm">หมายเหตุ</th></tr></thead><tbody>' + rows + '</tbody></table>';
   return pageShell(n, 'บัญชีรายชื่อนักเรียน', meta(d).classLabel, body, 'compact');

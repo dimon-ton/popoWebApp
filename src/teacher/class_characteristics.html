@@ -67,8 +67,10 @@ var TRAITS = [
 ];
 
 var currentData = null;
+var hasUnsavedChanges = false;
 
 function navigate(page) {
+  if (!confirmDiscardScoreChanges()) return;
   showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
@@ -77,6 +79,7 @@ function navigate(page) {
 }
 
 function doLogout() {
+  if (!confirmDiscardScoreChanges()) return;
   var btn = document.getElementById('logoutBtn');
   if (btn) btn.disabled = true;
   google.script.run
@@ -140,6 +143,21 @@ function loadCharacteristics() {
     })
     .getCharacteristicsData(TOKEN, CLASS_ID, SUBJECT_ID);
 }
+
+function markUnsavedChanges() {
+  hasUnsavedChanges = true;
+}
+
+function confirmDiscardScoreChanges() {
+  if (!hasUnsavedChanges) return true;
+  return confirm('คุณมีคะแนนที่ยังไม่ได้บันทึก หากออกจากหน้านี้ข้อมูลจะหายไป ต้องการไปต่อหรือไม่?');
+}
+
+window.addEventListener('beforeunload', function(e) {
+  if (!hasUnsavedChanges) return;
+  e.preventDefault();
+  e.returnValue = 'คุณมีคะแนนที่ยังไม่ได้บันทึก';
+});
 
 function renderGrid(data) {
   document.getElementById('loadingMsg').style.display = 'none';
@@ -223,6 +241,7 @@ function renderGrid(data) {
 }
 
 function updateRowTotal(input) {
+  markUnsavedChanges();
   var tr = input.closest('tr');
   if (!tr) return;
   var studentId = tr.getAttribute('data-student-id');
@@ -278,6 +297,7 @@ function saveCharacteristics() {
       btn.disabled = false;
       document.getElementById('saveStatus').textContent = '';
       if (result && result.error) { showToast(result.error, 'error'); return; }
+      hasUnsavedChanges = false;
       showToast('บันทึกคะแนนสำเร็จ', 'success');
     })
     .withFailureHandler(function(err) {
@@ -287,6 +307,42 @@ function saveCharacteristics() {
     })
     .serverSaveCharacteristics(TOKEN, CLASS_ID, SUBJECT_ID, rows);
 }
+
+function moveScoreFocus(active, direction) {
+  var td = active.closest('td');
+  var tr = active.closest('tr');
+  if (!td || !tr) return false;
+  var cellIndex = td.cellIndex;
+  var target = null;
+  if (direction === 'down' || direction === 'up') {
+    var nextRow = direction === 'down' ? tr.nextElementSibling : tr.previousElementSibling;
+    while (nextRow && !target) {
+      var cell = nextRow.children[cellIndex];
+      target = cell ? cell.querySelector('input.score-input, input.makeup-input') : null;
+      nextRow = direction === 'down' ? nextRow.nextElementSibling : nextRow.previousElementSibling;
+    }
+  } else {
+    var cells = Array.from(tr.children);
+    var step = direction === 'right' ? 1 : -1;
+    for (var i = cellIndex + step; i >= 0 && i < cells.length; i += step) {
+      target = cells[i].querySelector('input.score-input, input.makeup-input');
+      if (target) break;
+    }
+  }
+  if (!target) return false;
+  target.focus();
+  target.select();
+  return true;
+}
+
+document.addEventListener('keydown', function(e) {
+  var active = document.activeElement;
+  if (!active || !active.matches('input.score-input, input.makeup-input')) return;
+  var map = { ArrowDown: 'down', ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right' };
+  var direction = map[e.key];
+  if (!direction) return;
+  if (moveScoreFocus(active, direction)) e.preventDefault();
+});
 
 // Init
 loadCharacteristics();

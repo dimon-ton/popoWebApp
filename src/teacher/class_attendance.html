@@ -58,6 +58,7 @@
   </div>
 
   <div class="save-bar" id="saveBar" style="display:none">
+    <button class="btn-secondary" id="markAllPresentBtn" onclick="markAllPresentForWeek()">✓ เช็คช่องว่างทั้งสัปดาห์ว่ามาเรียน</button>
     <button class="btn-save" id="saveBtn" onclick="saveAttendance()">บันทึกการเข้าเรียน</button>
     <span id="saveStatus" style="font-size:13px;color:#888"></span>
   </div>
@@ -77,12 +78,14 @@ var currentData = null;
 var CYCLE = ['', '/', 'ล', 'ข'];
 // Map cell values to class names
 var STATUS_CLASS = { '/': 'status-slash', 'ล': 'status-la', 'ข': 'status-kho', '': 'status-empty' };
+var DATE_FILL_TOOLTIP = 'คลิกเพื่อเช็คช่องว่างของวันนี้เป็นมาเรียน';
 
 // Dirty tracking: cells changed but not yet saved
 // Key: "student_id|date", value: status
 var pendingChanges = {};
 
 function navigate(page) {
+  if (!confirmDiscardAttendanceChanges()) return;
   showNavLoading();
   google.script.run
     .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
@@ -91,6 +94,7 @@ function navigate(page) {
 }
 
 function doLogout() {
+  if (!confirmDiscardAttendanceChanges()) return;
   var btn = document.getElementById('logoutBtn');
   if (btn) btn.disabled = true;
   google.script.run
@@ -118,6 +122,10 @@ function showToast(msg, type) {
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function escAttr(s) {
+  return escHtml(s);
 }
 
 var THAI_DAYS_BY_DATE = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
@@ -156,6 +164,21 @@ function loadAttendance() {
     .getAttendanceData(TOKEN, CLASS_ID, SUBJECT_ID, currentWeek);
 }
 
+function hasPendingAttendanceChanges() {
+  return Object.keys(pendingChanges).length > 0;
+}
+
+function confirmDiscardAttendanceChanges() {
+  if (!hasPendingAttendanceChanges()) return true;
+  return confirm('คุณมีข้อมูลการเข้าเรียนที่ยังไม่ได้บันทึก หากออกจากหน้านี้ข้อมูลจะหายไป ต้องการไปต่อหรือไม่?');
+}
+
+window.addEventListener('beforeunload', function(e) {
+  if (!hasPendingAttendanceChanges()) return;
+  e.preventDefault();
+  e.returnValue = 'คุณมีข้อมูลการเข้าเรียนที่ยังไม่ได้บันทึก';
+});
+
 function renderGrid(data) {
   document.getElementById('loadingMsg').style.display = 'none';
 
@@ -182,7 +205,14 @@ function renderGrid(data) {
     var dt = new Date(dateStr + 'T00:00:00');
     var dayLabel = THAI_DAYS_BY_DATE[dt.getDay()];
     var dateLabel = typeof formatThaiBuddhistDate === 'function' ? formatThaiBuddhistDate(dateStr + 'T00:00:00') : (dt.getDate() + '/' + (dt.getMonth() + 1) + '/' + (dt.getFullYear() + 543));
-    headRow += '<th>' + dayLabel + '<br><span style="font-weight:normal;font-size:11px">' + dateLabel + '</span></th>';
+    var dateContent = data.can_edit
+      ? '<button type="button" class="attendance-date-fill-link" ' +
+          'data-date="' + escAttr(dateStr) + '" ' +
+          'data-tooltip="' + escAttr(DATE_FILL_TOOLTIP) + '" ' +
+          'aria-label="' + escAttr(DATE_FILL_TOOLTIP) + '" ' +
+          'onclick="markPresentForDate(this.getAttribute(\'data-date\'))">' + escHtml(dateLabel) + '</button>'
+      : '<span style="font-weight:normal;font-size:11px">' + escHtml(dateLabel) + '</span>';
+    headRow += '<th>' + escHtml(dayLabel) + '<br>' + dateContent + '</th>';
   });
   headRow += '<th>มา</th><th>ลา</th><th>ขาด</th><th>รวม<br>ชม.</th></tr>';
   thead.innerHTML = headRow;
@@ -264,9 +294,67 @@ function cycleCell(el) {
   var student = el.getAttribute('data-student');
   var date = el.getAttribute('data-date');
   pendingChanges[student + '|' + date] = { student_id: student, date: date, status: next };
+  refreshAttendanceWeeklyTotals();
+}
+
+function markAllPresentForWeek() {
+  if (!currentData || !currentData.can_edit) return;
+  var changed = 0;
+  document.querySelectorAll('.att-cell:not(.readonly)').forEach(function(cell) {
+    if (cell.textContent.trim() !== '') return;
+    var student = cell.getAttribute('data-student');
+    var date = cell.getAttribute('data-date');
+    if (!student || !date) return;
+    cell.textContent = '/';
+    cell.className = 'att-cell ' + STATUS_CLASS['/'];
+    pendingChanges[student + '|' + date] = { student_id: student, date: date, status: '/' };
+    changed++;
+  });
+  refreshAttendanceWeeklyTotals();
+  showToast(changed ? 'เช็คช่องว่างเป็นมาเรียนแล้ว ' + changed + ' ช่อง อย่าลืมกดบันทึก' : 'ไม่มีช่องว่างให้เช็คเป็นมาเรียน', changed ? 'success' : 'success');
+}
+
+function markPresentForDate(dateStr) {
+  if (!currentData || !currentData.can_edit || !dateStr) return;
+  var changed = 0;
+  document.querySelectorAll('.att-cell[data-date="' + dateStr + '"]:not(.readonly)').forEach(function(cell) {
+    if (cell.textContent.trim() !== '') return;
+    var student = cell.getAttribute('data-student');
+    if (!student) return;
+    cell.textContent = '/';
+    cell.className = 'att-cell ' + STATUS_CLASS['/'];
+    pendingChanges[student + '|' + dateStr] = { student_id: student, date: dateStr, status: '/' };
+    changed++;
+  });
+  refreshAttendanceWeeklyTotals();
+  showToast(changed ? 'เช็คช่องว่างวันที่นี้เป็นมาเรียนแล้ว ' + changed + ' ช่อง อย่าลืมกดบันทึก' : 'ไม่มีช่องว่างในวันที่นี้ให้เช็คเป็นมาเรียน', 'success');
+}
+
+function refreshAttendanceWeeklyTotals() {
+  if (!currentData || !currentData.dates) return;
+  var tfoot = document.getElementById('attFoot');
+  if (!tfoot) return;
+  var footRow = '<tr><td colspan="2" style="text-align:right;font-size:12px">รวม (สัปดาห์นี้):</td>';
+  currentData.dates.forEach(function(dateStr) {
+    var slash = 0, la = 0, kho = 0;
+    document.querySelectorAll('.att-cell[data-date="' + dateStr + '"]').forEach(function(cell) {
+      var status = cell.textContent.trim();
+      if (status === '/') slash++;
+      else if (status === 'ล') la++;
+      else if (status === 'ข') kho++;
+    });
+    footRow += '<td style="font-size:11px;line-height:1.4">' +
+      '<span style="color:#1a7a1a">' + slash + '</span>/' +
+      '<span style="color:#856404">' + la + '</span>/' +
+      '<span style="color:#721c24">' + kho + '</span>' +
+      '</td>';
+  });
+  footRow += '<td></td><td></td><td></td><td></td></tr>';
+  tfoot.innerHTML = footRow;
 }
 
 function changeWeek(delta) {
+  if (!confirmDiscardAttendanceChanges()) return;
   var newWeek = parseInt(currentWeek) + delta;
   var maxWeeks = currentData && currentData.max_weeks ? Number(currentData.max_weeks) : 40;
   if (newWeek < 1 || newWeek > maxWeeks) return;
@@ -276,6 +364,10 @@ function changeWeek(delta) {
 }
 
 function jumpToWeek(val) {
+  if (!confirmDiscardAttendanceChanges()) {
+    buildWeekSelect();
+    return;
+  }
   var w = parseInt(val);
   var maxWeeks = currentData && currentData.max_weeks ? Number(currentData.max_weeks) : 40;
   if (!w || w < 1 || w > maxWeeks) return;

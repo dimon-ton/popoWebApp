@@ -174,7 +174,7 @@ function doGet(e) {
           subject_id: params.subject_id || ''
         });
       case 'dashboard':
-        return buildPage('dashboard', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl() });
+        return buildPage('dashboard', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl(), setup_status: getAdminSetupStatus(session) });
       case 'profile_edit':
         return buildPage('profile_edit', { session: session, token: token });
       default:
@@ -339,8 +339,36 @@ function getDashboardHtml(token) {
   var user = dbFindOne('Users', 'user_id', session.user_id);
   if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
   var tmpl = createTemplate('dashboard');
-  tmpl.data = { session: session, token: token };
+  tmpl.data = { session: session, token: token, setup_status: getAdminSetupStatus(session) };
   return tmpl.evaluate().getContent();
+}
+
+function getAdminSetupStatus(session) {
+  if (!session || session.role !== 'admin') return {};
+  function countRows(tabName) {
+    try { return dbGetAll(tabName).length; } catch (err) { return 0; }
+  }
+  var users = [];
+  try { users = dbGetAll('Users'); } catch (err) {}
+  var teacherCount = users.filter(function(user) { return user.role === 'teacher'; }).length;
+  var classCount = countRows('Classes');
+  var subjectCount = countRows('Subjects');
+  var weightCount = countRows('SubjectWeights');
+  var indicatorCount = countRows('Indicators');
+  var studentCount = countRows('Students');
+  var enrollmentCount = countRows('Enrollments');
+  var auditCount = countRows('AuditLog');
+  return {
+    classes: { done: classCount > 0, count: classCount },
+    subjects: { done: subjectCount > 0, count: subjectCount },
+    weights: { done: weightCount > 0, count: weightCount },
+    indicators: { done: indicatorCount > 0, count: indicatorCount },
+    students: { done: studentCount > 0, count: studentCount },
+    users: { done: teacherCount > 0, count: teacherCount },
+    enrollments: { done: enrollmentCount > 0, count: enrollmentCount },
+    workload: { done: enrollmentCount > 0, count: enrollmentCount },
+    audit: { done: auditCount > 0, count: auditCount }
+  };
 }
 
 // Generic page navigation — returns HTML string for document.write() navigation
@@ -359,7 +387,7 @@ function getPageHtml(token, page) {
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
     var tmpl = createTemplate(page);
-    tmpl.data = { session: session, token: token };
+    tmpl.data = { session: session, token: token, setup_status: page === 'dashboard' ? getAdminSetupStatus(session) : {} };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';

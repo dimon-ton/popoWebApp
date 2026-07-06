@@ -65,7 +65,7 @@
         <input type="text" id="holidayDescription" placeholder="รายละเอียดเพิ่มเติม">
       </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:10px">
       <button class="btn-primary" id="saveHolidayBtn" onclick="saveHoliday()">บันทึกวันหยุด</button>
       <button class="btn-secondary" type="button" onclick="resetHolidayForm()">ล้างฟอร์ม</button>
     </div>
@@ -86,6 +86,7 @@
 <script>
 var TOKEN = '<?= data.token || '' ?>';
 var holidays = [];
+var editingHolidayIndex = -1;
 
 function navigate(page) {
   showNavLoading();
@@ -120,12 +121,32 @@ function setDateValue(id, value) {
   else el.value = value || '';
 }
 
+function holidayDateDisplay(value) {
+  if (!value) return '';
+  if (typeof formatThaiDateValue === 'function') return formatThaiDateValue(value) || value;
+  var parts = String(value || '').split('-');
+  if (parts.length !== 3) return value;
+  var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  var month = Number(parts[1]) - 1;
+  if (month < 0 || month > 11) return value;
+  return Number(parts[2]) + ' ' + months[month] + ' ' + (Number(parts[0]) + 543);
+}
+
+function holidayRangeDisplay(row) {
+  var start = row.start_date || '';
+  var end = row.end_date || start;
+  if (!start) return '';
+  if (!end || end === start) return holidayDateDisplay(start);
+  return holidayDateDisplay(start) + ' - ' + holidayDateDisplay(end);
+}
+
 function loadHolidays() {
   document.getElementById('holidaysLoading').style.display = 'block';
   document.getElementById('holidaysTable').style.display = 'none';
   google.script.run
     .withSuccessHandler(function(result) {
       holidays = result.holidays || [];
+      editingHolidayIndex = -1;
       renderHolidays();
     })
     .withFailureHandler(function(err) { showToast('โหลดวันหยุดไม่สำเร็จ: ' + err.message, 'error'); })
@@ -136,18 +157,50 @@ function renderHolidays() {
   var tbody = document.getElementById('holidaysBody');
   tbody.innerHTML = '';
   holidays.forEach(function(row, index) {
-    var range = row.end_date && row.end_date !== row.start_date ? row.start_date + ' - ' + row.end_date : row.start_date;
+    var range = holidayRangeDisplay(row);
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + escHtml(range) + '</td>' +
-      '<td>' + escHtml(row.name) + '</td>' +
-      '<td>' + escHtml(row.type || '') + '</td>' +
-      '<td>' + escHtml(row.description || '') + '</td>' +
-      '<td><button class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="editHoliday(' + index + ')">แก้ไข</button>' +
-      '<button class="btn-danger" style="font-size:12px;padding:5px 12px" onclick="deleteHolidayByIndex(' + index + ')">ลบ</button></td>';
+    if (editingHolidayIndex === index) {
+      tr.innerHTML =
+        '<td><div style="display:grid;gap:6px;min-width:150px">' +
+          '<div class="thai-date-picker" data-thai-date-picker>' +
+            '<input type="hidden" id="editHolidayStart' + index + '" data-thai-date-value value="' + escHtml(row.start_date || '') + '">' +
+            '<input type="text" class="thai-date-display" data-thai-date-display placeholder="วันที่เริ่มต้น" readonly>' +
+          '</div>' +
+          '<div class="thai-date-picker" data-thai-date-picker>' +
+            '<input type="hidden" id="editHolidayEnd' + index + '" data-thai-date-value value="' + escHtml(row.end_date || row.start_date || '') + '">' +
+            '<input type="text" class="thai-date-display" data-thai-date-display placeholder="วันที่สิ้นสุด" readonly>' +
+          '</div>' +
+        '</div></td>' +
+        '<td><input type="text" id="editHolidayName' + index + '" value="' + escHtml(row.name || '') + '" style="width:100%"></td>' +
+        '<td><select id="editHolidayType' + index + '" style="width:100%">' + holidayTypeOptions(row.type || 'custom') + '</select></td>' +
+        '<td><input type="text" id="editHolidayDescription' + index + '" value="' + escHtml(row.description || '') + '" style="width:100%"></td>' +
+        '<td><button class="btn-primary" id="saveHolidayInlineBtn' + index + '" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="saveHolidayInline(' + index + ')">บันทึก</button>' +
+        '<button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="cancelHolidayEdit()">ยกเลิก</button></td>';
+    } else {
+      tr.innerHTML = '<td>' + escHtml(range) + '</td>' +
+        '<td>' + escHtml(row.name) + '</td>' +
+        '<td>' + escHtml(row.type || '') + '</td>' +
+        '<td>' + escHtml(row.description || '') + '</td>' +
+        '<td><button class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="editHoliday(' + index + ')">แก้ไข</button>' +
+        '<button class="btn-danger" style="font-size:12px;padding:5px 12px" onclick="deleteHolidayByIndex(' + index + ')">ลบ</button></td>';
+    }
     tbody.appendChild(tr);
+    if (editingHolidayIndex === index && typeof initThaiDatePickers === 'function') initThaiDatePickers(tr);
   });
   document.getElementById('holidaysLoading').style.display = 'none';
   document.getElementById('holidaysTable').style.display = 'table';
+}
+
+function holidayTypeOptions(selected) {
+  var options = [
+    ['public', 'วันหยุดราชการ'],
+    ['school', 'วันหยุดโรงเรียน'],
+    ['activity', 'กิจกรรมพิเศษ'],
+    ['custom', 'กำหนดเอง']
+  ];
+  return options.map(function(option) {
+    return '<option value="' + escHtml(option[0]) + '"' + (selected === option[0] ? ' selected' : '') + '>' + escHtml(option[1]) + '</option>';
+  }).join('');
 }
 
 function saveHoliday() {
@@ -176,14 +229,44 @@ function saveHoliday() {
 }
 
 function editHoliday(index) {
+  editingHolidayIndex = index;
+  resetHolidayForm();
+  renderHolidays();
+}
+
+function cancelHolidayEdit() {
+  editingHolidayIndex = -1;
+  renderHolidays();
+}
+
+function saveHolidayInline(index) {
   var row = holidays[index];
-  document.getElementById('formTitle').textContent = 'แก้ไขวันหยุด';
-  document.getElementById('holidayId').value = row.holiday_id || '';
-  setDateValue('startDate', row.start_date || '');
-  setDateValue('endDate', row.end_date || row.start_date || '');
-  document.getElementById('holidayName').value = row.name || '';
-  document.getElementById('holidayType').value = row.type || 'custom';
-  document.getElementById('holidayDescription').value = row.description || '';
+  if (!row) return;
+  var start = document.getElementById('editHolidayStart' + index).value.trim();
+  var end = document.getElementById('editHolidayEnd' + index).value.trim() || start;
+  var name = document.getElementById('editHolidayName' + index).value.trim();
+  if (!start || !name) { showToast('กรุณาระบุวันที่และชื่อวันหยุด', 'error'); return; }
+  var btn = document.getElementById('saveHolidayInlineBtn' + index);
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() {
+      if (btn) btn.disabled = false;
+      showToast('บันทึกวันหยุดสำเร็จ', 'success');
+      editingHolidayIndex = -1;
+      loadHolidays();
+    })
+    .withFailureHandler(function(err) {
+      if (btn) btn.disabled = false;
+      showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .serverSaveHoliday(TOKEN, {
+      holiday_id: row.holiday_id || '',
+      start_date: start,
+      end_date: end,
+      name: name,
+      type: document.getElementById('editHolidayType' + index).value,
+      description: document.getElementById('editHolidayDescription' + index).value.trim()
+    });
 }
 
 function resetHolidayForm() {

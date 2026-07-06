@@ -120,6 +120,12 @@ function normalizeSchoolDateValue(value) {
     return Utilities.formatDate(value, Session.getScriptTimeZone() || 'Asia/Bangkok', 'yyyy-MM-dd');
   }
   var s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    var parsed = new Date(s);
+    return !isNaN(parsed.getTime())
+      ? Utilities.formatDate(parsed, Session.getScriptTimeZone() || 'Asia/Bangkok', 'yyyy-MM-dd')
+      : '';
+  }
   var match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return '';
   var year = Number(match[1]);

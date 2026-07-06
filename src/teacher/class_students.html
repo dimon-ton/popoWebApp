@@ -78,7 +78,7 @@
   <div id="csvCard" class="card" style="display:none">
     <h3>นำเข้ารายชื่อนักเรียนด้วย CSV</h3>
     <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
-      ใช้สำหรับเพิ่มหรืออัปเดตรายชื่อนักเรียนในชั้นเรียนนี้ คอลัมน์ <code>first_name*</code> และ <code>last_name*</code> ต้องกรอก ระบบจะรวมคำนำหน้า ชื่อ และนามสกุลให้ คอลัมน์ <code>student_id</code> ไม่บังคับ หากเว้นว่างระบบจะสร้างให้ใหม่
+      ใช้สำหรับเพิ่มหรืออัปเดตรายชื่อนักเรียนในชั้นเรียนนี้ คอลัมน์ <code>first_name*</code> และ <code>last_name*</code> ต้องกรอก ระบบจะรวมคำนำหน้า ชื่อ และนามสกุลให้ คอลัมน์ <code>student_id</code> ไม่บังคับ หากเว้นว่างระบบจะสร้างให้ใหม่ วันเกิดในคอลัมน์ <code>dob</code> แนะนำให้ใช้รูปแบบสากล <code>yyyy-mm-dd</code> เช่น <code>2017-01-01</code> หรือกรอกแบบไทย เช่น <code>01 ม.ค. 60</code> ได้
     </div>
     <div class="form-row csv-import-row" style="align-items:center;">
       <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
@@ -226,8 +226,8 @@ function findCSVHeaderIndex(headers, names) {
 function downloadStudentsCSVTemplate() {
   downloadCSVFile('students_import_template_' + CLASS_ID + '.csv', [
     ['student_id', 'seq_no', 'student_code', 'citizen_id', 'prefix', 'first_name*', 'last_name*', 'full_name', 'dob', 'note'],
-    ['', '1', '65001', '', 'เด็กชาย', 'ตัวอย่าง', 'นักเรียน', '', '01 ม.ค. 60', ''],
-    ['', '2', '65002', '', 'เด็กหญิง', 'ตัวอย่าง', 'เรียนดี', '', '02 ม.ค. 60', '']
+    ['', '1', '65001', '', 'เด็กชาย', 'ตัวอย่าง', 'นักเรียน', '', '2017-01-01', ''],
+    ['', '2', '65002', '', 'เด็กหญิง', 'ตัวอย่าง', 'เรียนดี', '', '2017-01-02', '']
   ]);
 }
 

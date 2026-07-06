@@ -229,6 +229,7 @@ function getReportBookData(token, class_id, subject_id) {
     }
   });
   var attendance_dates = attendanceCalendar.slice(0, lastAttendanceIndex >= 0 ? lastAttendanceIndex + 1 : 24);
+  var attendance_holiday_notes = getReportAttendanceHolidayNotes(attendance_dates);
   var attendanceDateSet = {};
   attendance_dates.forEach(function(date) { attendanceDateSet[date] = true; });
   var attendance_totals = {};
@@ -303,6 +304,7 @@ function getReportBookData(token, class_id, subject_id) {
   d.formative_students = formative_students;
   d.summative_students = summative_students;
   d.attendance_dates = attendance_dates;
+  d.attendance_holiday_notes = attendance_holiday_notes;
   d.attendance_students = attendance_students;
   d.characteristics_students = characteristics_students;
   d.readthinkwrite_students = readthinkwrite_students;
@@ -312,6 +314,32 @@ function getReportBookData(token, class_id, subject_id) {
 
 function reportValueOrBlank(value) {
   return value === null || value === undefined ? '' : value;
+}
+
+function getReportAttendanceHolidayNotes(attendanceDates) {
+  var dates = attendanceDates || [];
+  if (!dates.length) return [];
+  try { ensureHolidaysSchema(); } catch (e) { return []; }
+
+  var reportStart = dates[0];
+  var reportEnd = dates[dates.length - 1];
+  return dbGetAll('Holidays').map(function(row) {
+    var start = normalizeSchoolDateValue(row.start_date);
+    var end = normalizeSchoolDateValue(row.end_date) || start;
+    if (!start || !end) return null;
+    if (end < reportStart || start > reportEnd) return null;
+    return {
+      start_date: start,
+      end_date: end,
+      name: String(row.name || '').trim(),
+      description: String(row.description || '').trim(),
+      type: String(row.type || '').trim()
+    };
+  }).filter(function(row) {
+    return row && (row.name || row.description);
+  }).sort(function(a, b) {
+    return String(a.start_date || '').localeCompare(String(b.start_date || ''));
+  });
 }
 
 function getHomeroomTeacherIds(row) {

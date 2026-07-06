@@ -65,6 +65,8 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 - **`DevActivity`**: `id`, `student_id`, `class_id`, `subject_id`, `result`, `updated_by`, `updated_at`
 - **`Holidays`**: `holiday_id`, `start_date`, `end_date`, `name`, `type`, `description`, `created_by`, `updated_at`
 
+Date fields in the database should be stored in global ISO date format (`yyyy-mm-dd`). Frontend pages should display those dates in Thai format for users, such as `2 มิถุนายน 2567`, while preserving ISO values in hidden inputs or payloads sent back to Apps Script.
+
 ---
 
 ## Deployment & Clasp Configuration
@@ -88,10 +90,10 @@ Use this same URL as `WEB_APP_URL` when running production smoke tests.
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `268`
+- Stable production version: `269`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Add Flowbite icons to teacher dashboard buttons`
+- Latest verified production release: `Implement UX UI report improvements`
 
 ---
 
