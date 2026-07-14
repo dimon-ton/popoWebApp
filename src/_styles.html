@@ -2640,6 +2640,165 @@ body.page-class-report {
     .page-class-summative td.final-grade-col { font-weight: 700; color: var(--brand); text-align: center; }
     .page-class-summative .legend { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 
+/* Shared assessment enhancements */
+table th.student-name-col,
+table td.student-name-col,
+.page-class-attendance th.name-col,
+.page-class-attendance td.name-col,
+.page-class-formative th.name-col,
+.page-class-formative td.name-col,
+.page-class-summative th.name-col,
+.page-class-summative td.name-col,
+.page-class-characteristics th.name-col,
+.page-class-characteristics td.name-col,
+.page-class-readthinkwrite th.name-col,
+.page-class-readthinkwrite td.name-col,
+.page-class-dev-activity th.name-col,
+.page-class-dev-activity td.name-col {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.assessment-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.assessment-toolbar svg { width: 17px; height: 17px; }
+.assessment-reference {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.72);
+}
+.assessment-reference h3 {
+  margin: 0 0 6px;
+  color: var(--brand);
+  font-size: 17px;
+}
+.assessment-reference-intro {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.assessment-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.assessment-reference-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(26,86,160,0.12);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.assessment-reference-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-weight: 700;
+  font-size: 12px;
+}
+.assessment-reference-item h4 { margin: 0 0 4px; font-size: 14px; color: var(--text); }
+.assessment-reference-item p { margin: 0; font-size: 13px; line-height: 1.58; color: var(--text-muted); }
+.assessment-reference-group { margin-bottom: 14px; }
+.assessment-reference-group:last-child { margin-bottom: 0; }
+.assessment-reference-group h4 { margin: 0 0 7px; color: var(--brand); font-size: 14px; }
+.assessment-reference-group ol { margin: 0; padding-left: 24px; }
+.assessment-reference-group li { padding: 3px 0; line-height: 1.55; }
+.assessment-criteria-list { margin: 0; }
+.assessment-criteria-list > div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(216,225,239,0.7);
+}
+.assessment-criteria-list > div:last-child { border-bottom: 0; }
+.assessment-criteria-list dt { color: var(--brand); font-weight: 700; }
+.assessment-criteria-list dd { margin: 0; line-height: 1.5; }
+.assessment-scale { margin-top: 14px; max-width: 520px; }
+.assessment-scale th, .assessment-scale td { padding: 8px 12px; }
+
+.assessment-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 28px;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  font: inherit;
+  line-height: inherit;
+}
+.assessment-tooltip-trigger:hover:not(:disabled) {
+  background: rgba(26,86,160,0.08);
+  box-shadow: none;
+  transform: none;
+}
+.assessment-tooltip-trigger:focus-visible { outline-offset: 1px; }
+.assessment-tooltip {
+  position: fixed;
+  z-index: 1800;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #1f2937;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(16,24,40,0.24);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+}
+.assessment-tooltip[hidden] { display: none; }
+
+.source-modal { width: min(560px, 94vw); max-height: min(720px, 90vh); overflow-y: auto; }
+.source-modal p { margin: 0 0 14px; color: var(--text-muted); line-height: 1.55; }
+.source-list { display: grid; gap: 9px; }
+.source-option {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  cursor: pointer;
+}
+.source-option:has(input:checked) { border-color: var(--brand); background: var(--brand-light); }
+.source-option input { margin-top: 3px; accent-color: var(--brand); }
+.source-option-title { display: block; font-weight: 700; color: var(--text); }
+.source-option-meta { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+.source-complete { color: var(--green); font-weight: 700; }
+.source-modal-state { padding: 24px 12px; text-align: center; color: var(--text-muted); }
+.copy-warning { padding: 12px 14px; border-left: 4px solid var(--amber); background: #fffbeb; border-radius: var(--radius-sm); color: var(--text); }
+
+@media (max-width: 640px) {
+  .assessment-reference { padding: 16px 13px; }
+  .assessment-reference-grid { grid-template-columns: 1fr; }
+  .modal-overlay { align-items: flex-end; padding: 10px; }
+  .source-modal { width: 100%; max-width: 100%; max-height: 88vh; padding: 20px 16px; border-radius: 16px; }
+  .source-modal .modal-actions button { flex: 1 1 140px; }
+}
 </style>
 <script>
 var THAI_DATE_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -3229,6 +3388,101 @@ function restoreNavbarDefaults(titleEl, userTrigger) {
   if (userTrigger) {
     userTrigger.innerHTML = '<div class="navbar-avatar-placeholder">?</div><span>ผู้ใช้งาน</span>';
   }
+}
+
+function initAssessmentTooltips(root) {
+  root = root || document;
+  var triggers = root.querySelectorAll('[data-assessment-tooltip]');
+  if (!triggers.length) return;
+
+  var tooltip = document.getElementById('assessmentTooltipPortal');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'assessmentTooltipPortal';
+    tooltip.className = 'assessment-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+  }
+  for (var i = 0; i < triggers.length; i++) {
+    triggers[i].setAttribute('aria-describedby', tooltip.id);
+  }
+
+  if (document._assessmentTooltipBound) return;
+  document._assessmentTooltipBound = true;
+  var activeTrigger = null;
+  var showTimer = null;
+  var hideTimer = null;
+
+  function positionTooltip() {
+    if (!activeTrigger || tooltip.hidden) return;
+    var rect = activeTrigger.getBoundingClientRect();
+    var margin = 12;
+    var gap = 8;
+    tooltip.style.left = margin + 'px';
+    tooltip.style.top = margin + 'px';
+    var tooltipRect = tooltip.getBoundingClientRect();
+    var left = rect.left + (rect.width - tooltipRect.width) / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+    var top = rect.top - tooltipRect.height - gap;
+    if (top < margin) top = rect.bottom + gap;
+    if (top + tooltipRect.height > window.innerHeight - margin) {
+      top = Math.max(margin, window.innerHeight - tooltipRect.height - margin);
+    }
+    tooltip.style.left = Math.round(left) + 'px';
+    tooltip.style.top = Math.round(top) + 'px';
+  }
+
+  function showTooltip(trigger, immediate) {
+    clearTimeout(hideTimer);
+    clearTimeout(showTimer);
+    showTimer = setTimeout(function() {
+      activeTrigger = trigger;
+      tooltip.textContent = trigger.getAttribute('data-assessment-tooltip') || '';
+      tooltip.hidden = false;
+      positionTooltip();
+    }, immediate ? 0 : 140);
+  }
+
+  function hideTooltip(immediate) {
+    clearTimeout(showTimer);
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function() {
+      tooltip.hidden = true;
+      activeTrigger = null;
+    }, immediate ? 0 : 90);
+  }
+
+  document.addEventListener('mouseover', function(event) {
+    var trigger = event.target.closest && event.target.closest('[data-assessment-tooltip]');
+    if (trigger) showTooltip(trigger, false);
+  });
+  document.addEventListener('mouseout', function(event) {
+    var trigger = event.target.closest && event.target.closest('[data-assessment-tooltip]');
+    if (trigger && (!event.relatedTarget || !trigger.contains(event.relatedTarget))) hideTooltip(false);
+  });
+  document.addEventListener('focusin', function(event) {
+    var trigger = event.target.closest && event.target.closest('[data-assessment-tooltip]');
+    if (trigger) showTooltip(trigger, false);
+  });
+  document.addEventListener('focusout', function(event) {
+    var trigger = event.target.closest && event.target.closest('[data-assessment-tooltip]');
+    if (trigger) hideTooltip(false);
+  });
+  document.addEventListener('click', function(event) {
+    var trigger = event.target.closest && event.target.closest('[data-assessment-tooltip]');
+    if (trigger) {
+      if (activeTrigger === trigger && !tooltip.hidden) hideTooltip(true);
+      else showTooltip(trigger, true);
+      return;
+    }
+    hideTooltip(true);
+  });
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') hideTooltip(true);
+  });
+  window.addEventListener('scroll', positionTooltip, true);
+  window.addEventListener('resize', positionTooltip);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarAvatar);
 else initNavbarAvatar();

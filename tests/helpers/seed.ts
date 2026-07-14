@@ -190,6 +190,22 @@ interface SeedSummativeOpts {
   makeup_grade?: number | string;
 }
 
+interface SeedCharacteristicsOpts {
+  student_id: string;
+  subject_id: string;
+  updated_by: string;
+  values?: Array<number | string>;
+  updated_at?: string;
+}
+
+interface SeedReadThinkWriteOpts {
+  student_id: string;
+  subject_id: string;
+  updated_by: string;
+  values?: Array<number | string>;
+  updated_at?: string;
+}
+
 export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> {
   await apiCall({
     api: 'seed_summative',
@@ -200,6 +216,35 @@ export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> 
     midterm: opts.midterm ?? '',
     final: opts.final ?? '',
     makeup_grade: opts.makeup_grade ?? '',
+  });
+}
+
+export async function seedTestCharacteristics(opts: SeedCharacteristicsOpts): Promise<void> {
+  const values = opts.values ?? [8, 8, 8, 8, 8, 8, 8, 8];
+  await apiCall({
+    api: 'seed_characteristics',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    updated_by: opts.updated_by,
+    updated_at: opts.updated_at ?? '',
+    t1: values[0] ?? '', t2: values[1] ?? '',
+    t3: values[2] ?? '', t4: values[3] ?? '',
+    t5: values[4] ?? '', t6: values[5] ?? '',
+    t7: values[6] ?? '', t8: values[7] ?? '',
+  });
+}
+
+export async function seedTestReadThinkWrite(opts: SeedReadThinkWriteOpts): Promise<void> {
+  const values = opts.values ?? [8, 8, 8, 8, 8, 8, 8, 8, 8, 8];
+  await apiCall({
+    api: 'seed_readthinkwrite',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    updated_by: opts.updated_by,
+    updated_at: opts.updated_at ?? '',
+    r1: values[0] ?? '', r2: values[1] ?? '', r3: values[2] ?? '',
+    t1: values[3] ?? '', t2: values[4] ?? '', t3: values[5] ?? '', t4: values[6] ?? '',
+    w1: values[7] ?? '', w2: values[8] ?? '', w3: values[9] ?? '',
   });
 }
 

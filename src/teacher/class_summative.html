@@ -206,7 +206,7 @@ function renderGrid(data) {
   var thead = document.getElementById('summativeHead');
   thead.innerHTML = '<tr>' +
     '<th class="seq-col">ที่</th>' +
-    '<th class="name-col">ชื่อ-สกุล</th>' +
+    '<th class="name-col student-name-col">ชื่อ-สกุล</th>' +
     '<th class="computed-col">ระหว่างเรียน<br><span style="font-weight:normal;font-size:11px">/' + cwMax + '</span></th>' +
     '<th class="computed-col">สอบกลางภาค<br><span style="font-weight:normal;font-size:11px">/' + midMax + '</span></th>' +
     '<th class="computed-col">สอบปลายภาค<br><span style="font-weight:normal;font-size:11px">/' + finMax + '</span></th>' +
@@ -251,7 +251,7 @@ function renderGrid(data) {
 
     tr.innerHTML =
       '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
-      '<td class="name-col">' + escHtml(student.full_name) + '</td>' +
+      '<td class="name-col student-name-col">' + escHtml(student.full_name) + '</td>' +
       '<td>' + cwCell + '</td>' +
       '<td>' + midCell + '</td>' +
       '<td>' + finCell + '</td>' +

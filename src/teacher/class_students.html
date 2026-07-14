@@ -111,7 +111,7 @@
           <th>เลขที่</th>
           <th>เลขประจำตัว</th>
           <th>เลขประจำตัวประชาชน</th>
-          <th>ชื่อ-สกุล</th>
+          <th class="student-name-col">ชื่อ-สกุล</th>
           <th>วันเกิด</th>
           <th>หมายเหตุ</th>
           <th id="actionHeader"></th>
@@ -371,7 +371,7 @@ function renderStudents(students) {
       '<td class="cell-seq_no">' + escHtml(s.seq_no) + '</td>' +
       '<td class="cell-student_code">' + escHtml(s.student_code) + '</td>' +
       '<td class="cell-citizen_id">' + escHtml(s.citizen_id) + '</td>' +
-      '<td class="cell-full_name">' + escHtml(s.full_name) + '</td>' +
+      '<td class="cell-full_name student-name-col">' + escHtml(s.full_name) + '</td>' +
       '<td class="cell-dob">' + escHtml(s.dob) + '</td>' +
       '<td class="cell-note">' + escHtml(s.note) + '</td>' +
       actionCell;

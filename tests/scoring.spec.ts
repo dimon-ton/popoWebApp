@@ -13,6 +13,8 @@ import {
   seedTestIndicator,
   seedTestSubjectWeights,
   seedTestSummative,
+  seedTestCharacteristics,
+  seedTestReadThinkWrite,
   cleanupTestData,
 } from './helpers/seed';
 
@@ -240,6 +242,8 @@ test.describe('US-012: Read-Think-Write scoring', () => {
   let subjectId: string;
   let studentId: string;
   let teacherId: string;
+  let sourceSubjectId: string;
+  let sourceTeacherId: string;
   const url = process.env.WEB_APP_URL!;
 
   test.beforeAll(async () => {
@@ -253,6 +257,20 @@ test.describe('US-012: Read-Think-Write scoring', () => {
       class_id: classId,
       subject_id: subjectId,
       teacher_user_id: teacherId,
+    });
+    sourceSubjectId = await seedTestSubject({ suffix: 'us012_source', name: 'ภาษาไทยต้นทาง012', code: 'TST012S', group: 1, class_id: classId });
+    sourceTeacherId = await seedTestUser({ suffix: 'us012_source_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูต้นทางUS012' });
+    await seedTestEnrollment({
+      suffix: 'us012_source_enr',
+      class_id: classId,
+      subject_id: sourceSubjectId,
+      teacher_user_id: sourceTeacherId,
+    });
+    await seedTestReadThinkWrite({
+      student_id: studentId,
+      subject_id: sourceSubjectId,
+      updated_by: sourceTeacherId,
+      values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     });
   });
 
@@ -275,6 +293,44 @@ test.describe('US-012: Read-Think-Write scoring', () => {
     await expect(page.locator('#rtwHead')).toContainText('ผล', { timeout: 10_000 });
     // Save bar visible (admin session)
     await expect(page.locator('#saveBar')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#readThinkWriteReferenceHeading')).toBeVisible();
+    await expect(page.locator('.assessment-reference')).toContainText('วินิจฉัยตัดสินใจด้วยตนเองในสิ่งที่ดีและถูกต้อง');
+    await expect(page.locator('.assessment-reference')).toContainText('อ่าน 1');
+    await expect(page.locator('.assessment-reference')).toContainText('อ่าน 2');
+    await expect(page.locator('.assessment-reference')).toContainText('อ่าน 3');
+    await expect(page.locator('.assessment-reference')).toContainText('คิด 4');
+    await expect(page.locator('.assessment-reference')).toContainText('เขียน 3');
+    await expect(page.locator('#rtwHead .student-name-col')).toHaveCSS('text-align', 'left');
+    await expect(page.locator('#rtwBody .student-name-col').first()).toHaveCSS('text-align', 'left');
+    await expect(page.locator('#rtwBody td').nth(2)).toHaveCSS('text-align', 'center');
+  });
+
+  test('US-012: score header tooltip contains the reference criterion', async ({ page }) => {
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+    const trigger = page.locator('#rtwHead [data-assessment-tooltip]').first();
+    await expect(trigger).toHaveAttribute('aria-describedby', 'assessmentTooltipPortal');
+    await trigger.hover();
+    await expect(page.locator('#assessmentTooltipPortal')).toContainText('อ่านได้ถูกต้อง คล่องแคล่ว');
+    await trigger.focus();
+    await expect(page.locator('#assessmentTooltipPortal')).toBeVisible();
+  });
+
+  test('US-012: copy completed data from another subject in the same classroom', async ({ page }) => {
+    await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
+    await page.locator('input.score-input').first().fill('9');
+    await page.locator('input.score-input').first().dispatchEvent('input');
+    await page.locator('#openCopyBtn').click();
+    await expect(page.locator('#sourceList')).toContainText('ภาษาไทยต้นทาง012', { timeout: 20_000 });
+    await page.locator(`input[name="readThinkWriteSource"][value="${sourceSubjectId}"]`).check();
+    await page.locator('#confirmSourceBtn').click();
+    await expect(page.locator('#replaceWarning')).toBeVisible();
+    await page.locator('#confirmSourceBtn').click();
+    await expect(page.locator('#sourceModal')).not.toHaveClass(/open/, { timeout: 20_000 });
+    const inputs = page.locator('input.score-input');
+    for (let i = 0; i < 10; i++) await expect(inputs.nth(i)).toHaveValue(String(i + 1));
+    await expect(page.locator('#saveStatus')).toContainText('ยังไม่ได้บันทึก');
   });
 
   test('US-012: enter 10,9,9,9,9,8,9,9,9,9 → total=90, label=ดีเยี่ยม', async ({ page }) => {
@@ -471,6 +527,8 @@ test.describe('US-011: Characteristics scoring', () => {
   let subjectId: string;
   let studentId: string;
   let teacherId: string;
+  let sourceSubjectId: string;
+  let sourceTeacherId: string;
   const url = process.env.WEB_APP_URL!;
 
   test.beforeAll(async () => {
@@ -484,6 +542,27 @@ test.describe('US-011: Characteristics scoring', () => {
       class_id: classId,
       subject_id: subjectId,
       teacher_user_id: teacherId,
+    });
+    sourceSubjectId = await seedTestSubject({ suffix: 'us011_source', name: 'คณิตศาสตร์ต้นทาง011', code: 'TST011S', group: 1, class_id: classId });
+    sourceTeacherId = await seedTestUser({ suffix: 'us011_source_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูต้นทางUS011' });
+    await seedTestEnrollment({
+      suffix: 'us011_source_enr',
+      class_id: classId,
+      subject_id: sourceSubjectId,
+      teacher_user_id: sourceTeacherId,
+    });
+    await seedTestCharacteristics({
+      student_id: studentId,
+      subject_id: sourceSubjectId,
+      updated_by: sourceTeacherId,
+      values: [1, 2, 3, 4, 5, 6, 7, 8],
+    });
+    const incompleteSubjectId = await seedTestSubject({ suffix: 'us011_incomplete', name: 'วิชายังไม่ครบ011', code: 'TST011I', group: 1, class_id: classId });
+    await seedTestEnrollment({
+      suffix: 'us011_incomplete_enr',
+      class_id: classId,
+      subject_id: incompleteSubjectId,
+      teacher_user_id: sourceTeacherId,
     });
   });
 
@@ -505,6 +584,57 @@ test.describe('US-011: Characteristics scoring', () => {
     await expect(page.locator('#charHead')).toContainText('ผล', { timeout: 10_000 });
     // Save bar visible (admin session)
     await expect(page.locator('#saveBar')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#characteristicsReferenceHeading')).toBeVisible();
+    await expect(page.locator('#characteristicsReferenceHeading')).toContainText('8 ประการ');
+    await expect(page.locator('#charHead .student-name-col')).toHaveCSS('text-align', 'left');
+    await expect(page.locator('#charBody .student-name-col').first()).toHaveCSS('text-align', 'left');
+    await expect(page.locator('#charBody td').nth(2)).toHaveCSS('text-align', 'center');
+  });
+
+  test('US-011: trait tooltip is accessible on hover and focus', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+    const trigger = page.locator('#charHead [data-assessment-tooltip]').first();
+    await expect(trigger).toHaveAttribute('aria-describedby', 'assessmentTooltipPortal');
+    await trigger.hover();
+    await expect(page.locator('#assessmentTooltipPortal')).toContainText('รักชาติ ศาสน์ กษัตริย์');
+    await trigger.focus();
+    await expect(page.locator('#assessmentTooltipPortal')).toBeVisible();
+  });
+
+  test('US-011: copy completed source by student ID and require explicit overwrite confirmation', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+    await page.locator('input.score-input').first().fill('9');
+    await page.locator('input.score-input').first().dispatchEvent('input');
+
+    await page.locator('#openCopyBtn').click();
+    await expect(page.locator('#sourceModal')).toHaveClass(/open/);
+    await expect(page.locator('#sourceList')).toContainText('คณิตศาสตร์ต้นทาง011', { timeout: 20_000 });
+    await expect(page.locator('#sourceList')).not.toContainText('วิชายังไม่ครบ011');
+    await expect(page.locator('#sourceList')).not.toContainText('ภาษาอังกฤษทดสอบ011');
+    await page.locator(`input[name="characteristicSource"][value="${sourceSubjectId}"]`).check();
+    await page.locator('#confirmSourceBtn').click();
+    await expect(page.locator('#replaceWarning')).toBeVisible();
+    await expect(page.locator('#confirmSourceBtn')).toHaveText('ยืนยันและแทนที่ข้อมูล');
+    await page.locator('#confirmSourceBtn').click();
+
+    await expect(page.locator('#sourceModal')).not.toHaveClass(/open/, { timeout: 20_000 });
+    const inputs = page.locator('input.score-input');
+    for (let i = 0; i < 8; i++) await expect(inputs.nth(i)).toHaveValue(String(i + 1));
+    await expect(page.locator('#saveStatus')).toContainText('ยังไม่ได้บันทึก');
+  });
+
+  test('US-011: backend rejects a source ID that is not eligible', async ({ page }) => {
+    await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
+    const result = await page.evaluate(() => new Promise<{ error?: string }>((resolve) => {
+      (window as any).google.script.run
+        .withSuccessHandler((value: unknown) => resolve({ error: `unexpected success: ${JSON.stringify(value)}` }))
+        .withFailureHandler((error: { message?: string }) => resolve({ error: error.message || String(error) }))
+        .getCharacteristicsSourceValues((window as any).TOKEN, (window as any).CLASS_ID, (window as any).SUBJECT_ID, 'test_subject_not_eligible');
+    }));
+    expect(result.error).toContain('ไม่มีสิทธิ์ใช้งาน');
   });
 
   test('US-011: enter 10,10,10,9,9,10,10,10 → total=78, label=ดีเยี่ยม', async ({ page }) => {

@@ -200,7 +200,7 @@ function renderGrid(data) {
 
   // Build header
   var thead = document.getElementById('attHead');
-  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
+  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th>';
   data.dates.forEach(function(dateStr) {
     var dt = new Date(dateStr + 'T00:00:00');
     var dayLabel = THAI_DAYS_BY_DATE[dt.getDay()];
@@ -228,7 +228,7 @@ function renderGrid(data) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-student-id', student.student_id);
     var cells = '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
-                '<td class="name-col">' + escHtml(student.full_name) + '</td>';
+                '<td class="name-col student-name-col">' + escHtml(student.full_name) + '</td>';
 
     var presentCount = 0, leaveCount = 0, absentCount = 0;
     var yearData = (data.yearly && data.yearly[student.student_id]) || {};

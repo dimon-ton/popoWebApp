@@ -92,8 +92,8 @@ function renderDevActivity(data) {
   document.getElementById('readonlyNotice').style.display = data.can_edit ? 'none' : 'block';
   document.getElementById('saveBar').style.display = data.can_edit ? 'flex' : 'none';
   document.getElementById('devHead').innerHTML = data.can_edit
-    ? '<tr><th style="width:54px">ที่</th><th class="name-col">ชื่อ-สกุล</th><th>ผลการประเมิน<br>' + getColumnFillSelectHtml() + '</th></tr>'
-    : '<tr><th style="width:54px">ที่</th><th class="name-col">ชื่อ-สกุล</th><th>ผลการประเมิน</th></tr>';
+    ? '<tr><th style="width:54px">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th><th>ผลการประเมิน<br>' + getColumnFillSelectHtml() + '</th></tr>'
+    : '<tr><th style="width:54px">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th><th>ผลการประเมิน</th></tr>';
   var body = document.getElementById('devBody');
   body.innerHTML = '';
   (data.dev_students || []).forEach(function(student) {
@@ -106,7 +106,7 @@ function renderDevActivity(data) {
         '</select>'
       : escHtml(student.result || '-');
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + escHtml(student.seq_no) + '</td><td class="name-col">' + escHtml(student.full_name) + '</td><td class="dev-result-cell">' + resultHtml + '</td>';
+    tr.innerHTML = '<td>' + escHtml(student.seq_no) + '</td><td class="name-col student-name-col">' + escHtml(student.full_name) + '</td><td class="dev-result-cell">' + resultHtml + '</td>';
     body.appendChild(tr);
   });
   document.getElementById('devTable').style.display = 'table';

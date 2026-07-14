@@ -28,6 +28,12 @@
   </div>
 
   <div class="card">
+    <div class="assessment-toolbar" id="copyToolbar" style="display:none">
+      <button type="button" class="btn-secondary" id="openCopyBtn" onclick="openSourceModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        ดึงข้อมูลจากวิชาอื่น
+      </button>
+    </div>
     <div class="loading-msg" id="loadingMsg">
       <div class="skeleton-table">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:6%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:7%"></div><div class="skeleton-table-cell" style="width:11%"></div><div class="skeleton-table-cell" style="width:12%"></div></div>
@@ -46,6 +52,35 @@
     <button class="btn-save" id="saveBtn" onclick="saveCharacteristics()">บันทึกคะแนน</button>
     <span id="saveStatus" style="font-size:13px;color:#888"></span>
   </div>
+
+  <section class="assessment-reference" aria-labelledby="characteristicsReferenceHeading">
+    <h3 id="characteristicsReferenceHeading">รายละเอียดคุณลักษณะอันพึงประสงค์ 8 ประการ</h3>
+    <p class="assessment-reference-intro">คำอธิบายประกอบการประเมินตามหลักสูตรแกนกลางการศึกษาขั้นพื้นฐาน</p>
+    <div class="assessment-reference-grid">
+      <article class="assessment-reference-item"><span class="assessment-reference-number">1</span><div><h4>รักชาติ ศาสน์ กษัตริย์</h4><p>มีความรักและภาคภูมิใจในชาติ ยึดมั่นในศาสนา และแสดงความจงรักภักดีต่อสถาบันพระมหากษัตริย์</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">2</span><div><h4>ซื่อสัตย์สุจริต</h4><p>ประพฤติตรงตามความเป็นจริงทั้งต่อตนเองและผู้อื่น ยึดหลักความถูกต้อง และไม่แสวงหาประโยชน์โดยมิชอบ</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">3</span><div><h4>มีวินัย</h4><p>ปฏิบัติตามข้อตกลง กฎเกณฑ์ ระเบียบ และข้อบังคับของครอบครัว โรงเรียน และสังคม</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">4</span><div><h4>ใฝ่เรียนรู้</h4><p>ตั้งใจเรียน แสวงหาความรู้จากแหล่งเรียนรู้ต่าง ๆ รู้จักตั้งคำถาม สืบค้น และนำความรู้ไปใช้</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">5</span><div><h4>อยู่อย่างพอเพียง</h4><p>ดำเนินชีวิตอย่างพอประมาณ มีเหตุผล รอบคอบ และสามารถปรับตัวเพื่ออยู่ร่วมกับผู้อื่นได้อย่างเหมาะสม</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">6</span><div><h4>มุ่งมั่นในการทำงาน</h4><p>ตั้งใจและรับผิดชอบในการปฏิบัติหน้าที่ ทำงานด้วยความเพียรพยายาม และพัฒนางานจนสำเร็จ</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">7</span><div><h4>รักความเป็นไทย</h4><p>เห็นคุณค่าและภาคภูมิใจในขนบธรรมเนียม ศิลปวัฒนธรรม ภาษาไทย และภูมิปัญญาไทย</p></div></article>
+      <article class="assessment-reference-item"><span class="assessment-reference-number">8</span><div><h4>มีจิตสาธารณะ</h4><p>ช่วยเหลือผู้อื่นด้วยความเต็มใจ มีส่วนร่วมในกิจกรรมที่เป็นประโยชน์ต่อโรงเรียน ชุมชน และสังคม</p></div></article>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="sourceModal" role="presentation">
+  <div class="modal source-modal" role="dialog" aria-modal="true" aria-labelledby="sourceModalTitle" aria-describedby="sourceModalDescription">
+    <h3 id="sourceModalTitle">ดึงข้อมูลคุณลักษณะอันพึงประสงค์จากวิชาอื่น</h3>
+    <p id="sourceModalDescription">เลือกวิชาที่กรอกข้อมูลครบแล้ว ระบบจะนำคะแนนทั้ง 8 ด้านมาใส่ในตารางนี้โดยยังไม่บันทึก</p>
+    <div id="sourceModalState" class="source-modal-state">กำลังโหลดข้อมูล...</div>
+    <div id="sourceList" class="source-list" role="radiogroup" aria-label="วิชาต้นทาง"></div>
+    <div id="replaceWarning" class="copy-warning" style="display:none" role="alert">ข้อมูลที่กรอกไว้ในหน้านี้จะถูกแทนที่ด้วยข้อมูลจากวิชาที่เลือก คุณต้องการดำเนินการต่อหรือไม่</div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancelSourceBtn" onclick="closeSourceModal()">ยกเลิก</button>
+      <button type="button" class="btn-primary" id="confirmSourceBtn" onclick="confirmSourceCopy()" disabled>นำข้อมูลมาใช้</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -56,7 +91,7 @@ var CLASS_ID = '<?!= data.class_id || '' ?>';
 var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 
 var TRAITS = [
-  'รักชาติ ศาสนา กษัตริย์',
+  'รักชาติ ศาสน์ กษัตริย์',
   'ซื่อสัตย์สุจริต',
   'มีวินัย',
   'ใฝ่เรียนรู้',
@@ -68,6 +103,10 @@ var TRAITS = [
 
 var currentData = null;
 var hasUnsavedChanges = false;
+var selectedSourceId = '';
+var sourceRequestPending = false;
+var replaceWarningConfirmed = false;
+var sourceModalReturnFocus = null;
 
 function navigate(page) {
   if (!confirmDiscardScoreChanges()) return;
@@ -169,12 +208,15 @@ function renderGrid(data) {
 
   var readonlyNotice = document.getElementById('readonlyNotice');
   var saveBar = document.getElementById('saveBar');
+  var copyToolbar = document.getElementById('copyToolbar');
   if (data.can_edit) {
     readonlyNotice.style.display = 'none';
     saveBar.style.display = 'flex';
+    copyToolbar.style.display = 'flex';
   } else {
     readonlyNotice.style.display = 'block';
     saveBar.style.display = 'none';
+    copyToolbar.style.display = 'none';
   }
 
   var students = data.students || [];
@@ -182,9 +224,9 @@ function renderGrid(data) {
 
   // Build header row
   var thead = document.getElementById('charHead');
-  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
+  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th>';
   TRAITS.forEach(function(t, i) {
-    headRow += '<th title="' + escHtml(t) + '">ที่ ' + (i + 1) + '<br>' +
+    headRow += '<th><button type="button" class="assessment-tooltip-trigger" data-assessment-tooltip="' + escHtml(t) + ' — คะแนน 0–10" aria-label="รายละเอียด ' + escHtml(t) + '">ที่ ' + (i + 1) + '</button><br>' +
       '<span class="trait-group-header">/10</span></th>';
   });
   headRow += '<th class="total-col">รวม<br><span style="font-weight:normal;font-size:11px">/80</span></th>' +
@@ -201,7 +243,7 @@ function renderGrid(data) {
 
     var studentScores = scores[student.student_id] || {};
     var cells = '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
-                '<td class="name-col">' + escHtml(student.full_name) + '</td>';
+                '<td class="name-col student-name-col">' + escHtml(student.full_name) + '</td>';
 
     var rowTotal = '';
     var hasAny = false;
@@ -238,6 +280,130 @@ function renderGrid(data) {
   });
 
   document.getElementById('charTable').style.display = 'table';
+  initAssessmentTooltips(document.getElementById('charHead'));
+}
+
+function openSourceModal() {
+  if (!currentData || !currentData.can_edit || sourceRequestPending) return;
+  sourceModalReturnFocus = document.activeElement;
+  selectedSourceId = '';
+  replaceWarningConfirmed = false;
+  document.getElementById('replaceWarning').style.display = 'none';
+  document.getElementById('sourceList').innerHTML = '';
+  document.getElementById('sourceModalState').textContent = 'กำลังโหลดข้อมูล...';
+  document.getElementById('sourceModalState').style.display = 'block';
+  document.getElementById('confirmSourceBtn').disabled = true;
+  document.getElementById('confirmSourceBtn').textContent = 'นำข้อมูลมาใช้';
+  document.getElementById('sourceModal').classList.add('open');
+  sourceRequestPending = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      sourceRequestPending = false;
+      renderEligibleSources((result && result.sources) || []);
+    })
+    .withFailureHandler(function() {
+      sourceRequestPending = false;
+      document.getElementById('sourceModalState').textContent = 'ไม่สามารถดึงข้อมูลจากวิชาอื่นได้ กรุณาลองใหม่อีกครั้ง';
+    })
+    .getEligibleCharacteristicsSources(TOKEN, CLASS_ID, SUBJECT_ID);
+}
+
+function closeSourceModal() {
+  document.getElementById('sourceModal').classList.remove('open');
+  if (sourceModalReturnFocus && sourceModalReturnFocus.focus) sourceModalReturnFocus.focus();
+}
+
+function renderEligibleSources(sources) {
+  var state = document.getElementById('sourceModalState');
+  var list = document.getElementById('sourceList');
+  list.innerHTML = '';
+  if (!sources.length) {
+    state.style.display = 'block';
+    state.textContent = 'ยังไม่มีข้อมูลจากวิชาอื่นในระดับชั้นเดียวกันที่กรอกเรียบร้อยแล้ว';
+    return;
+  }
+  state.style.display = 'none';
+  sources.forEach(function(source) {
+    var label = document.createElement('label');
+    label.className = 'source-option';
+    var teacherText = (source.teacher_names || []).join(', ') || 'ไม่ระบุชื่อครู';
+    var updatedText = source.updated_at ? formatThaiBuddhistDateTime(source.updated_at) : 'ไม่ระบุเวลา';
+    label.innerHTML = '<input type="radio" name="characteristicSource" value="' + escHtml(source.subject_id) + '">' +
+      '<span><span class="source-option-title">' + escHtml(source.subject_name) + '</span>' +
+      '<span class="source-option-meta">ครูผู้สอน: ' + escHtml(teacherText) + '<br><span class="source-complete">กรอกครบแล้ว</span> · อัปเดตล่าสุด ' + escHtml(updatedText) + '</span></span>';
+    label.querySelector('input').addEventListener('change', function() {
+      selectedSourceId = this.value;
+      replaceWarningConfirmed = false;
+      document.getElementById('replaceWarning').style.display = 'none';
+      document.getElementById('confirmSourceBtn').textContent = 'นำข้อมูลมาใช้';
+      document.getElementById('confirmSourceBtn').disabled = false;
+    });
+    list.appendChild(label);
+  });
+}
+
+function hasDestinationValues() {
+  var inputs = document.querySelectorAll('#charBody input.score-input');
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].value !== '') return true;
+  }
+  return false;
+}
+
+function confirmSourceCopy() {
+  if (!selectedSourceId || sourceRequestPending) return;
+  if (hasDestinationValues() && !replaceWarningConfirmed) {
+    replaceWarningConfirmed = true;
+    document.getElementById('replaceWarning').style.display = 'block';
+    document.getElementById('confirmSourceBtn').textContent = 'ยืนยันและแทนที่ข้อมูล';
+    return;
+  }
+
+  sourceRequestPending = true;
+  var confirmBtn = document.getElementById('confirmSourceBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'กำลังนำข้อมูลมาใช้...';
+  document.getElementById('cancelSourceBtn').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      sourceRequestPending = false;
+      document.getElementById('cancelSourceBtn').disabled = false;
+      applySourceValues((result && result.values) || []);
+    })
+    .withFailureHandler(function() {
+      sourceRequestPending = false;
+      document.getElementById('cancelSourceBtn').disabled = false;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = replaceWarningConfirmed ? 'ยืนยันและแทนที่ข้อมูล' : 'นำข้อมูลมาใช้';
+      showToast('ไม่สามารถดึงข้อมูลจากวิชาอื่นได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    })
+    .getCharacteristicsSourceValues(TOKEN, CLASS_ID, SUBJECT_ID, selectedSourceId);
+}
+
+function applySourceValues(values) {
+  var sourceByStudent = {};
+  values.forEach(function(value) { sourceByStudent[String(value.student_id)] = value; });
+  var rows = document.querySelectorAll('#charBody tr[data-student-id]');
+  var copied = 0;
+  var unmatched = 0;
+  rows.forEach(function(row) {
+    var source = sourceByStudent[String(row.getAttribute('data-student-id'))];
+    if (!source) { unmatched++; return; }
+    for (var n = 1; n <= 8; n++) {
+      var input = row.querySelector('input[data-trait="t' + n + '"]');
+      if (input) input.value = source['t' + n];
+    }
+    var firstInput = row.querySelector('input.score-input');
+    if (firstInput) updateRowTotal(firstInput);
+    copied++;
+  });
+  hasUnsavedChanges = copied > 0 || hasUnsavedChanges;
+  document.getElementById('sourceModal').classList.remove('open');
+  var message = 'นำข้อมูลจากวิชาอื่นมาใช้เรียบร้อยแล้ว ' + copied + ' คน';
+  if (unmatched) message += ' ไม่พบข้อมูลตรงกัน ' + unmatched + ' คน';
+  message += ' กรุณาตรวจสอบและกดบันทึกคะแนน';
+  showToast(message, 'success');
+  document.getElementById('saveStatus').textContent = copied ? 'มีข้อมูลที่นำเข้ามาและยังไม่ได้บันทึก' : '';
 }
 
 function updateRowTotal(input) {
@@ -336,12 +502,20 @@ function moveScoreFocus(active, direction) {
 }
 
 document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('sourceModal').classList.contains('open') && !document.getElementById('cancelSourceBtn').disabled) {
+    closeSourceModal();
+    return;
+  }
   var active = document.activeElement;
   if (!active || !active.matches('input.score-input, input.makeup-input')) return;
   var map = { ArrowDown: 'down', ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right' };
   var direction = map[e.key];
   if (!direction) return;
   if (moveScoreFocus(active, direction)) e.preventDefault();
+});
+
+document.getElementById('sourceModal').addEventListener('click', function(e) {
+  if (e.target === this && !document.getElementById('cancelSourceBtn').disabled) closeSourceModal();
 });
 
 // Init

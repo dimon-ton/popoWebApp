@@ -156,6 +156,74 @@ function handleTestApi(e) {
         });
         return jsonOk({ student_id: params.student_id, final_grade: sFinalGrade });
 
+      case 'seed_characteristics':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var existingCharacteristics = dbGetAll('Characteristics').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id);
+        });
+        existingCharacteristics.forEach(function(row) {
+          if (row.id) dbDelete('Characteristics', 'id', row.id);
+        });
+        var characteristicValues = [];
+        for (var characteristicIndex = 1; characteristicIndex <= 8; characteristicIndex++) {
+          characteristicValues.push(params['t' + characteristicIndex] === '' ? '' : Number(params['t' + characteristicIndex]));
+        }
+        var characteristicTotal = characteristicValues.every(function(value) { return value === ''; })
+          ? ''
+          : characteristicValues.reduce(function(total, value) { return total + (value === '' ? 0 : value); }, 0);
+        dbInsert('Characteristics', {
+          id: 'test_char_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          t1: characteristicValues[0], t2: characteristicValues[1],
+          t3: characteristicValues[2], t4: characteristicValues[3],
+          t5: characteristicValues[4], t6: characteristicValues[5],
+          t7: characteristicValues[6], t8: characteristicValues[7],
+          total: characteristicTotal,
+          label: characteristicTotal === '' ? '' : computeCharacteristicsLabel(characteristicTotal),
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id });
+
+      case 'seed_readthinkwrite':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var existingReadThinkWrite = dbGetAll('ReadThinkWrite').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id);
+        });
+        existingReadThinkWrite.forEach(function(row) {
+          if (row.id) dbDelete('ReadThinkWrite', 'id', row.id);
+        });
+        var readThinkWriteFields = ['r1','r2','r3','t1','t2','t3','t4','w1','w2','w3'];
+        var readThinkWriteValues = {};
+        var readThinkWriteTotal = 0;
+        var readThinkWriteEmpty = true;
+        readThinkWriteFields.forEach(function(field) {
+          var value = params[field] === '' ? '' : Number(params[field]);
+          readThinkWriteValues[field] = value;
+          if (value !== '') { readThinkWriteTotal += value; readThinkWriteEmpty = false; }
+        });
+        dbInsert('ReadThinkWrite', {
+          id: 'test_rtw_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          r1: readThinkWriteValues.r1, r2: readThinkWriteValues.r2, r3: readThinkWriteValues.r3,
+          t1: readThinkWriteValues.t1, t2: readThinkWriteValues.t2,
+          t3: readThinkWriteValues.t3, t4: readThinkWriteValues.t4,
+          w1: readThinkWriteValues.w1, w2: readThinkWriteValues.w2, w3: readThinkWriteValues.w3,
+          total: readThinkWriteEmpty ? '' : readThinkWriteTotal,
+          label: readThinkWriteEmpty ? '' : computeReadThinkWriteLabel(readThinkWriteTotal),
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id });
+
       case 'cleanup':
         var count = 0;
         var tabIdFields = {

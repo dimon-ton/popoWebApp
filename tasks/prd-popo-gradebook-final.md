@@ -245,7 +245,8 @@ assessment periods so the summative form shows correct column maxima.
 
 ### US-011: Characteristics scoring (คุณลักษณะ)
 **Description:** As a teacher, I want to score each student on 8 affective traits and see the
-auto-computed label.
+auto-computed label, understand each trait, and reuse a completed assessment from another subject
+in the same classroom.
 
 **Acceptance Criteria:**
 - [ ] Page `/class/:class_id/subject/:subject_id/characteristics`.
@@ -256,6 +257,23 @@ auto-computed label.
   `≥70→ดีเยี่ยม, ≥60→ดี, ≥50→ผ่านเกณฑ์, else→ไม่ผ่าน`.
 - [ ] Write to `Characteristics`: `id`, `student_id`, `subject_id`, `t1..t8`, `total`, `label`,
   `updated_by`, `updated_at`.
+- [ ] The `ชื่อ-สกุล` header and student-name cells are left-aligned and vertically centered;
+  scoring columns remain centered and sticky-column behavior is preserved.
+- [ ] Each trait header has an accessible tooltip containing its full Thai title. Tooltips open on
+  hover, keyboard focus, and touch/click, use `role="tooltip"` + `aria-describedby`, stay inside the
+  viewport, and are not clipped by the table's horizontal scroller.
+- [ ] Below the save bar, show the eight supplied desirable-characteristic titles and full Thai
+  descriptions as searchable, printable, responsive HTML.
+- [ ] Editable users see `ดึงข้อมูลจากวิชาอื่น`. The selector lists each eligible source subject
+  once with teacher name(s), completed status, and Thai-formatted last-update time.
+- [ ] A source is eligible only when it is a different subject in the exact same `class_id`, is not
+  co-taught by the current teacher, and has exactly one valid saved `t1..t8` row for every current
+  classroom student. Backend handlers revalidate all conditions and reject arbitrary source IDs.
+- [ ] Copying matches only by `student_id`, loads only `t1..t8` into the existing form state,
+  recalculates totals/labels, leaves unmatched students unchanged, never modifies the source, and
+  requires the teacher to press the existing save button.
+- [ ] Existing destination values trigger an in-app confirmation dialog before replacement. After
+  copying, show copied/unmatched counts and mark the form as containing unsaved changes.
 - [ ] Playwright (`tests/scoring.spec.ts -g US-011`):
   - Enter 10,10,10,9,9,10,10,10 for student 1 → assert total=78, label=ดีเยี่ยม.
   - Enter 8,8,8,9,9,8,9,8 → assert total=67, label=ดี. Save; reload; assert persists.
@@ -264,16 +282,29 @@ auto-computed label.
 
 ### US-012: Read-Think-Write scoring (อ่านคิด)
 **Description:** As a teacher, I want to score each student on 10 read-think-write sub-items and
-see the auto-label.
+see the auto-label, understand every sub-item, and reuse a completed assessment from another
+subject in the same classroom.
 
 **Acceptance Criteria:**
 - [ ] Page `/class/:class_id/subject/:subject_id/readthinkwrite`.
 - [ ] Grid: rows = students, 10 columns (0–10 each) grouped visually:
   อ่าน (r1, r2, r3), คิดวิเคราะห์ (t1, t2, t3, t4), เขียน (w1, w2, w3).
+- [ ] The visible reference section explicitly maps the columns as follows:
+  - `อ่าน 1` อ่านได้ถูกต้อง คล่องแคล่ว; `อ่าน 2` เข้าใจและถ่ายทอดสิ่งที่อ่านได้;
+    `อ่าน 3` มีนิสัยรักการอ่าน.
+  - `คิด 1` คิดอย่างมีระบบ และสรุปประเด็นได้; `คิด 2` แสดงความคิดเห็นอย่างมีเหตุผล;
+    `คิด 3` สรุปข้อคิด และกระบวนการแก้ปัญหา; `คิด 4` วินิจฉัยตัดสินใจด้วยตนเองในสิ่งที่ดีและถูกต้อง.
+  - `เขียน 1` เขียนได้ถูกต้อง สะอาดเป็นระเบียบ; `เขียน 2` เขียนสื่อความหมายได้ถูกต้อง;
+    `เขียน 3` เขียนได้ตรงตามจุดประสงค์.
 - [ ] Computed total (max 100) and label:
   `≥90→ดีเยี่ยม, ≥80→ดี, ≥70→ผ่านเกณฑ์, else→ไม่ผ่าน`.
 - [ ] Write to `ReadThinkWrite`: `id`, `student_id`, `subject_id`, `r1..r3`, `t1..t4`,
   `w1..w3`, `total`, `label`, `updated_by`, `updated_at`.
+- [ ] The `ชื่อ-สกุล` column follows the shared left-alignment rule. Every scoring header has an
+  accessible tooltip containing its mapped criterion, `0–10` range, and aggregate quality bands.
+- [ ] The page provides the same cross-subject workflow and security rules as US-011, validating
+  completeness across all ten fields and copying only `r1..r3`, `t1..t4`, and `w1..w3` by
+  `student_id` into the unsaved destination form.
 - [ ] Playwright (`tests/scoring.spec.ts -g US-012`):
   - Enter 10,9,9,9,9,8,9,9,9,9 for student 1 → assert total=90, label=ดีเยี่ยม.
   - Save; reload; assert values persist.
@@ -532,10 +563,11 @@ data so specs stay independent and never pollute real production data.
   - `tests/auth.setup.ts` — US-021
   - `tests/helpers/seed.ts` — US-022
 
-- **FR-14:** Test API path: Apps Script exposes `?api=seed_class|seed_subject|seed_student|
-  seed_user|cleanup` gated by `Authorization: Bearer <TEST_API_TOKEN>` header matching the
-  `TEST_API_TOKEN` Script Property. Kill-switch: Script Property `TEST_API_ENABLED=false`
-  disables the path entirely. Path 404s on any ID that does not start with `test_`.
+- **FR-14:** Test API path: Apps Script exposes test-prefixed seed/query/cleanup operations,
+  including `seed_class`, `seed_subject`, `seed_student`, `seed_user`, `seed_characteristics`,
+  `seed_readthinkwrite`, `query_rows`, and `cleanup`, gated by `TEST_API_TOKEN` from Script
+  Properties. Kill-switch `TEST_API_ENABLED=false` disables the path entirely. ID-bearing seed
+  operations reject identifiers that do not start with `test_`.
 
 - **FR-15:** All test-created records use prefix `test_`. `cleanupTestData()` deletes only those.
 
@@ -558,6 +590,20 @@ data so specs stay independent and never pollute real production data.
 
 - **FR-19:** Bulk-assign (US-019) runs under one `LockService` acquisition; 30s timeout → abort
   with no partial writes.
+
+- **FR-20:** Every editable student table with a `ชื่อ-สกุล` column uses the shared
+  `student-name-col` convention to left-align only the header and student names. The protected
+  grade-book/report implementation in `class_report.html` is outside this rule unless separately
+  requested.
+
+- **FR-21:** Characteristics and Read-Think-Write cross-subject copying is limited to a different
+  subject in the same `class_id`. Source discovery and value retrieval both enforce authentication,
+  destination edit permission, source enrollment, completion, valid score ranges, current-teacher
+  exclusion, and stable `student_id` matching server-side. Copying never persists automatically.
+
+- **FR-22:** The shared assessment tooltip portal renders outside scrollable table containers,
+  supports pointer, keyboard, and touch interaction, exposes accessible relationships, and adjusts
+  placement at viewport edges.
 
 ---
 

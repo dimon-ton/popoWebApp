@@ -179,7 +179,7 @@ function renderGrid(data) {
 
   // Build header row
   var thead = document.getElementById('formativeHead');
-  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col">ชื่อ-สกุล</th>';
+  var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th>';
   indicators.forEach(function(ind) {
     var maxText = '/' + escHtml(ind.max_score);
     var maxHtml = String(ind.max_score) === '3' && data.can_edit
@@ -207,7 +207,7 @@ function renderGrid(data) {
     var rowTotal = 0;
 
     var cells = '<td class="seq-col">' + escHtml(student.seq_no) + '</td>' +
-                '<td class="name-col">' + escHtml(student.full_name) + '</td>';
+                '<td class="name-col student-name-col">' + escHtml(student.full_name) + '</td>';
 
     indicators.forEach(function(ind, i) {
       var score = studentScores[ind.indicator_id];
