@@ -393,7 +393,7 @@ function pageReferenceCover(d, n) {
       '<span class="meta-label">ครูประจำชั้น</span><span class="meta-value" style="grid-column:2/7">' + blank(d.homeroom_teacher_name) + '</span>' +
     '</div>' +
     '<div style="fon  t-weight:700;font-size:20px;margin-bottom:1mm">สรุปผลการประเมิน</div>' +
-    '<table class="report-table form-summary-table"><thead><tr><th rowspan="2" style="width:28mm">จำนวนนักเรียน</th><th colspan="6">ระดับผลการเรียน</th><th colspan="4">กิจกรรมพัฒนาผู้เรียน</th><th colspan="2">ผลการประเมิน</th></tr><tr>' + gradeHeader + '<th>ผ่าน</th><th>ไม่ผ่าน</th><th>ร</th><th>มส</th></tr></thead>' +
+    '<table class="report-table form-summary-table"><thead><tr><th rowspan="2" style="width:28mm">จำนวนนักเรียน</th><th colspan="8">ระดับผลการเรียน</th><th colspan="2" style="width:34mm">กิจกรรมพัฒนาผู้เรียน</th><th colspan="2">ผลการประเมิน</th></tr><tr>' + gradeHeader + '<th>ผ่าน</th><th>ไม่ผ่าน</th><th>ร</th><th>มส</th></tr></thead>' +
     '<tbody><tr><td>' + num(totalForPct) + '</td>' + countRow + '<td>' + num(devCounts['ผ่าน'] || 0) + '</td><td>' + num(devCounts['ไม่ผ่าน'] || 0) + '</td><td>' + num(devCounts['ร'] || 0) + '</td><td>' + num(devCounts['มส'] || 0) + '</td></tr>' +
     '<tr><td class="bold">คิดเป็นร้อยละ</td>' + pctRow + '<td>' + num(percentOf(devCounts['ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ไม่ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ร'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['มส'] || 0, totalForPct)) + '</td></tr></tbody></table>' +
     '<div class="report-grid" style="margin-top:6mm">' +
