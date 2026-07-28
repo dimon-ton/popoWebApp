@@ -241,6 +241,27 @@ test.describe('US-005: Student roster CRUD', () => {
     await expect(page.locator('#studentsBody')).toContainText('test_note_updated', { timeout: 15_000 });
   });
 
+  test('US-005: edit date of birth and assert updated after reload', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+
+    await expect(page.locator('#studentsTable')).toBeVisible({ timeout: 20_000 });
+    await page.locator('#studentsBody .btn-secondary').first().click();
+
+    const dobInput = page.locator('#studentsBody input[data-field="dob"]').first();
+    await dobInput.evaluate((input) => {
+      const picker = input.closest('[data-thai-date-picker]');
+      (window as any).setThaiDatePickerValue(picker, '2017-01-02');
+    });
+    await expect(dobInput).toHaveValue('2017-01-02');
+    await page.locator('#studentsBody .btn-save').first().click();
+    await expect(page.locator('#toast')).toContainText('บันทึกข้อมูลนักเรียนสำเร็จ', { timeout: 15_000 });
+
+    await page.goto(`${url}?page=class_students&class_id=${classId}`);
+    await expect(page.locator('#studentsTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#studentsBody .cell-dob').first()).toHaveText('02/01/2560', { timeout: 15_000 });
+  });
+
   test('US-005: delete student and assert row gone', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=class_students&class_id=${classId}`);

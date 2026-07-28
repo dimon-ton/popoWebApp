@@ -218,7 +218,7 @@ function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id
   }
 
   var oldVal = JSON.parse(JSON.stringify(student));
-  dbUpdate('Students', 'student_id', student_id, {
+  var updated = dbUpdate('Students', 'student_id', student_id, {
     seq_no: parseInt(seq_no) || student.seq_no,
     student_code: student_code !== undefined ? student_code : student.student_code,
     citizen_id: citizen_id !== undefined ? citizen_id : student.citizen_id,
@@ -226,9 +226,10 @@ function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id
     dob: dob !== undefined ? normalizedDob.value : student.dob,
     note: note !== undefined ? note : student.note
   });
+  if (!updated) throw new Error('ไม่สามารถบันทึกข้อมูลนักเรียนได้');
 
   appendAuditLog(session.user_id, 'Students', student_id, oldVal, {
-    seq_no: seq_no, student_code: student_code, full_name: full_name, note: note
+    seq_no: seq_no, student_code: student_code, full_name: full_name, dob: normalizedDob.value, note: note
   });
 
   return { ok: true };

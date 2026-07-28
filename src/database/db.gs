@@ -57,7 +57,18 @@ function dbUpdate(tabName, idField, idValue, updates) {
       if (data[i][idCol] === idValue) {
         Object.keys(updates).forEach(function(key) {
           var col = headers.indexOf(key);
-          if (col !== -1) sheet.getRange(i + 1, col + 1).setValue(updates[key]);
+          if (col !== -1) {
+            var range = sheet.getRange(i + 1, col + 1);
+            var value = updates[key];
+            // Keep application dates in the documented ISO text format. Without
+            // this, Sheets may parse yyyy-mm-dd using the sheet locale and return
+            // a Date later, which can shift the displayed day through timezone
+            // conversion.
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+              range.setNumberFormat('@');
+            }
+            range.setValue(value);
+          }
         });
         return true;
       }
