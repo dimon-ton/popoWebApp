@@ -224,6 +224,96 @@ function handleTestApi(e) {
         });
         return jsonOk({ student_id: params.student_id, subject_id: params.subject_id });
 
+      case 'seed_attendance':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var attendanceDate = normalizeISODate(params.date);
+        if (!attendanceDate) throw new Error('Test API: invalid attendance date');
+        if (ATTENDANCE_STATUSES.indexOf(String(params.status || '')) === -1) {
+          throw new Error('Test API: invalid attendance status');
+        }
+        var existingAttendance = dbGetAll('Attendance').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id) &&
+            formatDateISO(new Date(row.date)) === attendanceDate;
+        });
+        existingAttendance.forEach(function(row) {
+          if (row.attendance_id) dbDelete('Attendance', 'attendance_id', row.attendance_id);
+        });
+        dbInsert('Attendance', {
+          attendance_id: 'test_att_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          date: attendanceDate,
+          period: '',
+          status: params.status,
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id, date: attendanceDate });
+
+      case 'seed_complete_attendance':
+        ensureTestPrefix(params.class_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var completeStudents = dbFind('Students', 'class_id', params.class_id);
+        if (!completeStudents.length) throw new Error('Test API: no students in class');
+        var completeConfig = getAttendanceConfig();
+        var completeDates = buildAttendanceDates(completeConfig.start_date, completeConfig.required_days);
+        var completeStatus = String(params.status || '/');
+        if (ATTENDANCE_STATUSES.indexOf(completeStatus) === -1) {
+          throw new Error('Test API: invalid attendance status');
+        }
+        var attendanceSheet = getSheet('Attendance');
+        var attendanceData = attendanceSheet.getDataRange().getValues();
+        var attendanceHeaders = attendanceData[0];
+        var attendanceSubjectCol = attendanceHeaders.indexOf('subject_id');
+        var attendanceIdCol = attendanceHeaders.indexOf('attendance_id');
+        var attendanceStudentCol = attendanceHeaders.indexOf('student_id');
+        var attendanceDateCol = attendanceHeaders.indexOf('date');
+        var attendancePeriodCol = attendanceHeaders.indexOf('period');
+        var attendanceStatusCol = attendanceHeaders.indexOf('status');
+        var attendanceUpdatedByCol = attendanceHeaders.indexOf('updated_by');
+        var attendanceUpdatedAtCol = attendanceHeaders.indexOf('updated_at');
+        var attendanceLock = LockService.getDocumentLock();
+        if (!attendanceLock.tryLock(30000)) throw new Error('Test API: could not acquire attendance lock');
+        try {
+          for (var attendanceRowIndex = attendanceData.length - 1; attendanceRowIndex >= 1; attendanceRowIndex--) {
+            if (String(attendanceData[attendanceRowIndex][attendanceSubjectCol]) === String(params.subject_id)) {
+              attendanceSheet.deleteRow(attendanceRowIndex + 1);
+            }
+          }
+          var seededAt = params.updated_at || new Date().toISOString();
+          var completeRows = [];
+          completeStudents.forEach(function(student, studentIndex) {
+            completeDates.forEach(function(date, dateIndex) {
+              var row = attendanceHeaders.map(function() { return ''; });
+              row[attendanceIdCol] = 'test_att_' + studentIndex + '_' + dateIndex + '_' + Utilities.getUuid().substring(0, 8);
+              row[attendanceStudentCol] = student.student_id;
+              row[attendanceSubjectCol] = params.subject_id;
+              row[attendanceDateCol] = formatDateISO(date);
+              if (attendancePeriodCol !== -1) row[attendancePeriodCol] = '';
+              row[attendanceStatusCol] = completeStatus;
+              row[attendanceUpdatedByCol] = params.updated_by;
+              row[attendanceUpdatedAtCol] = seededAt;
+              completeRows.push(row);
+            });
+          });
+          if (completeRows.length) {
+            attendanceSheet.getRange(attendanceSheet.getLastRow() + 1, 1, completeRows.length, attendanceHeaders.length).setValues(completeRows);
+          }
+        } finally {
+          attendanceLock.releaseLock();
+        }
+        return jsonOk({
+          class_id: params.class_id,
+          subject_id: params.subject_id,
+          students: completeStudents.length,
+          days: completeDates.length,
+          records: completeStudents.length * completeDates.length
+        });
+
       case 'cleanup':
         var count = 0;
         var tabIdFields = {

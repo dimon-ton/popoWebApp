@@ -84,13 +84,10 @@ function buildEligibleCharacteristicsSources(session, class_id, current_subject_
     if (sourceEnrollments.length === 0) return;
 
     var teacherIds = {};
-    var containsCurrentTeacher = false;
     sourceEnrollments.forEach(function(enrollment) {
       var teacherId = String(enrollment.teacher_user_id || '');
       teacherIds[teacherId] = true;
-      if (teacherId === String(session.user_id)) containsCurrentTeacher = true;
     });
-    if (session.role !== 'admin' && containsCurrentTeacher) return;
 
     var rowsForStudents = {};
     var valid = true;

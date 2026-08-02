@@ -206,6 +206,23 @@ interface SeedReadThinkWriteOpts {
   updated_at?: string;
 }
 
+interface SeedAttendanceOpts {
+  student_id: string;
+  subject_id: string;
+  updated_by: string;
+  date: string;
+  status?: '/' | 'ล' | 'ข';
+  updated_at?: string;
+}
+
+interface SeedCompleteAttendanceOpts {
+  class_id: string;
+  subject_id: string;
+  updated_by: string;
+  status?: '/' | 'ล' | 'ข';
+  updated_at?: string;
+}
+
 export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> {
   await apiCall({
     api: 'seed_summative',
@@ -245,6 +262,29 @@ export async function seedTestReadThinkWrite(opts: SeedReadThinkWriteOpts): Prom
     r1: values[0] ?? '', r2: values[1] ?? '', r3: values[2] ?? '',
     t1: values[3] ?? '', t2: values[4] ?? '', t3: values[5] ?? '', t4: values[6] ?? '',
     w1: values[7] ?? '', w2: values[8] ?? '', w3: values[9] ?? '',
+  });
+}
+
+export async function seedTestAttendance(opts: SeedAttendanceOpts): Promise<void> {
+  await apiCall({
+    api: 'seed_attendance',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    updated_by: opts.updated_by,
+    date: opts.date,
+    status: opts.status ?? '/',
+    updated_at: opts.updated_at ?? '',
+  });
+}
+
+export async function seedCompleteTestAttendance(opts: SeedCompleteAttendanceOpts): Promise<Record<string, unknown>> {
+  return apiCall({
+    api: 'seed_complete_attendance',
+    class_id: opts.class_id,
+    subject_id: opts.subject_id,
+    updated_by: opts.updated_by,
+    status: opts.status ?? '/',
+    updated_at: opts.updated_at ?? '',
   });
 }
 

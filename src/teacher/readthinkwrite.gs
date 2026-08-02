@@ -74,13 +74,10 @@ function buildEligibleReadThinkWriteSources(session, class_id, current_subject_i
     if (!sourceEnrollments.length) return;
 
     var teacherIds = {};
-    var containsCurrentTeacher = false;
     sourceEnrollments.forEach(function(enrollment) {
       var teacherId = String(enrollment.teacher_user_id || '');
       teacherIds[teacherId] = true;
-      if (teacherId === String(session.user_id)) containsCurrentTeacher = true;
     });
-    if (session.role !== 'admin' && containsCurrentTeacher) return;
 
     var rowsForStudents = {};
     var valid = true;

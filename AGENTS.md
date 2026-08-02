@@ -45,9 +45,10 @@ The application is divided into server-side controllers (`.gs`) and client-side 
 
 ### Assessment UX and Cross-Subject Copying
 - Editable student tables use the shared `student-name-col` convention from `_styles.html`; both the `ชื่อ-สกุล` header and student-name cells must remain left-aligned and vertically centered. Do not apply this rule to unrelated columns.
-- `class_characteristics.html` and `class_readthinkwrite.html` expose `ดึงข้อมูลจากวิชาอื่น`. Both workflows load completed assessment values from a **different subject in the same `class_id`** into the current unsaved form.
+- `class_attendance.html`, `class_characteristics.html`, and `class_readthinkwrite.html` expose `ดึงข้อมูลจากวิชาอื่น`. All workflows load completed values from a **different subject in the same `class_id`** into unsaved client state.
 - Copying always matches students by `student_id`, never by displayed name or row position. Unmatched destination students remain unchanged, source records are read-only, and teachers must use the existing save button to persist copied values under the destination subject.
-- Source listing and value retrieval are revalidated server-side in `characteristics.gs` and `readthinkwrite.gs`. Eligible sources must be complete for every current classroom student, contain valid `0–10` values, belong to assigned source teachers, exclude the destination subject, and exclude co-taught subjects involving the current teacher. Admins retain their existing privileged override while remaining restricted to the same classroom.
+- Source listing and value retrieval are revalidated server-side. Eligible sources must be complete for every current classroom student, contain values valid for their data type, belong to assigned source teachers, and exclude the destination subject. A teacher may copy from another subject they also teach. Admins retain their privileged override while remaining restricted to the same classroom.
+- Attendance copying stages every configured non-holiday school day for the full year, preserves the staged set while users review different weeks, and saves it with one indexed/batched call. Missing source statuses never clear destination values.
 - The assessment pages use a shared body-level tooltip portal from `_styles.html`. Tooltip triggers must support hover, keyboard focus, touch/click, Escape dismissal, `role="tooltip"`, and `aria-describedby`, and must not be clipped by horizontally scrollable table cards.
 - The visible Read-Think-Write reference maps `อ่าน 1–3`, `คิด 1–4`, and `เขียน 1–3` explicitly to their curriculum criteria; do not rely on list order or tooltips alone to explain a column.
 - **Protected grade-book boundary:** assessment UX changes must not modify `src/teacher/class_report.html`, its printable report tables, aggregation, or export behavior unless the user explicitly requests a grade-book/report change.
@@ -121,7 +122,7 @@ The test suite is built on **Playwright** with custom configurations for Google 
 To avoid polluting production data, all test cases must interact with the dedicated test API in [testapi.gs](file:///C:/Users/saich/Documents/popoWebApp/src/shared/testapi.gs) through [seed.ts](file:///C:/Users/saich/Documents/popoWebApp/tests/helpers/seed.ts):
 - Any mocked classroom, teacher, or student record must have its primary ID prefixed with `test_` (e.g. `test_teacher_math`).
 - The test API strictly validates the `test_` prefix before modifying database sheets.
-- Assessment-copy coverage uses `seed_characteristics` and `seed_readthinkwrite`; both require test-prefixed student, subject, and updater IDs.
+- Cross-subject copy coverage uses `seed_characteristics`, `seed_readthinkwrite`, `seed_attendance`, and `seed_complete_attendance`; all require test-prefixed student/class, subject, and updater IDs as applicable.
 - `cleanupTestData()` is triggered at the end of each spec to delete all `test_` records across all sheets.
 
 ### Sandbox Iframe Traversal

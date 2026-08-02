@@ -243,7 +243,6 @@ test.describe('US-012: Read-Think-Write scoring', () => {
   let studentId: string;
   let teacherId: string;
   let sourceSubjectId: string;
-  let sourceTeacherId: string;
   const url = process.env.WEB_APP_URL!;
 
   test.beforeAll(async () => {
@@ -259,17 +258,16 @@ test.describe('US-012: Read-Think-Write scoring', () => {
       teacher_user_id: teacherId,
     });
     sourceSubjectId = await seedTestSubject({ suffix: 'us012_source', name: 'ภาษาไทยต้นทาง012', code: 'TST012S', group: 1, class_id: classId });
-    sourceTeacherId = await seedTestUser({ suffix: 'us012_source_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูต้นทางUS012' });
     await seedTestEnrollment({
       suffix: 'us012_source_enr',
       class_id: classId,
       subject_id: sourceSubjectId,
-      teacher_user_id: sourceTeacherId,
+      teacher_user_id: teacherId,
     });
     await seedTestReadThinkWrite({
       student_id: studentId,
       subject_id: sourceSubjectId,
-      updated_by: sourceTeacherId,
+      updated_by: teacherId,
       values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     });
   });
@@ -528,7 +526,6 @@ test.describe('US-011: Characteristics scoring', () => {
   let studentId: string;
   let teacherId: string;
   let sourceSubjectId: string;
-  let sourceTeacherId: string;
   const url = process.env.WEB_APP_URL!;
 
   test.beforeAll(async () => {
@@ -544,17 +541,16 @@ test.describe('US-011: Characteristics scoring', () => {
       teacher_user_id: teacherId,
     });
     sourceSubjectId = await seedTestSubject({ suffix: 'us011_source', name: 'คณิตศาสตร์ต้นทาง011', code: 'TST011S', group: 1, class_id: classId });
-    sourceTeacherId = await seedTestUser({ suffix: 'us011_source_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูต้นทางUS011' });
     await seedTestEnrollment({
       suffix: 'us011_source_enr',
       class_id: classId,
       subject_id: sourceSubjectId,
-      teacher_user_id: sourceTeacherId,
+      teacher_user_id: teacherId,
     });
     await seedTestCharacteristics({
       student_id: studentId,
       subject_id: sourceSubjectId,
-      updated_by: sourceTeacherId,
+      updated_by: teacherId,
       values: [1, 2, 3, 4, 5, 6, 7, 8],
     });
     const incompleteSubjectId = await seedTestSubject({ suffix: 'us011_incomplete', name: 'วิชายังไม่ครบ011', code: 'TST011I', group: 1, class_id: classId });
@@ -562,7 +558,7 @@ test.describe('US-011: Characteristics scoring', () => {
       suffix: 'us011_incomplete_enr',
       class_id: classId,
       subject_id: incompleteSubjectId,
-      teacher_user_id: sourceTeacherId,
+      teacher_user_id: teacherId,
     });
   });
 
