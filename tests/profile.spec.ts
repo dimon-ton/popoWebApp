@@ -93,7 +93,7 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#toast')).toContainText('อัพโหลดรูปภาพสำเร็จ');
   });
 
-  test('remove avatar button replaces image with placeholder', async ({ page }) => {
+  test('remove avatar button restores the default profile image', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=profile_edit`);
 
@@ -110,7 +110,11 @@ test.describe('Profile Edit — Avatar Upload', () => {
 
     await page.click('#removeAvatarBtn');
 
-    await expect(page.locator('#profileAvatarPlaceholder')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#profileAvatar')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#profileAvatar')).toHaveAttribute(
+      'src',
+      'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar.png',
+    );
     await expect(page.locator('#removeAvatarBtn')).not.toBeVisible();
     await expect(page.locator('#avatarFileName')).toContainText('ยังไม่ได้เลือก');
   });

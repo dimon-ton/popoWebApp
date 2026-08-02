@@ -3388,6 +3388,8 @@ function initNavbarDropdown() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarDropdown);
 else initNavbarDropdown();
 
+var DEFAULT_PROFILE_AVATAR_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar.png';
+
 function initNavbarAvatar() {
   var titleEl = document.querySelector('.navbar-title');
   var userTrigger = document.querySelector('.navbar-user-trigger');
@@ -3429,27 +3431,21 @@ function initNavbarAvatar() {
         }
       }
 
+      var avatarSrc = profile.avatar || DEFAULT_PROFILE_AVATAR_URL;
       if (userTrigger) {
-        var avatarHtml = '';
-        if (profile.avatar) {
-          avatarHtml = '<img class="navbar-avatar" src="' + profile.avatar + '" />';
-        } else {
-          var firstChar = profile.full_name ? profile.full_name.charAt(0) : '';
-          avatarHtml = '<div class="navbar-avatar-placeholder">' + firstChar + '</div>';
-        }
+        var avatarHtml = '<img class="navbar-avatar" src="' + avatarSrc + '" alt="รูปโปรไฟล์" />';
         var nameSuffix = profile.role === 'admin' ? ' (admin)' : '';
         userTrigger.innerHTML = avatarHtml + '<span>' + profile.full_name + nameSuffix + '</span>';
       }
 
-      if (profile.avatar) {
-        var dropdownAvatarWrap = document.querySelector('.dropdown-avatar-wrap');
-        if (dropdownAvatarWrap) {
-          dropdownAvatarWrap.innerHTML = '';
-          var lgImg = document.createElement('img');
-          lgImg.className = 'dropdown-avatar';
-          lgImg.src = profile.avatar;
-          dropdownAvatarWrap.appendChild(lgImg);
-        }
+      var dropdownAvatarWrap = document.querySelector('.dropdown-avatar-wrap');
+      if (dropdownAvatarWrap) {
+        dropdownAvatarWrap.innerHTML = '';
+        var lgImg = document.createElement('img');
+        lgImg.className = 'dropdown-avatar';
+        lgImg.src = avatarSrc;
+        lgImg.alt = 'รูปโปรไฟล์';
+        dropdownAvatarWrap.appendChild(lgImg);
       }
 
       var dropdownName = document.querySelector('.dropdown-profile-name');

@@ -119,20 +119,24 @@ function initProfileAvatar() {
   if (typeof google === 'undefined' || !google.script || !TOKEN) return;
   google.script.run
     .withSuccessHandler(function(profile) {
-      if (!profile || profile.error || !profile.avatar) return;
-      SESSION.avatar = profile.avatar;
+      if (!profile || profile.error) return;
+      var hasCustomAvatar = !!profile.avatar;
+      var avatarSrc = profile.avatar || DEFAULT_PROFILE_AVATAR_URL;
+      SESSION.avatar = profile.avatar || '';
       var nameEl = document.getElementById('avatarFileName');
-      if (nameEl) nameEl.textContent = 'profile_image.png';
+      if (nameEl && hasCustomAvatar) nameEl.textContent = 'profile_image.png';
       var removeBtn = document.getElementById('removeAvatarBtn');
-      if (removeBtn) removeBtn.style.display = 'inline-flex';
+      if (removeBtn) removeBtn.style.display = hasCustomAvatar ? 'inline-flex' : 'none';
       
       var p = document.getElementById('profileAvatarPlaceholder');
-      if (!p) return;
       var img = new Image();
       img.id = 'profileAvatar';
+      img.alt = 'รูปโปรไฟล์';
       img.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
-      img.onload = function() { p.parentNode.replaceChild(img, p); };
-      img.src = profile.avatar;
+      img.onload = function() {
+        if (p && p.parentNode) p.parentNode.replaceChild(img, p);
+      };
+      img.src = avatarSrc;
     })
     .withFailureHandler(function() {})
     .serverGetCurrentUserProfile(TOKEN);
@@ -541,15 +545,23 @@ function uploadCroppedAvatar(b64, fileName) {
 }
 
 function removeAvatar() {
+  SESSION.avatar = '';
   document.getElementById('avatarFileName').textContent = 'ยังไม่ได้เลือก';
   document.getElementById('removeAvatarBtn').style.display = 'none';
   var img = document.getElementById('profileAvatar');
   if (img) {
-    var ph = document.createElement('div');
-    ph.id = 'profileAvatarPlaceholder';
-    ph.style.cssText = 'width:64px;height:64px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:var(--brand)';
-    ph.textContent = SESSION.full_name.charAt(0);
-    img.parentNode.replaceChild(ph, img);
+    img.src = DEFAULT_PROFILE_AVATAR_URL;
+    img.alt = 'รูปโปรไฟล์เริ่มต้น';
+  } else {
+    var ph = document.getElementById('profileAvatarPlaceholder');
+    if (ph && ph.parentNode) {
+      var defaultImg = document.createElement('img');
+      defaultImg.id = 'profileAvatar';
+      defaultImg.src = DEFAULT_PROFILE_AVATAR_URL;
+      defaultImg.alt = 'รูปโปรไฟล์เริ่มต้น';
+      defaultImg.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+      ph.parentNode.replaceChild(defaultImg, ph);
+    }
   }
   google.script.run
     .withSuccessHandler(function() {})
