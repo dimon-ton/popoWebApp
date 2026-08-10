@@ -197,6 +197,13 @@ function meta(d) {
   };
 }
 
+function getEducationLevelLabel(grade) {
+  var normalized = String(grade || '').replace(/\s+/g, '');
+  if (normalized.indexOf('ม') === 0) return 'ระดับมัธยมศึกษา';
+  if (normalized.indexOf('ป') === 0) return 'ระดับประถมศึกษา';
+  return '';
+}
+
 function referenceShell(number, body, extraClass) {
   return pageShell(number, '', '', body, 'form-page ' + (extraClass || ''));
 }
@@ -365,6 +372,7 @@ function approvalSignature(label, name, role, extraClass) {
 
 function pageReferenceCover(d, n) {
   var m = meta(d);
+  var educationLevelLabel = getEducationLevelLabel(m.cls.level) || 'ระดับประถมศึกษา';
   var grades = gradeCountMap(d);
   var charSummary = qualitySummaryCells(d.char_dist || []);
   var rtwSummary = qualitySummaryCells(d.rtw_dist || []);
@@ -378,7 +386,7 @@ function pageReferenceCover(d, n) {
     ? '<img class="report-school-logo" src="' + escHtml(m.school.school_logo) + '" alt="โลโก้โรงเรียน">'
     : '<div class="report-cover-mark">ตรา</div>';
   var body = coverMark +
-    '<div class="form-title">แบบบันทึกผลการเรียนประจำรายวิชา ระดับประถมศึกษา</div>' +
+    '<div class="form-title">แบบบันทึกผลการเรียนประจำรายวิชา ' + educationLevelLabel + '</div>' +
     '<div class="form-meta">' +
       '<span class="meta-label">โรงเรียน</span><span class="meta-value">' + blank(m.school.school_name) + '</span>' +
       '<span class="meta-label">อำเภอ</span><span class="meta-value">' + blank(m.school.district) + '</span>' +
@@ -482,7 +490,7 @@ function pageReferenceScoreGrid(d, n) {
     while ((cells.match(/<td>/g) || []).length < 16) cells += '<td></td>';
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td class="left">' + blank(studentName(s)) + '</td><td></td>' + cells + '</tr>';
   }).join('');
-  var body = '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:60mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3"') + '<th colspan="16">คะแนนระหว่างเรียน</th></tr><tr><th colspan="16">ตัวชี้วัดการเรียนรู้/ผลการเรียนรู้ที่คาดหวัง</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  var body = '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:60mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="16">คะแนนระหว่างเรียน</th></tr><tr><th colspan="16">ตัวชี้วัดการเรียนรู้/ผลการเรียนรู้ที่คาดหวัง</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -490,7 +498,7 @@ function pageReferenceScoreGridSummary(d, n) {
   var rows = (d.summative_students || studentRows(d)).map(function(s, i) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td class="left">' + blank(studentName(s)) + '</td><td></td><td>' + num(s.coursework) + '</td><td>' + num(s.midterm) + '</td><td>' + num(s.final) + '</td><td>' + num(s.total) + '</td><td class="bold">' + num(s.final_grade || s.computed_grade) + '</td><td></td></tr>';
   }).join('');
-  var body = '<div class="form-title">' + blank((meta(d).subj.subject_name || '') + '  ' + (meta(d).classLabel || '')) + '</div><table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:58mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3"') + '<th colspan="4">รวมคะแนน</th>' + rotatedTh('ผลการเรียน', 'rowspan="3"') + rotatedTh('สอบแก้ตัว', 'rowspan="3"') + '</tr><tr><th>ระหว่างเรียน</th><th>สอบกลางภาค</th><th>สอบปลายภาค</th><th>ทั้งหมด</th></tr><tr><th>50</th><th>20</th><th>30</th><th>100</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  var body = '<div class="form-title">' + blank((meta(d).subj.subject_name || '') + '  ' + (meta(d).classLabel || '')) + '</div><table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:58mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="4">รวมคะแนน</th>' + rotatedTh('ผลการเรียน', 'rowspan="3" style="width:12mm"') + rotatedTh('สอบแก้ตัว', 'rowspan="3" style="width:12mm"') + '</tr><tr><th>ระหว่างเรียน</th><th>สอบกลางภาค</th><th>สอบปลายภาค</th><th>ทั้งหมด</th></tr><tr><th>50</th><th>20</th><th>30</th><th>100</th></tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -503,11 +511,16 @@ function pageReferenceCharacteristicsGrid(d, n) {
 }
 
 function referenceRubricGrid(d, n, title, rowsData, fields) {
+  // The landscape form page has 192mm of usable table width (A4 minus 9mm side padding).
+  // Reserve the last columns for the total and the Thai assessment result; distribute the
+  // remaining width equally across the compact score columns.
+  var scoreColumnWidth = (192 - 8 - 24 - 54 - 10 - 18) / fields.length;
   var head = fields.map(function(f, i) { return '<th>' + (i + 1) + '</th>'; }).join('');
   var rows = rowsData.map(function(s, i) {
-    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + fields.map(function(f) { return '<td>' + rubricNum(s[f]) + '</td>'; }).join('') + '<td>' + rubricNum(s.total) + '</td><td>' + blank(s.label) + '</td></tr>';
+    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + fields.map(function(f) { return '<td>' + rubricNum(s[f]) + '</td>'; }).join('') + '<td class="rubric-total-column">' + rubricNum(s.total) + '</td><td class="rubric-result-column">' + blank(s.label) + '</td></tr>';
   }).join('');
-  var body = '<table class="report-table form-grid-table"><thead><tr>' + rotatedTh('เลขที่', 'rowspan="2" style="width:8mm"') + '<th rowspan="2" style="width:24mm">เลขประจำตัว</th><th rowspan="2" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + fields.length + '">' + escHtml(title) + '</th><th rowspan="2">รวม</th><th rowspan="2">ผล</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>' + rubricExplanation(title);
+  var scoreColumns = fields.map(function() { return '<col style="width:' + scoreColumnWidth + 'mm">'; }).join('');
+  var body = '<table class="report-table form-grid-table rubric-grid-table"><colgroup><col style="width:8mm"><col style="width:24mm"><col style="width:54mm">' + scoreColumns + '<col class="rubric-total-column" style="width:10mm"><col class="rubric-result-column" style="width:18mm"></colgroup><thead><tr>' + rotatedTh('เลขที่', 'rowspan="2"') + '<th rowspan="2">เลขประจำตัว</th><th rowspan="2">ชื่อ - สกุล</th><th colspan="' + fields.length + '">' + escHtml(title) + '</th><th rowspan="2" class="rubric-total-column">รวม</th><th rowspan="2" class="rubric-result-column">ผล</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>' + rubricExplanation(title);
   return referenceShell(n, body, 'landscape-table');
 }
 
