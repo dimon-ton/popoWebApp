@@ -3536,7 +3536,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initNavbarAvatar();
 
 function initFeedbackFooter() {
-  if (document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
+  if (document.body.classList.contains('page-login') || document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
   var footer = document.createElement('footer');
   footer.id = 'appFeedbackFooter'; footer.className = 'app-feedback-footer';
   footer.innerHTML = '<div class="feedback-footer-card"><div class="feedback-footer-copy"><span class="feedback-footer-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-1.8 5.2A8.5 8.5 0 0 1 12.5 20a8.7 8.7 0 0 1-3.3-.7L3 21l1.7-5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg></span><div><p class="feedback-footer-title">ช่วยเราพัฒนาระบบ</p><p class="feedback-footer-description">แจ้งปัญหาที่พบ หรือเสนอฟีเจอร์ที่อยากให้มีได้ทุกเวลา</p></div></div><a href="#" id="feedbackLink" aria-label="เปิดแบบฟอร์มแจ้งปัญหาหรือเสนอฟีเจอร์">ส่งข้อเสนอแนะ</a></div>';
