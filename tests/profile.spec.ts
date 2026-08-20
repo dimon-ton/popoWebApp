@@ -93,7 +93,7 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#toast')).toContainText('อัพโหลดรูปภาพสำเร็จ');
   });
 
-  test('remove avatar button replaces image with placeholder', async ({ page }) => {
+  test('remove avatar button restores the prefix-appropriate default image', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=profile_edit`);
 
@@ -110,7 +110,12 @@ test.describe('Profile Edit — Avatar Upload', () => {
 
     await page.click('#removeAvatarBtn');
 
-    await expect(page.locator('#profileAvatarPlaceholder')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#profileAvatar')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#profileAvatar')).toHaveAttribute(
+      'src',
+      /default-profile-avatar(?:-female)?\.png/,
+      { timeout: 10_000 },
+    );
     await expect(page.locator('#removeAvatarBtn')).not.toBeVisible();
     await expect(page.locator('#avatarFileName')).toContainText('ยังไม่ได้เลือก');
   });
@@ -129,4 +134,3 @@ test.describe('Profile Edit — Avatar Upload', () => {
     await expect(page.locator('#toast')).toContainText('บันทึกสำเร็จ', { timeout: 20_000 });
   });
 });
-

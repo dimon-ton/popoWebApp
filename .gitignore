@@ -12,5 +12,8 @@ tests/.auth/
 
 # Screenshots and generated images
 *.png
+!assets/
+!assets/default-profile-avatar.png
+!assets/default-profile-avatar-female.png
 logo_b64.txt
 test-results/
