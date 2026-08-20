@@ -175,8 +175,12 @@ can track each student's presence over the whole year.
 - [ ] "Save week" writes/upserts rows to `Attendance`: `attendance_id`, `student_id`,
   `subject_id`, `date`, `period`, `status`, `updated_by`, `updated_at`.
 - [ ] `LockService.getDocumentLock().tryLock(30000)` wraps every write; released in `finally`.
-- [ ] Previous / Next week navigation buttons; "Jump to week" dropdown.
-- [ ] Footer row: per-student totals — `present`, `leave`, `absent`, `total hours so far`.
+  - [ ] Previous / Next week navigation buttons; "Jump to week" dropdown.
+  - [ ] Footer row: per-student totals — `present`, `leave`, `absent`, `total hours so far`.
+  - [ ] Editable users can stage a complete full-year attendance record from a different subject in
+    the exact same `class_id`. Sources must contain one valid `/`, `ล`, or `ข` value for every
+    current student and configured non-holiday school day. Staged values remain available while
+    reviewing other weeks and persist only when the existing save button is pressed.
 - [ ] Playwright (`tests/attendance.spec.ts -g US-007`): log in as teacher assigned to
   `test_class_p1_1`/`test_subject_eng`; navigate to week 1; set student 1 day 1 = `/`;
   set student 1 day 2 = `ล`; save; reload page; assert values persist; assert footer shows
@@ -596,10 +600,11 @@ data so specs stay independent and never pollute real production data.
   grade-book/report implementation in `class_report.html` is outside this rule unless separately
   requested.
 
-- **FR-21:** Characteristics and Read-Think-Write cross-subject copying is limited to a different
-  subject in the same `class_id`. Source discovery and value retrieval both enforce authentication,
-  destination edit permission, source enrollment, completion, valid score ranges, current-teacher
-  exclusion, and stable `student_id` matching server-side. Copying never persists automatically.
+- **FR-21:** Attendance, Characteristics, and Read-Think-Write cross-subject copying is limited to a
+  different subject in the same `class_id`. Source discovery and value retrieval both enforce
+  authentication, destination edit permission, source enrollment, completeness, data-type validation,
+  and stable `student_id` matching server-side. A teacher may use another subject they also teach.
+  Copying never persists automatically.
 
 - **FR-22:** The shared assessment tooltip portal renders outside scrollable table containers,
   supports pointer, keyboard, and touch interaction, exposes accessible relationships, and adjusts

@@ -133,7 +133,9 @@ function initProfileAvatar() {
       img.id = 'profileAvatar';
       img.alt = 'รูปโปรไฟล์';
       img.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
-      img.onload = function() { if (p && p.parentNode) p.parentNode.replaceChild(img, p); };
+      img.onload = function() {
+        if (p && p.parentNode) p.parentNode.replaceChild(img, p);
+      };
       img.src = avatarSrc;
     })
     .withFailureHandler(function() {})

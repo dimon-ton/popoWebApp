@@ -10,6 +10,8 @@ import {
   seedTestStudent,
   seedTestUser,
   seedTestEnrollment,
+  seedCompleteTestAttendance,
+  queryTestRows,
   cleanupTestData,
 } from './helpers/seed';
 
@@ -162,5 +164,87 @@ test.describe('US-007: Attendance grid view and edit', () => {
 
     await page.selectOption('#weekJump', '5');
     await expect(page.locator('#weekLabel')).toContainText('สัปดาห์ที่ 5', { timeout: 15_000 });
+  });
+});
+
+// ---- Cross-subject full-year attendance copy ----
+
+test.describe('Attendance copy from another subject', () => {
+  let classId: string;
+  let destinationSubjectId: string;
+  let sourceSubjectId: string;
+  let incompleteSubjectId: string;
+  let teacherId: string;
+  const url = process.env.WEB_APP_URL!;
+
+  test.beforeAll(async () => {
+    await cleanupTestData();
+    classId = await seedTestClass({ suffix: 'attendance_copy', level: 'ป.2', section: '1' });
+    destinationSubjectId = await seedTestSubject({ suffix: 'attendance_copy_dest', name: 'วิชาปลายทางการเข้าเรียน', class_id: classId });
+    sourceSubjectId = await seedTestSubject({ suffix: 'attendance_copy_source', name: 'วิชาต้นทางการเข้าเรียน', class_id: classId });
+    incompleteSubjectId = await seedTestSubject({ suffix: 'attendance_copy_incomplete', name: 'วิชาการเข้าเรียนไม่ครบ', class_id: classId });
+    teacherId = await seedTestUser({ suffix: 'attendance_copy_teacher', role: 'teacher', full_name: 'test_ครูสอนหลายวิชา' });
+    await seedTestStudent({ class_suffix: 'attendance_copy', seq: 1, full_name: 'test_นักเรียนนำเข้า 1' });
+    await seedTestStudent({ class_suffix: 'attendance_copy', seq: 2, full_name: 'test_นักเรียนนำเข้า 2' });
+    await seedTestEnrollment({ suffix: 'attendance_copy_dest', class_id: classId, subject_id: destinationSubjectId, teacher_user_id: teacherId });
+    await seedTestEnrollment({ suffix: 'attendance_copy_source', class_id: classId, subject_id: sourceSubjectId, teacher_user_id: teacherId });
+    await seedTestEnrollment({ suffix: 'attendance_copy_incomplete', class_id: classId, subject_id: incompleteSubjectId, teacher_user_id: teacherId });
+    await seedCompleteTestAttendance({ class_id: classId, subject_id: sourceSubjectId, updated_by: teacherId, status: '/' });
+    await seedCompleteTestAttendance({ class_id: classId, subject_id: destinationSubjectId, updated_by: teacherId, status: 'ล' });
+  });
+
+  test.afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  test('stages a complete school year, preserves it across weeks, and saves only after confirmation', async ({ page }) => {
+    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${destinationSubjectId}&week=1`);
+    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#attBody .att-cell').first()).toHaveText('ล');
+
+    await page.locator('#openCopyBtn').click();
+    await expect(page.locator('#sourceModal')).toHaveClass(/open/);
+    await expect(page.locator('#sourceList')).toContainText('วิชาต้นทางการเข้าเรียน', { timeout: 30_000 });
+    await expect(page.locator('#sourceList')).not.toContainText('วิชาการเข้าเรียนไม่ครบ');
+    await page.locator(`input[name="attendanceSource"][value="${sourceSubjectId}"]`).check();
+    await page.locator('#confirmSourceBtn').click();
+    await expect(page.locator('#replaceWarning')).toBeVisible();
+    await page.locator('#confirmSourceBtn').click();
+
+    await expect(page.locator('#sourceModal')).not.toHaveClass(/open/, { timeout: 30_000 });
+    await expect(page.locator('#importBanner')).toBeVisible();
+    await expect(page.locator('#attBody .att-cell').first()).toHaveText('/');
+
+    const rowsBeforeSave = await queryTestRows('Attendance', 'subject_id');
+    const destinationBeforeSave = rowsBeforeSave.filter(row => row.subject_id === destinationSubjectId);
+    expect(destinationBeforeSave.length).toBeGreaterThan(0);
+    expect(destinationBeforeSave.every(row => row.status === 'ล')).toBe(true);
+
+    await page.locator('#nextWeekBtn').click();
+    await expect(page.locator('#weekLabel')).toContainText('สัปดาห์ที่ 2', { timeout: 20_000 });
+    await expect(page.locator('#attBody .att-cell').first()).toHaveText('/');
+    await expect(page.locator('#importBanner')).toBeVisible();
+
+    await page.locator('#saveBtn').click();
+    await expect(page.locator('#toast')).toContainText('บันทึกการเข้าเรียนสำเร็จ', { timeout: 60_000 });
+    await expect(page.locator('#importBanner')).toBeHidden();
+
+    const rowsAfterSave = await queryTestRows('Attendance', 'subject_id');
+    const destinationAfterSave = rowsAfterSave.filter(row => row.subject_id === destinationSubjectId);
+    expect(destinationAfterSave.length).toBe(destinationBeforeSave.length);
+    expect(destinationAfterSave.every(row => row.status === '/')).toBe(true);
+  });
+
+  test('backend rejects an incomplete source subject', async ({ page }) => {
+    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${destinationSubjectId}&week=1`);
+    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
+    const result = await page.evaluate((sourceId) => new Promise<{ error?: string }>((resolve) => {
+      const app = globalThis as any;
+      app.google.script.run
+        .withSuccessHandler((value: unknown) => resolve({ error: `unexpected success: ${JSON.stringify(value)}` }))
+        .withFailureHandler((error: { message?: string }) => resolve({ error: error.message || String(error) }))
+        .getAttendanceSourceValues(app.TOKEN, app.CLASS_ID, app.SUBJECT_ID, sourceId);
+    }), incompleteSubjectId);
+    expect(result.error).toContain('ข้อมูลยังไม่ครบถ้วน');
   });
 });
