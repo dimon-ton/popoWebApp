@@ -3355,6 +3355,17 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initNavbarDropdown();
 
 var DEFAULT_PROFILE_AVATAR_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar.png';
+var DEFAULT_FEMALE_PROFILE_AVATAR_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar-female.png';
+
+function getDefaultProfileAvatarUrl(fullName) {
+  var name = String(fullName || '').trim();
+  // Check longer prefixes first: "นางสาว" begins with "นาง".
+  var femalePrefixes = ['นางสาว', 'เด็กหญิง', 'นาง'];
+  for (var i = 0; i < femalePrefixes.length; i++) {
+    if (name.indexOf(femalePrefixes[i]) === 0) return DEFAULT_FEMALE_PROFILE_AVATAR_URL;
+  }
+  return DEFAULT_PROFILE_AVATAR_URL;
+}
 
 function initNavbarAvatar() {
   var titleEl = document.querySelector('.navbar-title');
@@ -3397,7 +3408,7 @@ function initNavbarAvatar() {
         }
       }
 
-      var avatarSrc = profile.avatar || DEFAULT_PROFILE_AVATAR_URL;
+      var avatarSrc = profile.avatar || getDefaultProfileAvatarUrl(profile.full_name);
       if (userTrigger) {
         var avatarHtml = '<img class="navbar-avatar" src="' + avatarSrc + '" alt="รูปโปรไฟล์" />';
         var nameSuffix = profile.role === 'admin' ? ' (admin)' : '';

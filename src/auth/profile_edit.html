@@ -121,7 +121,7 @@ function initProfileAvatar() {
     .withSuccessHandler(function(profile) {
       if (!profile || profile.error) return;
       var hasCustomAvatar = !!profile.avatar;
-      var avatarSrc = profile.avatar || DEFAULT_PROFILE_AVATAR_URL;
+      var avatarSrc = profile.avatar || getDefaultProfileAvatarUrl(profile.full_name);
       SESSION.avatar = profile.avatar || '';
       var nameEl = document.getElementById('avatarFileName');
       if (nameEl && hasCustomAvatar) nameEl.textContent = 'profile_image.png';
@@ -550,14 +550,14 @@ function removeAvatar() {
   document.getElementById('removeAvatarBtn').style.display = 'none';
   var img = document.getElementById('profileAvatar');
   if (img) {
-    img.src = DEFAULT_PROFILE_AVATAR_URL;
+    img.src = getDefaultProfileAvatarUrl(SESSION.full_name);
     img.alt = 'รูปโปรไฟล์เริ่มต้น';
   } else {
     var ph = document.getElementById('profileAvatarPlaceholder');
     if (ph && ph.parentNode) {
       var defaultImg = document.createElement('img');
       defaultImg.id = 'profileAvatar';
-      defaultImg.src = DEFAULT_PROFILE_AVATAR_URL;
+      defaultImg.src = getDefaultProfileAvatarUrl(SESSION.full_name);
       defaultImg.alt = 'รูปโปรไฟล์เริ่มต้น';
       defaultImg.style.cssText = 'width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
       ph.parentNode.replaceChild(defaultImg, ph);
