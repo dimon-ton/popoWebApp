@@ -1,19 +1,33 @@
+# Dependencies and build output
 node_modules/
 dist/
+coverage/
+
+# Local configuration and credentials
+.clasp.json
+opencode.json
 tests/.auth/
 *.env
 .env.*
 
-# Logs and temporary files
+# Test and browser output
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Agent and automation state
+.ralph-tui/
+.commit-msg.tmp
+.commit-prompt.tmp
+
+# Logs, caches, and operating-system files
 *.log
 *.stackdump
-.playwright-mcp/
-.ralph-tui/
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+Thumbs.db
 
-# Screenshots and generated images
-*.png
-!assets/
-!assets/default-profile-avatar.png
-!assets/default-profile-avatar-female.png
+# Generated one-off assets
 logo_b64.txt
-test-results/

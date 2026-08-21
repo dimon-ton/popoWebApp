@@ -1,102 +1,100 @@
 # PopoWebApp
 
-Google Apps Script web app + Google Sheet as relational DB for school-wide grade book management.
+Google Apps Script web app backed by a Google Sheet for school-wide ป.พ.5 grade-book
+management.
+
+## Repository map
+
+| Path | Contents |
+| --- | --- |
+| [`src/`](src/) | Apps Script server code and server-rendered HTML pushed by clasp |
+| [`tests/`](tests/) | Playwright end-to-end tests and isolated test-data helpers |
+| [`docs/`](docs/) | Current product documentation, design references, guides, and archive |
+| [`reference/`](reference/) | Original workbook and optional inspection tools |
+| [`assets/`](assets/) | Tracked application image assets |
+| [`scripts/examples/`](scripts/examples/) | Opt-in, portable local-automation templates |
+
+See [`AGENTS.md`](AGENTS.md) for architecture, data rules, deployment details, and protected
+compatibility boundaries. See [`docs/product/requirements.md`](docs/product/requirements.md)
+for current product behavior.
 
 ## Setup
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
-- [pnpm](https://pnpm.io/)
-- [clasp](https://github.com/google/clasp) (for Apps Script deployment)
+- Node.js 18 or newer, including npm
+- clasp for Apps Script deployment (available through `npx clasp` or a global install)
+- Chromium installed by Playwright when prompted
 
-### Install dependencies
+Install the exact committed dependencies:
 
 ```sh
-pnpm install
+npm ci
 ```
 
-### Environment variables
-
-Create a `.env` file (or set in your shell):
+Create `.env` or define these variables in the shell:
 
 ```sh
 WEB_APP_URL=https://script.google.com/macros/s/<DEPLOY_ID>/exec
 TEST_API_TOKEN=<your-test-api-token>
 ```
 
-`WEB_APP_URL` — the production `/exec` URL of your deployed Apps Script web app.
-`TEST_API_TOKEN` — a 32+ char random token matching the `TEST_API_TOKEN` Script Property in your Apps Script project.
+`TEST_API_TOKEN` must be at least 32 characters and match the Apps Script property of the
+same name. Never commit `.env`, authentication state, or other live credentials.
 
-## Playwright Tests
+## Local configuration
 
-### First time only — auth bootstrap (US-021)
-
-The test suite uses a saved browser session (`auth.json`) so runs are non-interactive. You must create this file once manually:
+Copy the clasp template and enter the Apps Script project ID:
 
 ```sh
-pnpm playwright test --project=setup
+cp .clasp.json.example .clasp.json
 ```
 
-A Chromium browser window will open. In that window:
-1. Log in with your admin username and password.
-2. If Google shows an "Authorize script" consent page, complete it.
-3. Once you are on the app's main page, return to the terminal and press the **Resume** button in the Playwright inspector (or press `F8`).
+The live `.clasp.json` is local-only and ignored. Existing developer copies are preserved.
 
-The session is saved to `tests/.auth/auth.json`. This file is `.gitignore`d and contains your session tokens — never commit it.
+OpenCode users may copy `opencode.json.example` to `opencode.json` and provide
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` through environment variables. The live file
+is also ignored.
 
-> **Note:** Apps Script sessions expire after 12 hours. If specs start failing at the login screen, re-run the setup command above.
+## Playwright tests
 
-### Running the full test suite
+The suite uses one worker because Google Sheet mutations are lock-serialized. It traverses
+the nested Apps Script sandbox frames through `tests/helpers/custom-test.ts` and uses only
+`test_`-prefixed fixture records.
 
-After the auth bootstrap, all subsequent runs are fully headless and non-interactive:
+Bootstrap or refresh the saved authenticated session when needed:
 
 ```sh
-pnpm playwright test
+npx playwright test --project=setup
 ```
 
-### Running a specific story
+The session is saved to ignored `tests/.auth/auth.json` and normally expires after 12 hours.
+Run tests with:
 
 ```sh
-pnpm playwright test tests/admin.spec.ts -g "US-018"
+npm test
+npm run test:smoke
+npx playwright test tests/admin.spec.ts -g "US-018"
 ```
 
-### Playwright MCP integration
-
-The Playwright MCP browser also uses `tests/.auth/auth.json` for session reuse. If you run ad-hoc MCP clicks after the bootstrap, they will be authenticated. Re-run the setup project whenever the session expires.
+The tests use the live URL in `WEB_APP_URL`. Full tests can write temporary `test_` records;
+the shared cleanup helper removes them after each spec.
 
 ## Deployment
 
-### Fresh deploy from scratch
+For a fresh checkout, create the local `.clasp.json`, authenticate with `npx clasp login`,
+and follow the setup wizard if the Apps Script project has no `DB_SHEET_ID` property.
 
-1. Clone the repository.
-2. Copy `.clasp.json.example` to `.clasp.json` and fill in your Apps Script project ID:
-   ```sh
-   cp .clasp.json.example .clasp.json
-   # edit .clasp.json and replace YOUR_APPS_SCRIPT_PROJECT_ID with your actual scriptId
-   ```
-3. Log in to clasp:
-   ```sh
-   clasp login
-   ```
-4. Push the source files to Apps Script:
-   ```sh
-   clasp push
-   ```
-5. Redeploy the existing web app deployment (set execution as "User accessing the app", access "Anyone"):
-   ```sh
-   npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"
-   ```
-6. Visit the `/exec` URL in your browser. If `DB_SHEET_ID` is not yet set, the **first-run setup wizard** appears automatically — follow the three steps to create the database, enter school info, and confirm the default admin account.
-7. Log in as `admin` with the temporary password `admin1234` and **change it immediately** via Admin → จัดการผู้ใช้.
-
-### Redeploying after code changes
+Push and redeploy the stable production deployment:
 
 ```sh
 npx clasp push
 npx clasp redeploy <PROD_DEPLOY_ID> --description "Release Description"
 ```
 
-## Test data isolation
+Use the production ID documented in [`AGENTS.md`](AGENTS.md); do not substitute the HEAD
+deployment. If Apps Script reports its 200-version limit, clean unused Project History
+versions before retrying.
 
-All test-created records use IDs prefixed with `test_`. The cleanup helper (`cleanupTestData()` in `tests/helpers/seed.ts`) deletes every `test_`-prefixed row across all sheet tabs after each spec run. No `test_`-prefixed rows should remain in the production sheet after a clean test run.
+The initial admin credentials are `admin` / `admin1234`. Change the temporary password
+immediately after first login.

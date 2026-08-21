@@ -4,7 +4,7 @@
  * cleans up, then asserts no test_ rows remain.
  *
  * Run with:
- *   pnpm playwright test tests/helpers/seed.spec.ts
+ *   npx playwright test tests/helpers/seed.spec.ts
  *
  * Required env vars: WEB_APP_URL, TEST_API_TOKEN
  */

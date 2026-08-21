@@ -1,0 +1,5 @@
+@echo off
+rem Opt-in example. Run only after reviewing the working tree.
+rem Requires git and opencode on PATH; pushes the current branch, never a fixed branch.
+cd /d "%~dp0\..\.."
+opencode run "Review all repository changes. Stage them with git add -A, create a concise conventional commit, and push the current branch to its configured upstream."
