@@ -1,0 +1,31 @@
+# Opt-in example. Copy outside the repository or remove the .example suffix to use.
+# Requires git and opencode on PATH. Review changes before running: this stages all files.
+
+$projectDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$logFile = Join-Path $projectDir "auto-commit-push.log"
+
+function Log($message) {
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp - $message" | Out-File -Append -FilePath $logFile -Encoding utf8
+}
+
+Set-Location -LiteralPath $projectDir
+$status = git status --porcelain
+if ($LASTEXITCODE -ne 0) { throw "git status failed" }
+if (-not $status) {
+    Log "No changes to commit."
+    exit 0
+}
+
+$diff = git diff --stat
+$prompt = @"
+Review the current repository changes, stage them with git add -A, create a concise
+conventional commit, and push the current branch to its configured upstream.
+Current diff summary:
+$diff
+"@
+
+Log "Starting opt-in OpenCode commit workflow."
+opencode run $prompt
+if ($LASTEXITCODE -ne 0) { throw "OpenCode workflow failed" }
+Log "Workflow complete."

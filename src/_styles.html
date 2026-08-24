@@ -3354,16 +3354,14 @@ function initNavbarDropdown() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNavbarDropdown);
 else initNavbarDropdown();
 
-var DEFAULT_PROFILE_AVATAR_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar.png';
-var DEFAULT_FEMALE_PROFILE_AVATAR_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/default-profile-avatar-female.png';
+var DEFAULT_PROFILE_AVATAR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">'
+  + '<circle cx="8" cy="8" r="8" fill="#eaf2ff"/>'
+  + '<path fill="#2456a6" d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>'
+  + '<path fill="#2456a6" fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>'
+  + '</svg>';
+var DEFAULT_PROFILE_AVATAR_URL = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(DEFAULT_PROFILE_AVATAR_SVG);
 
-function getDefaultProfileAvatarUrl(fullName) {
-  var name = String(fullName || '').trim();
-  // Check longer prefixes first: "นางสาว" begins with "นาง".
-  var femalePrefixes = ['นางสาว', 'เด็กหญิง', 'นาง'];
-  for (var i = 0; i < femalePrefixes.length; i++) {
-    if (name.indexOf(femalePrefixes[i]) === 0) return DEFAULT_FEMALE_PROFILE_AVATAR_URL;
-  }
+function getDefaultProfileAvatarUrl() {
   return DEFAULT_PROFILE_AVATAR_URL;
 }
 
@@ -3408,7 +3406,7 @@ function initNavbarAvatar() {
         }
       }
 
-      var avatarSrc = profile.avatar || getDefaultProfileAvatarUrl(profile.full_name);
+      var avatarSrc = profile.avatar || getDefaultProfileAvatarUrl();
       if (userTrigger) {
         var avatarHtml = '<img class="navbar-avatar" src="' + avatarSrc + '" alt="รูปโปรไฟล์" />';
         var nameSuffix = profile.role === 'admin' ? ' (admin)' : '';

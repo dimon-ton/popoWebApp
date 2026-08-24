@@ -115,7 +115,7 @@ function serverLogout(token) {
 
 function getLoginHtml() {
   var tmpl = createTemplate('login');
-  tmpl.data = { error: null };
+  tmpl.data = { error: null, clear_stored_token: true };
   return tmpl.evaluate().getContent();
 }
 
@@ -394,7 +394,7 @@ function serverChangePassword(token, old_password, new_password) {
 function getChangePasswordHtml(token) {
   try {
     var session = getSession(token);
-    if (!session) return createTemplate('login').evaluate().getContent();
+    if (!session) return getLoginHtml();
     var tmpl = createTemplate('change_password');
     tmpl.data = { session: session, token: token };
     return tmpl.evaluate().getContent();

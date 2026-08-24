@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "google-workspace": {
+      "type": "local",
+      "command": ["npx", "-y", "@aaronsb/google-workspace-mcp"],
+      "enabled": true,
+      "environment": {
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}"
+      }
+    }
+  }
+}

@@ -335,7 +335,7 @@ function sortClassRows(classes) {
 
 function getDashboardHtml(token) {
   var session = getSession(token);
-  if (!session) return createTemplate('login').evaluate().getContent();
+  if (!session) return getLoginHtml();
   var user = dbFindOne('Users', 'user_id', session.user_id);
   if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
   var tmpl = createTemplate('dashboard');
@@ -431,7 +431,7 @@ function getClassStudentsPageHtml(token, class_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_students');
     tmpl.data = { session: session, token: token, class_id: class_id || '' };
@@ -446,7 +446,7 @@ function getAttendancePageHtml(token, class_id, subject_id, week) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_attendance');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '', week: parseInt(week) || 1 };
@@ -461,7 +461,7 @@ function getSummativePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_summative');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
@@ -476,7 +476,7 @@ function getCharacteristicsPageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_characteristics');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
@@ -491,7 +491,7 @@ function getReadThinkWritePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_readthinkwrite');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
@@ -506,7 +506,7 @@ function getReportPageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_report');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
@@ -521,7 +521,7 @@ function getFormativePageHtml(token, class_id, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('class_formative');
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
@@ -536,7 +536,7 @@ function getIndicatorsPageHtml(token, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     if (session.role !== 'admin') {
       var enrollment = dbGetAll('Enrollments').filter(function(e) {
@@ -567,7 +567,7 @@ function getSubjectIndicatorsRefPageHtml(token, subject_id) {
   try {
     var session = getSession(token);
     if (!session) {
-      return createTemplate('login').evaluate().getContent();
+      return getLoginHtml();
     }
     var tmpl = createTemplate('subject_indicators_ref');
     tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
