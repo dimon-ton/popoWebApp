@@ -7,6 +7,7 @@
   <?!= include('_styles') ?>
 </head>
 <body class="page-login">
+  <? var pageData = (typeof data !== 'undefined' && data) ? data : {}; ?>
   <div class="login-checking nav-loading" id="loginChecking">
     <div class="skeleton-line" style="width:260px;height:22px"></div>
     <div class="skeleton-line" style="width:180px;height:14px;margin-top:10px"></div>
@@ -29,7 +30,7 @@
       สำนักงานเขตพื้นที่การศึกษาประถมศึกษาร้อยเอ็ดเขต 2
     </p>
     <div class="error" id="errBox">
-      <? if (data.error) { ?><?= data.error ?><? } ?>
+      <? if (pageData.error) { ?><?= pageData.error ?><? } ?>
     </div>
     <div class="form-group">
       <label>ชื่อผู้ใช้ (Username)</label>
@@ -76,12 +77,14 @@
 
     // On load: if a valid token is in localStorage, go straight to dashboard
     (function() {
+      var clearStoredToken = <?!= pageData.clear_stored_token ? 'true' : 'false' ?>;
+      if (clearStoredToken) localStorage.removeItem('popo_token');
       var stored = localStorage.getItem('popo_token');
       if (stored) {
         showLoginChecking();
-        var redirectPage = '<?= data.redirect_page || "" ?>';
-        var classId = '<?= data.class_id || "" ?>';
-        var subjectId = '<?= data.subject_id || "" ?>';
+        var redirectPage = '<?= pageData.redirect_page || "" ?>';
+        var classId = '<?= pageData.class_id || "" ?>';
+        var subjectId = '<?= pageData.subject_id || "" ?>';
         
         var successHandler = function(html) {
           if (html) { document.open(); document.write(html); document.close(); }
@@ -158,9 +161,9 @@
                 })
                 .getChangePasswordHtml(result.token);
             } else {
-              var redirectPage = '<?= data.redirect_page || "" ?>';
-              var classId = '<?= data.class_id || "" ?>';
-              var subjectId = '<?= data.subject_id || "" ?>';
+              var redirectPage = '<?= pageData.redirect_page || "" ?>';
+              var classId = '<?= pageData.class_id || "" ?>';
+              var subjectId = '<?= pageData.subject_id || "" ?>';
               
               var successHandler = function(html) {
                 document.open();

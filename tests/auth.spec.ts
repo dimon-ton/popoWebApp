@@ -22,6 +22,26 @@ test.describe('US-002: Login form and session', () => {
     await expect(page.locator('#password')).toBeVisible();
   });
 
+  test('US-002: expired stored token returns to login without a template error', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.addInitScript(() => localStorage.setItem('popo_token', 'expired_test_token'));
+    await page.goto(url);
+
+    await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('body')).not.toContainText('ReferenceError: data is not defined');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('popo_token'))).toBeNull();
+
+    const renderResult = await page.evaluate(() => new Promise<{ ok: boolean; value: string }>((resolve) => {
+      (window as any).google.script.run
+        .withSuccessHandler((html: string) => resolve({ ok: true, value: html }))
+        .withFailureHandler((error: Error) => resolve({ ok: false, value: error.message }))
+        .getDashboardHtml('expired_test_token');
+    }));
+    expect(renderResult.ok).toBeTruthy();
+    expect(renderResult.value).toContain('id="loginBtn"');
+    expect(renderResult.value).not.toContain('data is not defined');
+  });
+
   test('US-002: wrong password shows Thai error message', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(url);
