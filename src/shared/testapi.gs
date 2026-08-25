@@ -1,12 +1,12 @@
 // FR-14: Test API — Bearer token gated endpoint for Playwright seed/cleanup
 // Token is set in Script Properties as TEST_API_TOKEN
-// Kill-switch: TEST_API_ENABLED=false
+// Fail-closed kill-switch: TEST_API_ENABLED must be exactly "true".
 
 function handleTestApi(e) {
   var props = PropertiesService.getScriptProperties();
 
-  // Kill-switch
-  if (props.getProperty('TEST_API_ENABLED') === 'false') {
+  // Fail closed: production is disabled unless explicitly enabled for a staging deployment.
+  if (props.getProperty('TEST_API_ENABLED') !== 'true') {
     return ContentService.createTextOutput(JSON.stringify({ error: 'Test API disabled' }))
       .setMimeType(ContentService.MimeType.JSON);
   }

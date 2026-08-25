@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
-    "test:smoke": "playwright test tests/auth.spec.ts tests/admin.spec.ts -g 'US-002|US-018' --reporter=line"
+    "test:smoke": "playwright test tests/auth.spec.ts tests/admin.spec.ts -g 'US-002|US-018' --reporter=line",
+    "test:security": "playwright test tests/security.spec.ts --reporter=line"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",

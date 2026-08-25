@@ -38,6 +38,7 @@
     </div>
   </div>
   <script>
+    var TOKEN = '<?= data.token || '' ?>';
     google.script.run
       .withSuccessHandler(function(rows) {
         document.getElementById('loading').style.display = 'none';
@@ -53,7 +54,7 @@
       .withFailureHandler(function(err) {
         document.getElementById('loading').textContent = 'Error: ' + err.message;
       })
-      .getDbStatus();
+      .getDbStatus(TOKEN);
   </script>
 </body>
 </html>

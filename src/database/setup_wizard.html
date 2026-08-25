@@ -21,7 +21,7 @@
     <div class="step active" id="step1">
       <h2>ขั้นตอนที่ 1: สร้างฐานข้อมูล</h2>
       <div class="info-box">
-        ระบบจะสร้าง Google Sheet ชื่อ <strong>PopoWebApp DB</strong> ใหม่ พร้อมตาราง 14 ชีต
+        ระบบจะสร้าง Google Sheet ชื่อ <strong>PopoWebApp DB</strong> ใหม่ พร้อมตาราง 16 ชีต
         และบันทึก Sheet ID ไว้ใน Script Properties
       </div>
       <div class="error" id="err1"></div>
@@ -66,6 +66,8 @@
   </div>
 
   <script>
+    var SETUP_TOKEN = '';
+
     function showError(elId, msg) {
       var el = document.getElementById(elId);
       el.textContent = msg;
@@ -95,6 +97,13 @@
         .withSuccessHandler(function(result) {
           if (result && result.error) {
             showError('err1', result.error);
+            btn.disabled = false;
+            btn.textContent = 'สร้างฐานข้อมูล';
+            return;
+          }
+          SETUP_TOKEN = result.setup_token || '';
+          if (!SETUP_TOKEN) {
+            showError('err1', 'ไม่สามารถสร้างเซสชันตั้งค่าระบบได้');
             btn.disabled = false;
             btn.textContent = 'สร้างฐานข้อมูล';
             return;
@@ -140,7 +149,7 @@
           btn.disabled = false;
           btn.textContent = 'บันทึกข้อมูลโรงเรียน';
         })
-        .wizardSaveSchoolInfo(schoolName, district, province, academicYear);
+        .wizardSaveSchoolInfo(SETUP_TOKEN, schoolName, district, province, academicYear);
     }
 
     function goToLogin() {
