@@ -26,13 +26,21 @@
 <div class="container">
   <!-- LEFT: Teacher list -->
   <div class="teacher-panel">
-    <div class="panel-header">รายชื่อครู</div>
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-teacher" onclick="switchTab('teacher')">ครูรายคน</button>
-      <button class="tab-btn" id="tab-allpairs" onclick="switchTab('allpairs')">รายการสอน</button>
+    <div class="panel-header">
+      <span>รายชื่อครู</span>
+      <span class="teacher-total" id="teacherTotal">— คน</span>
+    </div>
+    <div class="tab-bar" role="tablist" aria-label="มุมมองรายการสอน">
+      <button class="tab-btn active" id="tab-teacher" role="tab" aria-selected="true" aria-controls="teacherTab" onclick="switchTab('teacher')">ครูรายคน</button>
+      <button class="tab-btn" id="tab-allpairs" role="tab" aria-selected="false" aria-controls="allPairsTab" onclick="switchTab('allpairs')">รายการสอน</button>
     </div>
     <div class="teacher-search-wrap">
-      <input type="search" id="teacherSearch" placeholder="ค้นหาชื่อครู..." oninput="renderTeacherList()">
+      <div class="teacher-search-field">
+        <svg class="teacher-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="teacherSearch" aria-label="ค้นหาชื่อครู" placeholder="ค้นหาชื่อครู..." oninput="renderTeacherList()">
+        <button type="button" class="teacher-search-clear" id="teacherSearchClear" onclick="clearTeacherSearch()" aria-label="ล้างคำค้นหา" hidden>&times;</button>
+      </div>
+      <div class="teacher-search-status" id="teacherSearchStatus" aria-live="polite"></div>
     </div>
       <div id="teacherList" class="teacher-list loading-msg">
         <div class="skeleton-list">
@@ -45,11 +53,19 @@
 
   <!-- RIGHT -->
   <div class="right-panel" id="rightPanel">
-    <div class="right-content" id="teacherTab">
-      <div class="right-empty" id="emptyState">เลือกครูจากรายการทางซ้าย</div>
+    <div class="right-content" id="teacherTab" role="tabpanel" aria-labelledby="tab-teacher">
+      <div class="right-empty" id="emptyState">
+        <div class="empty-state-card">
+          <span class="empty-state-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          </span>
+          <strong>เลือกครูเพื่อจัดการรายการสอน</strong>
+          <span>ค้นหาและเลือกครูจากรายการด้านซ้าย จากนั้นเพิ่มหรือนำรายวิชาออกได้ที่นี่</span>
+        </div>
+      </div>
       <div id="teacherDetail" style="display:none"></div>
     </div>
-    <div class="all-pairs-panel" id="allPairsTab" style="display:none">
+    <div class="all-pairs-panel" id="allPairsTab" role="tabpanel" aria-labelledby="tab-allpairs" style="display:none">
       <div class="section-title">รายการชั้นเรียนและวิชาทั้งหมด</div>
       <div class="summary-grid" id="pairSummary">
         <div class="summary-card"><span class="summary-value">-</span><span class="summary-label">รายการทั้งหมด</span></div>
@@ -98,13 +114,28 @@
     </div>
     <p class="dialog-message" id="reassignMsg"></p>
     <div class="dialog-actions">
-      <button class="btn" onclick="closeReassignDialog()">ยกเลิก</button>
+      <button class="btn btn-secondary" onclick="closeReassignDialog()">ยกเลิก</button>
       <button class="btn btn-primary" id="confirmReassignBtn">ยืนยัน</button>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Remove assignment confirmation dialog -->
+<div class="dialog-overlay" id="removeDialog">
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="removeTitle" aria-describedby="removeMsg">
+    <div class="dialog-header">
+      <span class="dialog-icon danger" aria-hidden="true">!</span>
+      <h3 id="removeTitle">นำรายการสอนออก</h3>
+    </div>
+    <p class="dialog-message" id="removeMsg"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" onclick="closeRemoveDialog()">ยกเลิก</button>
+      <button class="btn btn-danger" id="confirmRemoveBtn">นำออก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 var TOKEN = '<?= data.token ?>';
@@ -138,7 +169,10 @@ function doLogout() {
 var allData = null;
 var selectedTeacherId = null;
 var pendingReassign = null;
+var pendingRemove = null;
 var allPairsRows = [];
+var availableSubjectChoices = [];
+var activeSubjectChoiceIndex = -1;
 
 // ---- Init ----
 loadData();
@@ -157,8 +191,12 @@ function loadData() {
 
 // ---- Tab switching ----
 function switchTab(tab) {
-  document.getElementById('tab-teacher').classList.toggle('active', tab === 'teacher');
-  document.getElementById('tab-allpairs').classList.toggle('active', tab === 'allpairs');
+  var teacherTabButton = document.getElementById('tab-teacher');
+  var allPairsTabButton = document.getElementById('tab-allpairs');
+  teacherTabButton.classList.toggle('active', tab === 'teacher');
+  allPairsTabButton.classList.toggle('active', tab === 'allpairs');
+  teacherTabButton.setAttribute('aria-selected', tab === 'teacher' ? 'true' : 'false');
+  allPairsTabButton.setAttribute('aria-selected', tab === 'allpairs' ? 'true' : 'false');
   document.querySelector('.teacher-panel').classList.toggle('compact', tab !== 'teacher');
   document.getElementById('teacherTab').style.display = tab === 'teacher' ? '' : 'none';
   document.getElementById('allPairsTab').style.display = tab === 'allpairs' ? '' : 'none';
@@ -167,26 +205,48 @@ function switchTab(tab) {
 // ---- Teacher list ----
 function renderTeacherList() {
   var el = document.getElementById('teacherList');
+  var totalEl = document.getElementById('teacherTotal');
   if (!allData || !allData.teachers || allData.teachers.length === 0) {
-    el.innerHTML = '<div style="padding:16px;color:#888;font-size:13px">ไม่พบครูในระบบ</div>';
+    if (totalEl) totalEl.textContent = '0 คน';
+    el.innerHTML = '<div class="teacher-list-empty">ไม่พบครูในระบบ</div>';
     return;
   }
+
   var searchEl = document.getElementById('teacherSearch');
   var query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  var totalTeachers = allData.teachers.length;
   var teachers = allData.teachers.filter(function(t) {
     return !query || String(t.full_name || '').toLowerCase().indexOf(query) !== -1;
   });
+
+  if (totalEl) {
+    totalEl.textContent = query ? teachers.length + '/' + totalTeachers + ' คน' : totalTeachers + ' คน';
+  }
+  var clearBtn = document.getElementById('teacherSearchClear');
+  var statusEl = document.getElementById('teacherSearchStatus');
+  if (clearBtn) clearBtn.hidden = !query;
+  if (statusEl) statusEl.textContent = query ? 'พบ ' + teachers.length + ' จาก ' + totalTeachers + ' คน' : '';
   if (teachers.length === 0) {
-    el.innerHTML = '<div style="padding:16px;color:#888;font-size:13px">ไม่พบครูที่ค้นหา</div>';
+    el.innerHTML = '<div class="teacher-list-empty">ไม่พบครูที่ค้นหา</div>';
     return;
   }
+
   el.innerHTML = teachers.map(function(t) {
-    var selectedClass = t.user_id === selectedTeacherId ? ' selected' : '';
-    return '<div class="teacher-item' + selectedClass + '" id="ti-' + escAttr(t.user_id) + '" onclick="selectTeacher(\'' + t.user_id + '\')">' +
+    var selected = t.user_id === selectedTeacherId;
+    var selectedClass = selected ? ' selected' : '';
+    return '<button type="button" class="teacher-item' + selectedClass + '" id="ti-' + escAttr(t.user_id) + '" data-user-id="' + escAttr(t.user_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '" onclick="selectTeacher(this.getAttribute(\'data-user-id\'))">' +
       '<span class="teacher-name">' + escHtml(t.full_name) + '</span>' +
-      '<span class="pair-badge" id="badge-' + escAttr(t.user_id) + '">' + t.pair_count + '</span>' +
-    '</div>';
+      '<span class="pair-badge" id="badge-' + escAttr(t.user_id) + '" aria-label="' + t.pair_count + ' รายการสอน">' + t.pair_count + '</span>' +
+    '</button>';
   }).join('');
+}
+
+function clearTeacherSearch() {
+  var input = document.getElementById('teacherSearch');
+  if (!input) return;
+  input.value = '';
+  renderTeacherList();
+  input.focus();
 }
 
 function selectTeacher(userId) {
@@ -194,15 +254,19 @@ function selectTeacher(userId) {
   // Highlight
   document.querySelectorAll('.teacher-item').forEach(function(el) {
     el.classList.remove('selected');
+    el.setAttribute('aria-pressed', 'false');
   });
   var item = document.getElementById('ti-' + userId);
-  if (item) item.classList.add('selected');
+  if (item) {
+    item.classList.add('selected');
+    item.setAttribute('aria-pressed', 'true');
+  }
 
   document.getElementById('emptyState').style.display = 'none';
   var detail = document.getElementById('teacherDetail');
   detail.style.display = '';
   detail.innerHTML =
-    '<div class="detail-card">' +
+    '<div class="teacher-detail-shell"><div class="detail-card">' +
       '<div class="skeleton-line w40" style="height:20px;margin-bottom:8px"></div>' +
       '<div class="skeleton-line w30" style="margin-bottom:18px"></div>' +
       '<div class="skeleton-form-row" style="margin-bottom:16px">' +
@@ -214,7 +278,7 @@ function selectTeacher(userId) {
         '<div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:55%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>' +
         '<div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:55%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>' +
       '</div>' +
-    '</div>';
+    '</div></div>';
   renderTeacherDetail(userId);
 }
 
@@ -224,6 +288,7 @@ function renderTeacherDetail(userId) {
 
   google.script.run
     .withSuccessHandler(function(data) {
+      if (selectedTeacherId !== userId) return;
       if (data.error) { showToast(data.error, 'error'); return; }
       renderDetailPanel(teacher, data.enrollments || []);
     })
@@ -236,49 +301,253 @@ function renderDetailPanel(teacher, enrollments) {
 
   var classMap = {};
   (allData.classes || []).forEach(function(c) { classMap[c.class_id] = c; });
-  var subjectOptions = (allData.subjects || []).filter(function(s) {
-    return !!s.class_id && !!classMap[s.class_id];
-  }).map(function(s) {
-    var cls = classMap[s.class_id];
-    var value = s.class_id + '|' + s.subject_id;
-    return '<option value="' + escAttr(value) + '">' + escHtml((cls.class_label || fmtCls(cls.level, cls.section)) + ' - ' + subjectLabel(s)) + '</option>';
-  }).join('');
-  if (!subjectOptions) subjectOptions = '<option value="">ยังไม่มีวิชาที่ผูกกับชั้นเรียน</option>';
 
-  var tableRows = enrollments.length === 0
-    ? '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>'
-    : enrollments.map(function(en) {
-        return '<tr>' +
-          '<td>' + escHtml(en.class_label) + '</td>' +
-          '<td>' + escHtml(subjectLabel(en)) + '</td>' +
-          '<td><button class="btn btn-danger" onclick="removeEnrollment(\'' + en.enrollment_id + '\')" data-eid="' + en.enrollment_id + '">ลบ</button></td>' +
-        '</tr>';
-      }).join('');
+  // Hide pairs already assigned to this teacher. Pairs assigned to another teacher
+  // remain selectable so the existing reassignment flow still works.
+  var ownPairKeys = {};
+  enrollments.forEach(function(en) {
+    if (en.class_id && en.subject_id) ownPairKeys[String(en.class_id) + '|' + String(en.subject_id)] = true;
+  });
+  var availableSubjects = (allData.subjects || []).filter(function(s) {
+    var key = String(s.class_id || '') + '|' + String(s.subject_id || '');
+    return !!s.class_id && !!classMap[s.class_id] && !ownPairKeys[key];
+  });
+  availableSubjectChoices = availableSubjects.map(function(subject) {
+    var cls = classMap[subject.class_id] || {};
+    var classLabel = cls.class_label || fmtCls(cls.level, cls.section) || 'ชั้นเรียน';
+    var subjectText = subjectLabel(subject);
+    return {
+      value: String(subject.class_id) + '|' + String(subject.subject_id),
+      class_label: classLabel,
+      subject_label: subjectText,
+      display_label: classLabel + ' — ' + subjectText,
+      search_text: normalizeSubjectSearch(classLabel + ' ' + subjectText + ' ' + String(subject.subject_code || ''))
+    };
+  }).sort(function(a, b) {
+    return a.class_label.localeCompare(b.class_label, 'th', { numeric: true }) ||
+      a.subject_label.localeCompare(b.subject_label, 'th');
+  });
+  activeSubjectChoiceIndex = -1;
+  var hasAvailableSubjects = availableSubjectChoices.length > 0;
 
   detail.innerHTML =
-    '<div class="teacher-detail-header">' +
-      '<div>' +
-        '<div class="teacher-name-big">' + escHtml(teacher.full_name) + '</div>' +
-        '<div class="pair-count" id="pairCountLabel">' + enrollments.length + ' รายการสอน</div>' +
-      '</div>' +
-    '</div>' +
-
-    '<div class="add-pair-form">' +
-      '<h3>เพิ่มวิชาที่สอน</h3>' +
-      '<div class="form-row">' +
-        '<div class="form-group">' +
-          '<label>ชั้นเรียน / วิชา</label>' +
-          '<select id="addSubjectId">' + subjectOptions + '</select>' +
+    '<div class="teacher-detail-shell">' +
+      '<div class="teacher-detail-header">' +
+        '<div class="teacher-detail-copy">' +
+          '<div class="teacher-context-kicker">ครูผู้สอนที่เลือก</div>' +
+          '<div class="teacher-name-big">' + escHtml(teacher.full_name) + '</div>' +
         '</div>' +
-        '<button class="btn btn-primary" id="addPairBtn" onclick="addPair()">เพิ่ม</button>' +
+        '<span class="teaching-count-badge" id="pairCountLabel">' + enrollments.length + ' รายการสอน</span>' +
       '</div>' +
-    '</div>' +
 
-    '<div class="section-title">รายการที่ครูสอน</div>' +
-    '<table id="enrollmentTable">' +
-      '<thead><tr><th>ชั้น</th><th>วิชา</th><th></th></tr></thead>' +
-      '<tbody id="enrollmentBody">' + tableRows + '</tbody>' +
-    '</table>';
+      '<div class="teacher-workspace-grid">' +
+        '<div class="add-pair-form">' +
+          '<div class="add-pair-heading">' +
+            '<div>' +
+              '<h3>เพิ่มรายการสอน</h3>' +
+              '<p>เลือกชั้นเรียนและวิชาที่ต้องการมอบหมายให้ครูคนนี้</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<div class="form-group subject-combobox" id="subjectCombobox">' +
+              '<label for="addSubjectSearch">ค้นหาชั้นเรียน / วิชา</label>' +
+              '<div class="subject-search-control">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+                '<input type="search" id="addSubjectSearch" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="subjectSearchResults" autocomplete="off" placeholder="พิมพ์ชื่อวิชา รหัสวิชา หรือชั้นเรียน"' +
+                  (hasAvailableSubjects ? '' : ' disabled') + ' onfocus="openSubjectSearch()" oninput="filterSubjectChoices()" onkeydown="handleSubjectSearchKeydown(event)">' +
+                '<button type="button" class="subject-search-clear" id="subjectSearchClear" onclick="clearSubjectChoice()" aria-label="ล้างวิชาที่เลือก" hidden>&times;</button>' +
+              '</div>' +
+              '<input type="hidden" id="addSubjectId" value="">' +
+              '<div class="subject-search-results" id="subjectSearchResults" role="listbox" aria-label="ผลการค้นหารายวิชา" hidden></div>' +
+              '<div class="subject-search-status" id="subjectSearchStatus" aria-live="polite">' +
+                (hasAvailableSubjects ? 'พิมพ์เพื่อค้นหาจาก ' + availableSubjectChoices.length + ' รายการ' : 'ไม่มีรายการที่สามารถเพิ่มได้') +
+              '</div>' +
+            '</div>' +
+            '<button class="btn btn-primary" id="addPairBtn" onclick="addPair()" disabled>เพิ่มรายการสอน</button>' +
+          '</div>' +
+          '<p class="assignment-helper">รายวิชาถูกจัดกลุ่มตามชั้นเรียน หากมีครูผู้สอนอยู่แล้ว ระบบจะขอให้ยืนยันก่อนเปลี่ยนผู้สอน</p>' +
+        '</div>' +
+
+        '<div class="teaching-list-card">' +
+          '<div class="teaching-list-head">' +
+            '<div>' +
+              '<h3>รายการที่ครูสอน</h3>' +
+              '<p>ดูชั้นเรียนและรายวิชาที่มอบหมายให้ครูคนนี้</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="teaching-table-wrap">' +
+            '<table id="enrollmentTable">' +
+              '<thead><tr><th>ชั้น</th><th>วิชา</th><th class="action-col">จัดการ</th></tr></thead>' +
+              '<tbody id="enrollmentBody">' + renderEnrollmentRows(enrollments) + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  renderSubjectChoices('');
+}
+
+function renderEnrollmentRows(enrollments) {
+  if (!enrollments || enrollments.length === 0) {
+    return '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>';
+  }
+  return enrollments.map(function(en) {
+    var classLabel = en.class_label || '';
+    var subjectText = subjectLabel(en);
+    var assignmentLabel = classLabel + ' — ' + subjectText;
+    return '<tr>' +
+      '<td class="class-cell">' + escHtml(classLabel) + '</td>' +
+      '<td class="subject-cell">' + escHtml(subjectText) + '</td>' +
+      '<td class="action-cell">' +
+        '<button type="button" class="btn remove-teaching-btn" data-enrollment-id="' + escAttr(en.enrollment_id) + '" data-assignment-label="' + escAttr(assignmentLabel) + '" onclick="requestRemoveEnrollment(this)" aria-label="นำ ' + escAttr(assignmentLabel) + ' ออกจากรายการสอน">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+          '<span>นำออก</span>' +
+        '</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function normalizeSubjectSearch(value) {
+  return String(value || '').trim().toLocaleLowerCase('th').replace(/\s+/g, ' ');
+}
+
+function openSubjectSearch() {
+  var input = document.getElementById('addSubjectSearch');
+  var results = document.getElementById('subjectSearchResults');
+  if (!input || !results || input.disabled) return;
+  renderSubjectChoices(input.value);
+  results.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+}
+
+function closeSubjectSearch() {
+  var input = document.getElementById('addSubjectSearch');
+  var results = document.getElementById('subjectSearchResults');
+  if (!input || !results) return;
+  results.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+  activeSubjectChoiceIndex = -1;
+}
+
+function filterSubjectChoices() {
+  var input = document.getElementById('addSubjectSearch');
+  var selected = document.getElementById('addSubjectId');
+  var clearButton = document.getElementById('subjectSearchClear');
+  var addButton = document.getElementById('addPairBtn');
+  if (!input || !selected) return;
+  selected.value = '';
+  if (addButton) addButton.disabled = true;
+  if (clearButton) clearButton.hidden = !input.value;
+  activeSubjectChoiceIndex = -1;
+  openSubjectSearch();
+}
+
+function renderSubjectChoices(queryValue) {
+  var results = document.getElementById('subjectSearchResults');
+  var status = document.getElementById('subjectSearchStatus');
+  if (!results) return;
+  var query = normalizeSubjectSearch(queryValue);
+  var matches = availableSubjectChoices.map(function(choice, index) {
+    return { choice: choice, index: index };
+  }).filter(function(item) {
+    return !query || item.choice.search_text.indexOf(query) !== -1;
+  });
+
+  if (matches.length === 0) {
+    results.innerHTML = '<div class="subject-search-empty">ไม่พบรายวิชาที่ตรงกับคำค้นหา</div>';
+    if (status) status.textContent = 'ไม่พบรายการ';
+    return;
+  }
+
+  var previousClass = '';
+  results.innerHTML = matches.map(function(item) {
+    var choice = item.choice;
+    var groupHeading = '';
+    if (choice.class_label !== previousClass) {
+      previousClass = choice.class_label;
+      groupHeading = '<div class="subject-result-group" role="presentation">' + escHtml(choice.class_label) + '</div>';
+    }
+    return groupHeading +
+      '<button type="button" class="subject-choice" id="subjectChoice-' + item.index + '" role="option" aria-selected="false" data-choice-index="' + item.index + '" onclick="selectSubjectChoice(' + item.index + ')">' +
+        '<span class="subject-choice-name">' + escHtml(choice.subject_label) + '</span>' +
+        '<span class="subject-choice-class">' + escHtml(choice.class_label) + '</span>' +
+      '</button>';
+  }).join('');
+  if (status) status.textContent = 'พบ ' + matches.length + ' รายการ';
+}
+
+function selectSubjectChoice(index) {
+  var choice = availableSubjectChoices[index];
+  var input = document.getElementById('addSubjectSearch');
+  var selected = document.getElementById('addSubjectId');
+  var clearButton = document.getElementById('subjectSearchClear');
+  var addButton = document.getElementById('addPairBtn');
+  var status = document.getElementById('subjectSearchStatus');
+  if (!choice || !input || !selected) return;
+  input.value = choice.display_label;
+  selected.value = choice.value;
+  if (clearButton) clearButton.hidden = false;
+  if (addButton) addButton.disabled = false;
+  if (status) status.textContent = 'เลือกแล้ว: ' + choice.display_label;
+  closeSubjectSearch();
+}
+
+function clearSubjectChoice() {
+  var input = document.getElementById('addSubjectSearch');
+  var selected = document.getElementById('addSubjectId');
+  var clearButton = document.getElementById('subjectSearchClear');
+  var addButton = document.getElementById('addPairBtn');
+  if (!input || !selected) return;
+  input.value = '';
+  selected.value = '';
+  if (clearButton) clearButton.hidden = true;
+  if (addButton) addButton.disabled = true;
+  renderSubjectChoices('');
+  openSubjectSearch();
+  input.focus();
+}
+
+function handleSubjectSearchKeydown(event) {
+  var results = document.getElementById('subjectSearchResults');
+  var input = document.getElementById('addSubjectSearch');
+  if (!results || !input) return;
+  if (event.key === 'Escape') {
+    closeSubjectSearch();
+    return;
+  }
+  if (event.key === 'Tab') {
+    closeSubjectSearch();
+    return;
+  }
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return;
+
+  if (results.hidden) openSubjectSearch();
+  var options = Array.prototype.slice.call(results.querySelectorAll('.subject-choice'));
+  if (!options.length) return;
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    var selectedOptionIndex = activeSubjectChoiceIndex < 0 ? 0 : activeSubjectChoiceIndex;
+    selectSubjectChoice(Number(options[selectedOptionIndex].getAttribute('data-choice-index')));
+    return;
+  }
+
+  event.preventDefault();
+  activeSubjectChoiceIndex += event.key === 'ArrowDown' ? 1 : -1;
+  if (activeSubjectChoiceIndex < 0) activeSubjectChoiceIndex = options.length - 1;
+  if (activeSubjectChoiceIndex >= options.length) activeSubjectChoiceIndex = 0;
+  options.forEach(function(option, index) {
+    var active = index === activeSubjectChoiceIndex;
+    option.classList.toggle('active', active);
+    option.setAttribute('aria-selected', active ? 'true' : 'false');
+    if (active) {
+      input.setAttribute('aria-activedescendant', option.id);
+      option.scrollIntoView({ block: 'nearest' });
+    }
+  });
 }
 
 function addPair() {
@@ -293,12 +562,12 @@ function addPair() {
   var subjectId = pairParts[1];
   var btn = document.getElementById('addPairBtn');
   btn.disabled = true;
-  btn.textContent = 'กำลังบันทึก...';
+  btn.textContent = 'กำลังเพิ่ม...';
 
   google.script.run
     .withSuccessHandler(function(data) {
       btn.disabled = false;
-      btn.textContent = 'เพิ่ม';
+      btn.textContent = 'เพิ่มรายการสอน';
       if (data.error) { showToast(data.error, 'error'); return; }
 
       if (data.status === 'conflict') {
@@ -328,48 +597,82 @@ function addPair() {
       loadData();
     })
     .withFailureHandler(function(err) {
-      btn.disabled = false; btn.textContent = 'เพิ่ม';
+      btn.disabled = false; btn.textContent = 'เพิ่มรายการสอน';
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .clientAddEnrollment(TOKEN, selectedTeacherId, classId, subjectId);
 }
 
+function requestRemoveEnrollment(button) {
+  if (!button) return;
+  var enrollmentId = button.getAttribute('data-enrollment-id');
+  if (!enrollmentId) return;
+  pendingRemove = {
+    enrollment_id: enrollmentId,
+    assignment_label: button.getAttribute('data-assignment-label') || 'รายการสอนนี้'
+  };
+  var teacher = allData && allData.teachers
+    ? allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; })
+    : null;
+  var teacherName = teacher ? teacher.full_name : 'ครูคนนี้';
+  document.getElementById('removeMsg').textContent =
+    'ต้องการนำ “' + pendingRemove.assignment_label + '” ออกจากรายการสอนของ ' + teacherName + ' ใช่ไหม? รายวิชายังคงอยู่ในระบบ';
+  document.getElementById('removeDialog').classList.add('open');
+  document.getElementById('confirmRemoveBtn').focus();
+}
+
+function closeRemoveDialog() {
+  document.getElementById('removeDialog').classList.remove('open');
+  pendingRemove = null;
+}
+
 function removeEnrollment(enrollmentId) {
-  if (!confirm('ต้องการลบรายการสอนนี้ออกใช่ไหม?')) return;
+  var btn = document.getElementById('confirmRemoveBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'กำลังนำออก...';
+  }
   google.script.run
     .withSuccessHandler(function(data) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'นำออก';
+      }
+      closeRemoveDialog();
       if (data.error) { showToast(data.error, 'error'); return; }
-      showToast('ลบสำเร็จ', 'success');
+      showToast('นำรายการสอนออกแล้ว', 'success');
       refreshEnrollments(data.enrollments);
       updatePairCount(selectedTeacherId, data.enrollments ? data.enrollments.length : null);
       loadData();
     })
-    .withFailureHandler(function(err) { showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .withFailureHandler(function(err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'นำออก';
+      }
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
     .clientRemoveEnrollment(TOKEN, enrollmentId, selectedTeacherId);
 }
+
+document.getElementById('confirmRemoveBtn').addEventListener('click', function() {
+  if (!pendingRemove) return;
+  removeEnrollment(pendingRemove.enrollment_id);
+});
 
 function refreshEnrollments(enrollments) {
   if (!enrollments) return;
   var teacher = allData.teachers.find(function(t) { return t.user_id === selectedTeacherId; });
   if (!teacher) return;
-  var tableRows = enrollments.length === 0
-    ? '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>'
-    : enrollments.map(function(en) {
-        return '<tr>' +
-          '<td>' + escHtml(en.class_label) + '</td>' +
-          '<td>' + escHtml(subjectLabel(en)) + '</td>' +
-          '<td><button class="btn btn-danger" onclick="removeEnrollment(\'' + en.enrollment_id + '\')" data-eid="' + en.enrollment_id + '">ลบ</button></td>' +
-        '</tr>';
-      }).join('');
-  var tbody = document.getElementById('enrollmentBody');
-  if (tbody) tbody.innerHTML = tableRows;
-  var label = document.getElementById('pairCountLabel');
-  if (label) label.textContent = enrollments.length + ' รายการสอน';
+  renderDetailPanel(teacher, enrollments);
 }
 
 function updatePairCount(userId, count) {
   var badge = document.getElementById('badge-' + userId);
-  if (badge && count !== null) badge.textContent = count;
+  if (badge && count !== null) {
+    badge.textContent = count;
+    badge.setAttribute('aria-label', count + ' รายการสอน');
+  }
   // Also update allData
   if (allData && allData.teachers) {
     var t = allData.teachers.find(function(x) { return x.user_id === userId; });
@@ -594,6 +897,11 @@ function importEnrollmentCSV() {
   reader.readAsText(input.files[0], 'UTF-8');
 }
 
+document.addEventListener('click', function(event) {
+  var combobox = document.getElementById('subjectCombobox');
+  if (combobox && !combobox.contains(event.target)) closeSubjectSearch();
+});
+
 // ---- Toast ----
 var toastTimer = null;
 function showToast(msg, type) {
@@ -610,7 +918,12 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function escAttr(s) {
-  return String(s || '').replace(/"/g,'&quot;');
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 function subjectLabel(subject) {
   var name = String(subject && subject.subject_name || '');

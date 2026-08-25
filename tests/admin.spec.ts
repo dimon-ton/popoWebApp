@@ -562,7 +562,8 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator('.teacher-name-big')).toContainText('ครูทดสอบ A');
 
     // Add pair form should exist
-    await expect(page.locator('#addSubjectId')).toBeVisible();
+    await expect(page.locator('#addSubjectSearch')).toBeVisible();
+    await expect(page.locator('#addSubjectId')).toHaveAttribute('type', 'hidden');
     await expect(page.locator('#addPairBtn')).toBeVisible();
   });
 
@@ -571,10 +572,11 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherAId}`);
     await page.click(`#ti-${teacherAId}`);
-    await page.waitForSelector('#addSubjectId');
+    await page.waitForSelector('#addSubjectSearch');
 
-    // Select class X + subject Z
-    await page.selectOption('#addSubjectId', `${classXId}|${subjectZXId}`);
+    // Search for subject Z and select the class X result
+    await page.fill('#addSubjectSearch', 'TST018');
+    await page.locator('.subject-choice').filter({ hasText: 'ป.1/1' }).click();
     await page.click('#addPairBtn');
 
     // Toast success
@@ -592,10 +594,11 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherAId}`);
     await page.click(`#ti-${teacherAId}`);
-    await page.waitForSelector('#addSubjectId');
+    await page.waitForSelector('#addSubjectSearch');
 
-    // Add class Y + subject Z
-    await page.selectOption('#addSubjectId', `${classYId}|${subjectZYId}`);
+    // Search for subject Z and select the class Y result
+    await page.fill('#addSubjectSearch', 'TST018');
+    await page.locator('.subject-choice').filter({ hasText: 'ป.1/2' }).click();
     await page.click('#addPairBtn');
 
     await expect(page.locator('#toast')).toContainText('เพิ่มสำเร็จ', { timeout: 15_000 });
@@ -607,10 +610,11 @@ test.describe('US-018: Teacher enrollment management', () => {
     await page.goto(`${url}?page=admin_enrollments`);
     await page.waitForSelector(`#ti-${teacherBId}`);
     await page.click(`#ti-${teacherBId}`);
-    await page.waitForSelector('#addSubjectId');
+    await page.waitForSelector('#addSubjectSearch');
 
     // Try to add (class X, subject Z) which is owned by teacher A
-    await page.selectOption('#addSubjectId', `${classXId}|${subjectZXId}`);
+    await page.fill('#addSubjectSearch', 'TST018');
+    await page.locator('.subject-choice').filter({ hasText: 'ป.1/1' }).click();
     await page.click('#addPairBtn');
 
     // Confirmation dialog should appear
