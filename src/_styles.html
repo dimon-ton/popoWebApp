@@ -1504,6 +1504,163 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .back-btn { display:inline-flex;align-items:center;gap:5px;padding:4px 0;background:none;color:var(--brand);border:none;border-radius:var(--radius-sm);font-size:13px;font-family:inherit;cursor:pointer;text-decoration:none;font-weight:500;transition:color 0.15s;margin-bottom:14px; }
 .back-btn:hover { color:var(--brand-dark);text-decoration:underline; }
 .back-btn svg { width:16px;height:16px;fill:currentColor; }
+
+/* ==========================================================================
+   Page styles: admin/admin_users.html (page-admin-users)
+   ========================================================================== */
+.page-admin-users .container { display: flex; flex-direction: column; }
+.page-admin-users .users-page-heading { order: 0; margin-bottom: 20px; }
+.page-admin-users .users-page-heading .page-title { margin-bottom: 3px; }
+.page-admin-users .users-page-heading p,
+.page-admin-users .card-description,
+.page-admin-users .user-list-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.page-admin-users .user-list-card { order: 1; overflow: visible; }
+.page-admin-users .user-create-card { order: 2; }
+.page-admin-users .user-import-card { order: 3; }
+.page-admin-users .card-description { margin: -6px 0 16px; }
+.page-admin-users .required-mark { color: var(--red); font-weight: 700; }
+.page-admin-users .user-create-card .form-group { flex: 1 1 145px; }
+.page-admin-users .user-create-card .prefix-group { flex: 0 1 125px; min-width: 110px; }
+.page-admin-users .user-create-card .submit-group {
+  flex: 0 0 auto;
+  min-width: 130px;
+  justify-content: flex-end;
+}
+.page-admin-users .user-list-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.page-admin-users .user-list-heading h3 { margin-bottom: 2px; color: var(--text); font-size: 17px; }
+.page-admin-users .user-list-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--button-tertiary);
+}
+.page-admin-users .user-search-field { position: relative; flex: 1 1 320px; }
+.page-admin-users .user-search-field svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 17px;
+  height: 17px;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.page-admin-users .user-search-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px 8px 40px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+}
+.page-admin-users .user-role-filter { display: flex; flex: 0 0 190px; flex-direction: column; gap: 5px; }
+.page-admin-users .user-role-filter select { width: 100%; min-height: 42px; }
+.page-admin-users .users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.page-admin-users .users-table-wrap table { margin: 0; }
+.page-admin-users .user-name-cell strong { font-weight: 600; }
+.page-admin-users .user-username-cell span { color: var(--brand-dark); font-weight: 600; }
+.page-admin-users .user-actions-heading { text-align: right; }
+.page-admin-users .user-actions-cell { min-width: 245px; }
+.page-admin-users .user-row-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.page-admin-users .user-row-actions button { margin: 0; }
+.page-admin-users .user-empty-state {
+  padding: 32px 18px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+  background: var(--button-tertiary);
+}
+.page-admin-users .user-empty-state[hidden] { display: none; }
+.page-admin-users .user-empty-state strong,
+.page-admin-users .user-empty-state span { display: block; }
+.page-admin-users .user-empty-state span { margin: 4px 0 14px; color: var(--text-muted); font-size: 13px; }
+.page-admin-users .modal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.page-admin-users .modal-heading h3 { min-width: 0; }
+.page-admin-users .modal-close {
+  display: inline-flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.page-admin-users .modal-close:hover { color: var(--text); background: var(--button-secondary); }
+.page-admin-users .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .page-admin-users .navbar-user-trigger > span { display: none; }
+  .page-admin-users .navbar-user-trigger { padding-left: 3px; padding-right: 3px; }
+  .page-admin-users .users-page-heading { margin-bottom: 14px; }
+  .page-admin-users .user-list-toolbar { align-items: stretch; flex-direction: column; }
+  .page-admin-users .user-search-field,
+  .page-admin-users .user-role-filter { flex: 1 1 auto; width: 100%; }
+  .page-admin-users .user-create-card .form-group,
+  .page-admin-users .user-create-card .prefix-group,
+  .page-admin-users .user-create-card .submit-group { width: 100%; min-width: 100%; }
+  .page-admin-users .users-table-wrap { overflow: visible; border: 0; }
+  .page-admin-users #usersTable,
+  .page-admin-users #usersTable tbody { display: block; width: 100%; }
+  .page-admin-users #usersTable thead { display: none; }
+  .page-admin-users #usersTable tbody { display: grid; gap: 12px; }
+  .page-admin-users #usersTable tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: var(--button-shadow);
+  }
+  .page-admin-users #usersTable td { display: block; padding: 0; border: 0; background: transparent; }
+  .page-admin-users #usersTable tr:hover td { background: transparent; }
+  .page-admin-users .user-name-cell { grid-column: 1; grid-row: 1; }
+  .page-admin-users .user-username-cell { grid-column: 1; grid-row: 2; font-size: 12px; }
+  .page-admin-users .user-role-cell { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .page-admin-users .user-actions-cell { grid-column: 1 / -1; grid-row: 3; min-width: 0; margin-top: 8px; padding-top: 10px !important; border-top: 1px solid var(--border) !important; }
+  .page-admin-users .user-row-actions { justify-content: stretch; }
+  .page-admin-users .user-row-actions button { flex: 1 1 auto; }
+}
 /* ==========================================================================
    Page styles: admin/admin_audit.html (page-admin-audit)
    ========================================================================== */
@@ -1567,6 +1724,81 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
     .page-admin-enrollments .subject-code { display: inline-block; margin-left: 6px; color: var(--text-muted); font-size: 11px; }
     .page-admin-enrollments .btn-danger { background: var(--button-danger) !important; color: white !important; min-height: 32px; padding: 5px 12px; font-size: 12px; line-height: 1.25; border-radius: 999px !important; border-color: transparent !important; }
     .page-admin-enrollments .btn-danger:hover { background: var(--button-danger-strong) !important; }
+
+    /* Teacher-first UX refinement */
+    .page-admin-enrollments .container { background: var(--bg-page); }
+    .page-admin-enrollments .teacher-panel { width: 300px; min-width: 260px; box-shadow: 8px 0 24px rgba(22, 59, 115, 0.04); z-index: 1; }
+    .page-admin-enrollments .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 15px 16px 12px; background: #fff; border-bottom: 0; font-size: 15px; color: var(--text); }
+    .page-admin-enrollments .teacher-total { flex: 0 0 auto; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--button-tertiary); color: var(--text-muted); font-size: 11px; font-weight: 600; }
+    .page-admin-enrollments .tab-bar { padding: 0 8px; background: #fff; border-bottom: 1px solid var(--border); }
+    .page-admin-enrollments .tab-btn { min-height: 42px; padding: 9px 10px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--text-muted) !important; box-shadow: none !important; transform: none !important; font-weight: 600; }
+    .page-admin-enrollments .tab-btn:hover:not(:disabled) { background: var(--brand-hover) !important; color: var(--brand-dark) !important; box-shadow: none !important; transform: none !important; }
+    .page-admin-enrollments .tab-btn.active { color: var(--brand) !important; background: transparent !important; box-shadow: inset 0 -3px 0 var(--brand) !important; }
+    .page-admin-enrollments .tab-btn:focus-visible { outline: 3px solid var(--button-brand-ring); outline-offset: -3px; }
+    .page-admin-enrollments .teacher-search-wrap { padding: 12px; background: #fff; }
+    .page-admin-enrollments .teacher-search-wrap input { width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: var(--button-tertiary); color: var(--text); font: inherit; font-size: 13px; transition: border-color .15s, box-shadow .15s, background .15s; }
+    .page-admin-enrollments .teacher-search-wrap input:focus { border-color: var(--brand); background: #fff; box-shadow: 0 0 0 3px var(--button-brand-ring); }
+    .page-admin-enrollments .teacher-list { padding: 6px 0 12px; background: #fff; }
+    .page-admin-enrollments .teacher-list-empty { padding: 24px 16px; color: var(--text-muted); font-size: 13px; text-align: center; }
+    .page-admin-enrollments .teacher-item { width: 100%; min-height: 50px; margin: 0; padding: 10px 14px !important; border: 0 !important; border-bottom: 1px solid rgba(216, 225, 239, 0.65) !important; border-radius: 0 !important; background: #fff !important; color: var(--text) !important; box-shadow: none !important; transform: none !important; justify-content: space-between; text-align: left; font-size: 13.5px; font-weight: 500; }
+    .page-admin-enrollments .teacher-item:hover:not(:disabled) { background: var(--brand-hover) !important; color: var(--brand-dark) !important; box-shadow: none !important; transform: none !important; }
+    .page-admin-enrollments .teacher-item.selected { background: #edf4ff !important; color: var(--brand-dark) !important; box-shadow: inset 3px 0 0 var(--brand) !important; font-weight: 600; }
+    .page-admin-enrollments .teacher-item:focus-visible { position: relative; z-index: 2; outline: 3px solid var(--button-brand-ring); outline-offset: -3px; }
+    .page-admin-enrollments .teacher-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page-admin-enrollments .pair-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 28px; padding: 2px 8px; margin-left: 10px; box-shadow: 0 2px 7px rgba(36, 86, 166, 0.16); }
+    .page-admin-enrollments .right-content { padding: 24px clamp(20px, 3vw, 36px); background: var(--bg-page); }
+    .page-admin-enrollments .teacher-detail-shell { width: 100%; max-width: 980px; margin: 0 auto; }
+    .page-admin-enrollments .right-empty { padding: 24px; }
+    .page-admin-enrollments .empty-state-card { display: flex; flex-direction: column; align-items: center; width: min(100%, 420px); padding: 34px 28px; border: 1px dashed #c6d4e8; border-radius: 14px; background: rgba(255, 255, 255, 0.78); text-align: center; box-shadow: 0 12px 30px rgba(22, 59, 115, 0.05); }
+    .page-admin-enrollments .empty-state-card strong { margin-bottom: 6px; color: var(--text); font-size: 16px; }
+    .page-admin-enrollments .empty-state-card > span:last-child { max-width: 330px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+    .page-admin-enrollments .empty-state-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 14px; border-radius: 14px; background: var(--brand-light); color: var(--brand); }
+    .page-admin-enrollments .empty-state-icon svg { width: 25px; height: 25px; }
+    .page-admin-enrollments .teacher-detail-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 20px; margin-bottom: 12px; border: 1px solid rgba(36, 86, 166, 0.14); border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%); box-shadow: 0 8px 22px rgba(22, 59, 115, 0.06); }
+    .page-admin-enrollments .teacher-context-kicker { margin-bottom: 2px; color: var(--text-muted); font-size: 11.5px; font-weight: 600; }
+    .page-admin-enrollments .teacher-name-big { color: var(--text); font-size: 20px; line-height: 1.35; font-weight: 700; }
+    .page-admin-enrollments .teaching-count-badge { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 11px; border: 1px solid rgba(36, 86, 166, 0.18); border-radius: 999px; background: var(--brand-light); color: var(--brand-dark); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .page-admin-enrollments .add-pair-form { padding: 15px 18px 17px; margin-bottom: 22px; border-radius: 12px; background: #fff; box-shadow: 0 6px 18px rgba(22, 59, 115, 0.04); }
+    .page-admin-enrollments .add-pair-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+    .page-admin-enrollments .add-pair-form h3 { margin: 0 0 2px; color: var(--text); font-size: 14.5px; }
+    .page-admin-enrollments .add-pair-form p { margin: 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+    .page-admin-enrollments .add-pair-form .form-row { flex-wrap: nowrap; align-items: flex-end; gap: 10px; }
+    .page-admin-enrollments .add-pair-form .form-group { flex: 1 1 460px; min-width: 0; }
+    .page-admin-enrollments .add-pair-form select { width: 100%; min-height: 42px; }
+    .page-admin-enrollments .add-pair-form #addPairBtn { flex: 0 0 auto; min-width: 148px; min-height: 42px; white-space: nowrap; }
+    .page-admin-enrollments .teaching-list-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+    .page-admin-enrollments .teaching-list-head h3 { margin: 0 0 2px; color: var(--brand); font-size: 16px; font-weight: 700; }
+    .page-admin-enrollments .teaching-list-head p { margin: 0; color: var(--text-muted); font-size: 12.5px; }
+    .page-admin-enrollments .teaching-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: var(--button-shadow); }
+    .page-admin-enrollments #enrollmentTable { margin: 0; }
+    .page-admin-enrollments #enrollmentTable thead th { padding: 10px 14px; background: #eef3f9; color: var(--text); font-size: 12.5px; }
+    .page-admin-enrollments #enrollmentTable tbody td { padding: 11px 14px; }
+    .page-admin-enrollments #enrollmentTable .class-cell { width: 120px; color: var(--brand-dark); font-weight: 600; white-space: nowrap; }
+    .page-admin-enrollments #enrollmentTable .action-col,
+    .page-admin-enrollments #enrollmentTable .action-cell { width: 100px; text-align: right; }
+    .page-admin-enrollments #enrollmentTable .no-data { padding: 28px 16px; text-align: center; }
+    .page-admin-enrollments .remove-teaching-btn { min-height: 32px !important; padding: 5px 10px !important; border: 1px solid rgba(214, 73, 63, 0.24) !important; border-radius: 999px !important; background: #fff !important; color: var(--red-dark) !important; box-shadow: none !important; transform: none !important; font-size: 12px !important; }
+    .page-admin-enrollments .remove-teaching-btn svg { width: 14px; height: 14px; }
+    .page-admin-enrollments .remove-teaching-btn:hover:not(:disabled) { border-color: rgba(214, 73, 63, 0.42) !important; background: #fff2f0 !important; color: var(--red-dark) !important; box-shadow: none !important; transform: none !important; }
+    .page-admin-enrollments .dialog-icon.danger { background: #fff0ee; color: var(--red-dark); }
+
+    @media (max-width: 760px) {
+      .page-admin-enrollments .teacher-panel { min-width: 0; box-shadow: none; }
+      .page-admin-enrollments .panel-header { padding: 12px 14px 9px; }
+      .page-admin-enrollments .teacher-list { padding-bottom: 6px; }
+      .page-admin-enrollments .teacher-item { min-height: 48px; padding: 9px 13px !important; }
+      .page-admin-enrollments .right-content { padding: 14px 12px; }
+      .page-admin-enrollments .right-empty { min-height: 240px; padding: 12px; }
+      .page-admin-enrollments .empty-state-card { padding: 26px 20px; }
+      .page-admin-enrollments .teacher-detail-header { align-items: flex-start; padding: 15px 16px; }
+      .page-admin-enrollments .teacher-name-big { font-size: 18px; }
+      .page-admin-enrollments .add-pair-form { padding: 14px; }
+      .page-admin-enrollments .add-pair-form .form-row { flex-direction: column; align-items: stretch; }
+      .page-admin-enrollments .add-pair-form .form-group { flex: 1 1 auto; width: 100%; }
+      .page-admin-enrollments .add-pair-form #addPairBtn { width: 100%; min-width: 0; }
+      .page-admin-enrollments .teaching-list-head { align-items: flex-start; }
+      .page-admin-enrollments #enrollmentTable { min-width: 520px; }
+    }
 
     /* All pairs overview */
 .page-admin-enrollments .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
@@ -2851,6 +3083,36 @@ table td.student-name-col,
   .source-modal { width: 100%; max-width: 100%; max-height: 88vh; padding: 20px 16px; border-radius: 16px; }
   .source-modal .modal-actions button { flex: 1 1 140px; }
 }
+/* ===== ADMIN ENROLLMENTS — WORKSPACE UX OVERRIDES ===== */
+.page-admin-enrollments .teacher-panel { width: clamp(300px, 23vw, 340px); min-width: 280px; }
+.page-admin-enrollments .teacher-search-field { position: relative; }
+.page-admin-enrollments .teacher-search-wrap input { width: 100%; min-height: 42px; padding-left: 36px; padding-right: 38px; border-radius: 9px; }
+.page-admin-enrollments .teacher-search-icon { position: absolute; left: 11px; top: 50%; width: 17px; height: 17px; color: var(--text-muted); pointer-events: none; transform: translateY(-50%); }
+.page-admin-enrollments .teacher-search-clear { position: absolute; right: 6px; top: 50%; width: 30px; min-height: 30px; height: 30px; padding: 0 !important; border: 0 !important; border-radius: 50% !important; background: transparent !important; color: var(--text-muted) !important; box-shadow: none !important; font-size: 20px; line-height: 1; transform: translateY(-50%) !important; }
+.page-admin-enrollments .teacher-search-clear:hover:not(:disabled) { background: var(--button-secondary) !important; color: var(--text) !important; box-shadow: none !important; transform: translateY(-50%) !important; }
+.page-admin-enrollments .teacher-search-clear[hidden] { display: none !important; }
+.page-admin-enrollments .teacher-search-status { min-height: 17px; margin-top: 5px; color: var(--text-muted); font-size: 11.5px; line-height: 1.35; }
+.page-admin-enrollments .teacher-detail-shell { max-width: 1160px; }
+.page-admin-enrollments .teacher-workspace-grid { display: grid; grid-template-columns: minmax(300px, .78fr) minmax(0, 1.55fr); gap: 16px; align-items: start; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form { margin-bottom: 0; padding: 18px; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form .form-row { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 10px; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form .form-group { width: 100%; min-width: 0; flex: 1 1 auto; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form select { width: 100%; min-height: 44px; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form select optgroup { color: var(--brand-dark); font-weight: 700; }
+.page-admin-enrollments .teacher-workspace-grid .add-pair-form select option { color: var(--text); font-weight: 400; }
+.page-admin-enrollments .teacher-workspace-grid #addPairBtn { width: 100%; min-width: 0; min-height: 42px; }
+.page-admin-enrollments .assignment-helper { margin: 12px 0 0; padding-top: 11px; border-top: 1px dashed var(--border); color: var(--text-muted); font-size: 11.5px; line-height: 1.55; }
+.page-admin-enrollments .teaching-list-card { min-width: 0; padding: 17px 18px 18px; border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: 0 6px 18px rgba(22, 59, 115, .04); }
+.page-admin-enrollments .teaching-list-card .teaching-list-head { margin-top: 0; }
+@media (max-width: 980px) {
+  .page-admin-enrollments .teacher-workspace-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .page-admin-enrollments .teacher-panel { width: 100%; min-width: 0; }
+  .page-admin-enrollments .teacher-workspace-grid .add-pair-form,
+  .page-admin-enrollments .teaching-list-card { padding: 14px; }
+}
+
 </style>
 <script>
 var THAI_DATE_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];

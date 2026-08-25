@@ -22,18 +22,24 @@
 </div>
 
 <div class="container">
-  <h2 class="page-title" id="pageHeading">จัดการผู้ใช้</h2>
+  <div class="users-page-heading">
+    <div>
+      <h2 class="page-title" id="pageHeading">รายชื่อครูและผู้ดูแลระบบ</h2>
+      <p>ค้นหาและจัดการบัญชีผู้ใช้งาน หรือเพิ่มบัญชีใหม่ให้บุคลากรในโรงเรียน</p>
+    </div>
+  </div>
 
   <!-- Add user form -->
-  <div class="card">
+  <div class="card user-create-card">
     <h3>เพิ่มผู้ใช้ใหม่</h3>
+    <p class="card-description">กรอกข้อมูลที่มีเครื่องหมาย <span aria-hidden="true">*</span> ให้ครบ ผู้ใช้ใหม่จะต้องเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งแรก</p>
     <div class="form-row">
       <div class="form-group">
-        <label>ชื่อผู้ใช้ (username)</label>
-        <input type="text" id="newUsername" placeholder="username">
+        <label for="newUsername">ชื่อผู้ใช้ <span class="required-mark">*</span></label>
+        <input type="text" id="newUsername" placeholder="เช่น somchai" autocomplete="off" aria-required="true">
       </div>
-      <div class="form-group" style="min-width:110px">
-        <label>คำนำหน้า</label>
+      <div class="form-group prefix-group">
+        <label for="newPrefix">คำนำหน้า</label>
         <input type="text" id="newPrefix" list="prefixList" placeholder="คำนำหน้า">
         <datalist id="prefixList">
           <option value="เด็กชาย">
@@ -44,31 +50,31 @@
         </datalist>
       </div>
       <div class="form-group">
-        <label>ชื่อ</label>
-        <input type="text" id="newFirstName" placeholder="ชื่อ">
+        <label for="newFirstName">ชื่อ <span class="required-mark">*</span></label>
+        <input type="text" id="newFirstName" placeholder="ชื่อจริง" autocomplete="given-name" aria-required="true">
       </div>
       <div class="form-group">
-        <label>นามสกุล</label>
-        <input type="text" id="newLastName" placeholder="นามสกุล">
+        <label for="newLastName">นามสกุล <span class="required-mark">*</span></label>
+        <input type="text" id="newLastName" placeholder="นามสกุล" autocomplete="family-name" aria-required="true">
       </div>
       <div class="form-group">
-        <label>บทบาท</label>
+        <label for="newRole">บทบาท <span class="required-mark">*</span></label>
         <select id="newRole">
           <option value="teacher">ครู</option>
           <option value="admin">ผู้ดูแลระบบ</option>
         </select>
       </div>
       <div class="form-group">
-        <label>รหัสผ่านเริ่มต้น</label>
-        <input type="password" id="newPassword" placeholder="รหัสผ่าน">
+        <label for="newPassword">รหัสผ่านเริ่มต้น <span class="required-mark">*</span></label>
+        <input type="password" id="newPassword" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password" aria-required="true">
       </div>
-      <div class="form-group" style="justify-content:flex-end">
+      <div class="form-group submit-group">
         <button class="btn-primary" id="addUserBtn" onclick="addUser()">เพิ่มผู้ใช้</button>
       </div>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card user-import-card">
     <h3>นำเข้าผู้ใช้ด้วย CSV</h3>
     <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
       ใช้สำหรับเพิ่มหรืออัปเดตบัญชีครูและผู้ดูแลระบบ คอลัมน์ <code>username*</code>, <code>first_name*</code>, <code>last_name*</code>, <code>role*</code> ต้องกรอก และ <code>initial_password</code> ต้องกรอกสำหรับผู้ใช้ใหม่ หรือกรอกเมื่อต้องการเปลี่ยนรหัสผ่านของผู้ใช้เดิม
@@ -81,8 +87,28 @@
   </div>
 
   <!-- User list -->
-  <div class="card">
-    <h3>รายชื่อผู้ใช้ทั้งหมด</h3>
+  <div class="card user-list-card">
+    <div class="user-list-heading">
+      <div>
+        <h3>บัญชีผู้ใช้งาน</h3>
+        <p id="userListSummary" aria-live="polite">กำลังโหลดรายชื่อ...</p>
+      </div>
+    </div>
+    <div class="user-list-toolbar" role="search" aria-label="ค้นหารายชื่อผู้ใช้">
+      <div class="user-search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <label class="sr-only" for="userSearch">ค้นหาชื่อหรือชื่อผู้ใช้</label>
+        <input type="search" id="userSearch" placeholder="ค้นหาชื่อหรือชื่อผู้ใช้" oninput="applyUserFilters()">
+      </div>
+      <div class="user-role-filter">
+        <label for="userRoleFilter">บทบาท</label>
+        <select id="userRoleFilter" onchange="applyUserFilters()">
+          <option value="all">ทั้งหมด</option>
+          <option value="teacher">ครู</option>
+          <option value="admin">ผู้ดูแลระบบ</option>
+        </select>
+      </div>
+    </div>
     <div class="loading-msg" id="usersLoading">
       <div class="skeleton-table">
         <div class="skeleton-table-row skeleton-table-head"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
@@ -92,27 +118,37 @@
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
       </div>
     </div>
-    <table id="usersTable" style="display:none">
-      <thead>
-        <tr>
-          <th>ชื่อผู้ใช้</th>
-          <th>ชื่อ-สกุล</th>
-          <th>บทบาท</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="usersBody"></tbody>
-    </table>
+    <div class="users-table-wrap">
+      <table id="usersTable" style="display:none">
+        <thead>
+          <tr>
+            <th>ชื่อผู้ใช้</th>
+            <th>ชื่อ-สกุล</th>
+            <th>บทบาท</th>
+            <th class="user-actions-heading">การจัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    <div class="user-empty-state" id="usersEmpty" hidden>
+      <strong>ไม่พบผู้ใช้ที่ตรงกับการค้นหา</strong>
+      <span>ลองเปลี่ยนคำค้นหาหรือตัวกรองบทบาท</span>
+      <button class="btn-secondary" type="button" onclick="clearUserFilters()">ล้างตัวกรอง</button>
+    </div>
   </div>
 </div>
 
 <!-- Edit user modal -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <h3>แก้ไขผู้ใช้ — <span id="editTargetUsername"></span></h3>
+<div class="modal-overlay" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+  <div class="modal" tabindex="-1">
+    <div class="modal-heading">
+      <h3 id="editModalTitle">แก้ไขผู้ใช้ — <span id="editTargetUsername"></span></h3>
+      <button class="modal-close" type="button" onclick="closeEditModal()" aria-label="ปิดหน้าต่างแก้ไข">×</button>
+    </div>
     <div class="form-row">
       <div class="form-group" style="min-width:110px">
-        <label>คำนำหน้า</label>
+        <label for="editPrefix">คำนำหน้า</label>
         <input type="text" id="editPrefix" list="editPrefixList" placeholder="คำนำหน้า">
         <datalist id="editPrefixList">
           <option value="เด็กชาย">
@@ -123,16 +159,16 @@
         </datalist>
       </div>
       <div class="form-group">
-        <label>ชื่อ</label>
+        <label for="editFirstName">ชื่อ</label>
         <input type="text" id="editFirstName" placeholder="ชื่อ">
       </div>
       <div class="form-group">
-        <label>นามสกุล</label>
+        <label for="editLastName">นามสกุล</label>
         <input type="text" id="editLastName" placeholder="นามสกุล">
       </div>
     </div>
     <div class="form-group">
-      <label>บทบาท</label>
+      <label for="editRole">บทบาท</label>
       <select id="editRole">
         <option value="teacher">ครู</option>
         <option value="admin">ผู้ดูแลระบบ</option>
@@ -146,12 +182,15 @@
 </div>
 
 <!-- Reset password modal -->
-<div class="modal-overlay" id="resetModal">
-  <div class="modal">
-    <h3>รีเซตรหัสผ่าน — <span id="resetTargetName"></span></h3>
+<div class="modal-overlay" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+  <div class="modal" tabindex="-1">
+    <div class="modal-heading">
+      <h3 id="resetModalTitle">รีเซตรหัสผ่าน — <span id="resetTargetName"></span></h3>
+      <button class="modal-close" type="button" onclick="closeResetModal()" aria-label="ปิดหน้าต่างรีเซตรหัสผ่าน">×</button>
+    </div>
     <div class="form-group">
-      <label>รหัสผ่านใหม่</label>
-      <input type="password" id="resetNewPwd" placeholder="รหัสผ่านใหม่">
+      <label for="resetNewPwd">รหัสผ่านใหม่</label>
+      <input type="password" id="resetNewPwd" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password">
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="confirmResetBtn" onclick="confirmReset()">บันทึก</button>
@@ -166,6 +205,8 @@
 var TOKEN = '<?= data.token || '' ?>';
 var resetUserId = null;
 var editUserId = null;
+var allUsers = [];
+var lastModalTrigger = null;
 
 function navigate(page) {
   showNavLoading();
@@ -327,7 +368,8 @@ function loadUsers() {
   google.script.run
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
-      renderUsers((result && result.users) ? result.users : []);
+      allUsers = (result && result.users) ? result.users : [];
+      applyUserFilters();
     })
     .withFailureHandler(function(err) {
       showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
@@ -335,24 +377,53 @@ function loadUsers() {
     .getUsersListForPage(TOKEN);
 }
 
+function applyUserFilters() {
+  var searchEl = document.getElementById('userSearch');
+  var roleEl = document.getElementById('userRoleFilter');
+  var query = String(searchEl ? searchEl.value : '').trim().toLocaleLowerCase('th');
+  var role = roleEl ? roleEl.value : 'all';
+  var filtered = allUsers.filter(function(user) {
+    var matchesRole = role === 'all' || String(user.role) === role;
+    var haystack = (String(user.username || '') + ' ' + String(user.full_name || '')).toLocaleLowerCase('th');
+    return matchesRole && (!query || haystack.indexOf(query) !== -1);
+  });
+  renderUsers(filtered);
+  var summary = document.getElementById('userListSummary');
+  if (summary) {
+    summary.textContent = filtered.length === allUsers.length
+      ? 'ทั้งหมด ' + allUsers.length + ' บัญชี'
+      : 'พบ ' + filtered.length + ' จาก ' + allUsers.length + ' บัญชี';
+  }
+}
+
+function clearUserFilters() {
+  document.getElementById('userSearch').value = '';
+  document.getElementById('userRoleFilter').value = 'all';
+  applyUserFilters();
+  document.getElementById('userSearch').focus();
+}
+
 function renderUsers(users) {
   document.getElementById('usersLoading').style.display = 'none';
   var tbody = document.getElementById('usersBody');
+  var table = document.getElementById('usersTable');
+  var empty = document.getElementById('usersEmpty');
   tbody.innerHTML = '';
   users.forEach(function(u) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-user-id', u.user_id);
     tr.setAttribute('data-username', u.username);
     tr.innerHTML =
-      '<td>' + escHtml(u.username) + '</td>' +
-      '<td>' + escHtml(u.full_name) + '</td>' +
-      '<td><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
-      '<td><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button> ' +
-      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">รีเซตรหัสผ่าน</button> ' +
-      '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></td>';
+      '<td class="user-username-cell"><span>@' + escHtml(u.username) + '</span></td>' +
+      '<td class="user-name-cell"><strong>' + escHtml(u.full_name) + '</strong></td>' +
+      '<td class="user-role-cell"><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
+      '<td class="user-actions-cell"><div class="user-row-actions"><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button>' +
+      '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button>' +
+      '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">ลบ</button></div></td>';
     tbody.appendChild(tr);
   });
-  document.getElementById('usersTable').style.display = 'table';
+  table.style.display = users.length ? '' : 'none';
+  empty.hidden = users.length !== 0;
 }
 
 function escHtml(s) {
@@ -375,10 +446,12 @@ function addUser() {
 
   var btn = document.getElementById('addUserBtn');
   btn.disabled = true;
+  btn.textContent = 'กำลังเพิ่ม...';
 
   google.script.run
     .withSuccessHandler(function(result) {
       btn.disabled = false;
+      btn.textContent = 'เพิ่มผู้ใช้';
       if (result.error) { showToast(result.error, 'error'); return; }
       showToast('เพิ่มผู้ใช้ ' + username + ' สำเร็จ', 'success');
       document.getElementById('newUsername').value = '';
@@ -392,22 +465,26 @@ function addUser() {
     })
     .withFailureHandler(function(err) {
       btn.disabled = false;
+      btn.textContent = 'เพิ่มผู้ใช้';
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
     .serverAddUser(TOKEN, username, full_name, role, password);
 }
 
 function openResetModal(userId, fullName) {
+  lastModalTrigger = document.activeElement;
   resetUserId = userId;
   document.getElementById('resetTargetName').textContent = fullName;
   document.getElementById('resetNewPwd').value = '';
   document.getElementById('resetModal').classList.add('open');
   document.getElementById('confirmResetBtn').disabled = false;
+  setTimeout(function() { document.getElementById('resetNewPwd').focus(); }, 0);
 }
 
 function closeResetModal() {
   resetUserId = null;
   document.getElementById('resetModal').classList.remove('open');
+  restoreModalFocus();
 }
 
 function confirmReset() {
@@ -432,6 +509,7 @@ function confirmReset() {
 }
 
 function openEditModal(userId, username, fullName, role) {
+  lastModalTrigger = document.activeElement;
   editUserId = userId;
   document.getElementById('editTargetUsername').textContent = username;
   document.getElementById('editRole').value = role;
@@ -459,11 +537,18 @@ function openEditModal(userId, username, fullName, role) {
   document.getElementById('editLastName').value = lastName;
   document.getElementById('editModal').classList.add('open');
   document.getElementById('confirmEditBtn').disabled = false;
+  setTimeout(function() { document.getElementById('editPrefix').focus(); }, 0);
 }
 
 function closeEditModal() {
   editUserId = null;
   document.getElementById('editModal').classList.remove('open');
+  restoreModalFocus();
+}
+
+function restoreModalFocus() {
+  if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
+  lastModalTrigger = null;
 }
 
 function confirmEdit() {
@@ -509,6 +594,20 @@ function deleteUser(userId, fullName) {
     })
     .serverDeleteUser(TOKEN, userId);
 }
+
+document.addEventListener('keydown', function(event) {
+  if (event.key !== 'Escape') return;
+  if (document.getElementById('editModal').classList.contains('open')) closeEditModal();
+  else if (document.getElementById('resetModal').classList.contains('open')) closeResetModal();
+});
+
+['editModal', 'resetModal'].forEach(function(modalId) {
+  document.getElementById(modalId).addEventListener('click', function(event) {
+    if (event.target !== this) return;
+    if (modalId === 'editModal') closeEditModal();
+    else closeResetModal();
+  });
+});
 
 // Load users on page open
 loadUsers();
