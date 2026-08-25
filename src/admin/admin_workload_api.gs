@@ -4,7 +4,7 @@
 var WORKLOAD_CACHE_KEY = 'workload_v1';
 var WORKLOAD_CACHE_TTL = 60; // seconds
 
-function getWorkloadData() {
+function getWorkloadData_() {
   var cache = CacheService.getScriptCache();
   var cached = cache.get(WORKLOAD_CACHE_KEY);
   if (cached) {
@@ -92,7 +92,7 @@ function clientGetWorkloadData(token) {
   try {
     var session = getSession(token);
     requireAdmin(session);
-    return getWorkloadData();
+    return getWorkloadData_();
   } catch (err) {
     return { error: err.message };
   }

@@ -4,14 +4,10 @@
 // Returns: { school_info, class_info, subject_info, teacher_name, homeroom_teacher_name,
 //            total_students, grade_dist, char_dist, rtw_dist, dev_activity }
 function getReportData(token, class_id, subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  var subj = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (!subj) throw new Error('ไม่พบวิชา: ' + subject_id);
+  var session = requireSession_(token);
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var cls = access.class_info;
+  var subj = access.subject_info;
 
   // School info (single-row table)
   var schoolRows = dbGetAll('SchoolInfo');
@@ -135,7 +131,7 @@ function getReportData(token, class_id, subject_id) {
     rtw_dist: rtw_dist,
     dev_counts: devCounts,
     dev_students: dev_students,
-    can_edit: session.role === 'admin' || (enrollment.length > 0 && enrollment[0].teacher_user_id === session.user_id)
+    can_edit: true
   };
 }
 
@@ -481,68 +477,27 @@ function serverExportReportPdf(token, class_id, subject_id) {
 // Save กิจกรรมพัฒนาผู้เรียน results for the report page.
 // rows: array of { student_id, result }
 function serverSaveDevActivity(token, class_id, subject_id, rows) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  // Authorization check
-  if (session.role !== 'admin') {
-    var enrollment = dbGetAll('Enrollments').filter(function(e) {
-      return e.class_id === class_id && e.subject_id === subject_id && e.teacher_user_id === session.user_id;
-    });
-    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลของวิชานี้');
-  }
+  var session = requireSession_(token);
+  requireSubjectAccess_(session, class_id, subject_id);
 
   if (!rows || rows.length === 0) return { ok: true };
+  validateRowsBelongToClass_(rows, class_id);
 
-  var lock = LockService.getDocumentLock();
-  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
-  try {
-    var sheet = getSheet('DevActivity');
-    var data = sheet.getDataRange().getValues();
-    var headers = data[0];
-    var idCol = headers.indexOf('id');
-    var sidCol = headers.indexOf('student_id');
-    var clsCol = headers.indexOf('class_id');
-    var subjCol = headers.indexOf('subject_id');
-    var resCol = headers.indexOf('result');
-    var updByCol = headers.indexOf('updated_by');
-    var updAtCol = headers.indexOf('updated_at');
-
-    var now = new Date().toISOString();
-
-    rows.forEach(function(row) {
-      var result = row.result || '';
-      var student_id = row.student_id;
-
-      var found = false;
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][sidCol] === student_id && data[i][subjCol] === subject_id) {
-          sheet.getRange(i + 1, resCol + 1).setValue(result);
-          sheet.getRange(i + 1, updByCol + 1).setValue(session.user_id);
-          sheet.getRange(i + 1, updAtCol + 1).setValue(now);
-          data[i][resCol] = result;
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        var newId = generateId('dev');
-        var newRow = headers.map(function() { return ''; });
-        newRow[idCol] = newId;
-        newRow[sidCol] = student_id;
-        newRow[clsCol] = class_id;
-        newRow[subjCol] = subject_id;
-        newRow[resCol] = result;
-        newRow[updByCol] = session.user_id;
-        newRow[updAtCol] = now;
-        sheet.appendRow(newRow);
-        data.push(newRow);
-      }
-    });
-  } finally {
-    lock.releaseLock();
-  }
+  var allowedResults = { '': true, 'ผ่าน': true, 'ไม่ผ่าน': true, 'ร': true, 'มส': true };
+  var now = new Date().toISOString();
+  var upsertRows = rows.map(function(row) {
+    var result = String(row.result || '');
+    if (!allowedResults[result]) throw new Error('ผลกิจกรรมพัฒนาผู้เรียนไม่ถูกต้อง');
+    return {
+      student_id: String(row.student_id),
+      class_id: String(class_id),
+      subject_id: String(subject_id),
+      result: result,
+      updated_by: session.user_id,
+      updated_at: now
+    };
+  });
+  dbBatchUpsertRows_('DevActivity', ['student_id', 'subject_id'], upsertRows, 'id', 'dev');
 
   appendAuditLog(session.user_id, 'DevActivity', subject_id, null,
     { class_id: class_id, subject_id: subject_id, rows_saved: rows.length });

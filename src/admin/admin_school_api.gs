@@ -584,10 +584,19 @@ function serverDeleteSubject(token, subject_id) {
 }
 
 function getTeachersList(token) {
-  var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
-  var users = dbGetAll('Users');
-  return { teachers: users };
+  requireAdminToken_(token);
+  var users = dbGetAll('Users').filter(function(user) { return user.role === 'teacher'; });
+  return {
+    teachers: users.map(function(user) {
+      return {
+        user_id: user.user_id,
+        username: user.username,
+        full_name: user.full_name,
+        avatar: user.avatar || '',
+        role: user.role
+      };
+    })
+  };
 }
 
 // ── Subject Weights (US-010) ──────────────────────────────────────────────────

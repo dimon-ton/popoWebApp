@@ -1,12 +1,12 @@
-// One-time setup script. Run setupDatabase() from the Apps Script editor:
+// One-time setup script. Run setupDatabase_() from the Apps Script editor:
 //   1. Open the Apps Script project.
-//   2. Select "setupDatabase" in the function dropdown.
+//   2. Select "setupDatabase_" in the function dropdown.
 //   3. Click Run. Approve the OAuth prompts.
-//   4. The script creates a new Google Sheet with all 14 tabs (headers in row 1),
+//   4. The script creates a new Google Sheet with all 16 tabs (headers in row 1),
 //      seeds a default admin user, and stores the Sheet's ID in
 //      Script Property DB_SHEET_ID so the rest of the app finds it.
 //
-// To re-run safely: setupDatabase() is idempotent — existing tabs are left
+// To re-run safely: setupDatabase_() is idempotent — existing tabs are left
 // alone, missing tabs are added with the correct headers, and the admin user
 // is only re-created if Users is empty. To start over from scratch, delete
 // DB_SHEET_ID from Project Settings → Script properties first.
@@ -37,7 +37,7 @@ var TAB_ORDER = [
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 
-function setupDatabase() {
+function setupDatabase_() {
   var props = PropertiesService.getScriptProperties();
   var existingId = props.getProperty('DB_SHEET_ID');
 
@@ -70,7 +70,7 @@ function setupDatabase() {
   // Seed a default admin if Users is empty.
   var usersSheet = ss.getSheetByName('Users');
   if (usersSheet.getLastRow() < 2) {
-    seedDefaultAdmin();
+    seedDefaultAdmin_();
   }
 
   Logger.log('Setup complete.');
@@ -107,7 +107,7 @@ function ensureTab(ss, tabName, headers) {
   }
 }
 
-function seedDefaultAdmin() {
+function seedDefaultAdmin_() {
   // Creates a default admin user. CHANGE THE PASSWORD IMMEDIATELY AFTER FIRST LOGIN.
   var defaultPassword = 'admin1234';
   var salt = Utilities.getUuid();
@@ -125,19 +125,19 @@ function seedDefaultAdmin() {
   Logger.log('⚠ CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN.');
 }
 
-function setTestApiToken(token) {
-  // Convenience for FR-14. Call setTestApiToken('your-secret-here') from the editor.
+function setTestApiToken_(token) {
+  // Convenience for FR-14. Call setTestApiToken_('your-secret-here') from the editor.
   if (!token) throw new Error('Provide a non-empty token.');
   PropertiesService.getScriptProperties().setProperty('TEST_API_TOKEN', token);
   Logger.log('TEST_API_TOKEN set.');
 }
 
-function disableTestApi() {
+function disableTestApi_() {
   PropertiesService.getScriptProperties().setProperty('TEST_API_ENABLED', 'false');
   Logger.log('Test API disabled.');
 }
 
-function enableTestApi() {
+function enableTestApi_() {
   PropertiesService.getScriptProperties().setProperty('TEST_API_ENABLED', 'true');
   Logger.log('Test API enabled.');
 }

@@ -394,7 +394,7 @@ function addUser() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddUser(username, full_name, role, password);
+    .serverAddUser(TOKEN, username, full_name, role, password);
 }
 
 function openResetModal(userId, fullName) {
@@ -428,7 +428,7 @@ function confirmReset() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverResetPassword(resetUserId, newPwd);
+    .serverResetPassword(TOKEN, resetUserId, newPwd);
 }
 
 function openEditModal(userId, username, fullName, role) {
@@ -491,7 +491,7 @@ function confirmEdit() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverEditUser(editUserId, fullName, role);
+    .serverEditUser(TOKEN, editUserId, fullName, role);
 }
 
 function deleteUser(userId, fullName) {

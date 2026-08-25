@@ -3,14 +3,8 @@
 // Returns students for a class, ordered by seq_no.
 // Access: admin OR homeroom teacher of the class.
 function getStudentsList(token, class_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  var isAdmin = session.role === 'admin';
-  var isHomeroom = classHasHomeroomTeacher(cls, session.user_id);
+  var session = requireSession_(token);
+  var cls = requireClassRosterAccess_(session, class_id);
 
   var students = dbFind('Students', 'class_id', class_id);
   students.sort(function(a, b) {
@@ -20,7 +14,7 @@ function getStudentsList(token, class_id) {
   return {
     students: sanitizeRows(students),
     class_info: sanitizeRow(withClassLabel(cls)),
-    can_edit: isAdmin || isHomeroom
+    can_edit: true
   };
 }
 
@@ -162,33 +156,35 @@ function serverAddStudent(token, class_id, seq_no, student_code, citizen_id, ful
   var normalizedDob = normalizeStudentDobForStorage(dob);
   if (!normalizedDob.ok) throw new Error('รูปแบบวันเกิดไม่ถูกต้อง กรุณาใช้รูปแบบ yyyy-mm-dd เช่น 2017-01-01');
 
-  // citizen_id uniqueness within class (if provided)
-  if (citizen_id && citizen_id.trim() !== '') {
-    var existing = dbFind('Students', 'class_id', class_id);
-    for (var i = 0; i < existing.length; i++) {
-      if (existing[i].citizen_id === citizen_id.trim()) {
-        throw new Error('เลขประจำตัวประชาชนซ้ำในชั้นเรียนนี้');
+  return withDbLock_(function() {
+    // Uniqueness check and insert are under the same lock.
+    if (citizen_id && citizen_id.trim() !== '') {
+      var existing = dbFind('Students', 'class_id', class_id);
+      for (var i = 0; i < existing.length; i++) {
+        if (String(existing[i].citizen_id || '').trim() === citizen_id.trim()) {
+          throw new Error('เลขประจำตัวประชาชนซ้ำในชั้นเรียนนี้');
+        }
       }
     }
-  }
 
-  var student_id = generateId('student');
-  dbInsert('Students', {
-    student_id: student_id,
-    class_id: class_id,
-    seq_no: parseInt(seq_no) || 0,
-    student_code: student_code || '',
-    citizen_id: citizen_id || '',
-    full_name: full_name || '',
-    dob: normalizedDob.value,
-    note: note || ''
+    var student_id = generateId('student');
+    dbInsertUnlocked_('Students', {
+      student_id: student_id,
+      class_id: class_id,
+      seq_no: parseInt(seq_no) || 0,
+      student_code: student_code || '',
+      citizen_id: citizen_id || '',
+      full_name: full_name || '',
+      dob: normalizedDob.value,
+      note: note || ''
+    });
+
+    appendAuditLogUnlocked_(session.user_id, 'Students', student_id, null, {
+      class_id: class_id, seq_no: seq_no, full_name: full_name
+    });
+
+    return { ok: true, student_id: student_id };
   });
-
-  appendAuditLog(session.user_id, 'Students', student_id, null, {
-    class_id: class_id, seq_no: seq_no, full_name: full_name
-  });
-
-  return { ok: true, student_id: student_id };
 }
 
 // Update a student's note (and other editable fields). Only admin or homeroom teacher.
@@ -207,32 +203,34 @@ function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id
   var normalizedDob = dob !== undefined ? normalizeStudentDobForStorage(dob) : { ok: true, value: student.dob };
   if (!normalizedDob.ok) throw new Error('รูปแบบวันเกิดไม่ถูกต้อง กรุณาใช้รูปแบบ yyyy-mm-dd เช่น 2017-01-01');
 
-  // citizen_id uniqueness within class (if changed)
-  if (citizen_id && citizen_id.trim() !== '' && citizen_id.trim() !== student.citizen_id) {
-    var classStudents = dbFind('Students', 'class_id', student.class_id);
-    for (var i = 0; i < classStudents.length; i++) {
-      if (classStudents[i].student_id !== student_id && classStudents[i].citizen_id === citizen_id.trim()) {
-        throw new Error('เลขประจำตัวประชาชนซ้ำในชั้นเรียนนี้');
+  return withDbLock_(function() {
+    // Uniqueness check and update are atomic.
+    if (citizen_id && citizen_id.trim() !== '' && citizen_id.trim() !== String(student.citizen_id || '').trim()) {
+      var classStudents = dbFind('Students', 'class_id', student.class_id);
+      for (var i = 0; i < classStudents.length; i++) {
+        if (classStudents[i].student_id !== student_id && String(classStudents[i].citizen_id || '').trim() === citizen_id.trim()) {
+          throw new Error('เลขประจำตัวประชาชนซ้ำในชั้นเรียนนี้');
+        }
       }
     }
-  }
 
-  var oldVal = JSON.parse(JSON.stringify(student));
-  var updated = dbUpdate('Students', 'student_id', student_id, {
-    seq_no: parseInt(seq_no) || student.seq_no,
-    student_code: student_code !== undefined ? student_code : student.student_code,
-    citizen_id: citizen_id !== undefined ? citizen_id : student.citizen_id,
-    full_name: full_name !== undefined ? full_name : student.full_name,
-    dob: dob !== undefined ? normalizedDob.value : student.dob,
-    note: note !== undefined ? note : student.note
+    var oldVal = JSON.parse(JSON.stringify(student));
+    var updated = dbUpdateUnlocked_('Students', 'student_id', student_id, {
+      seq_no: parseInt(seq_no) || student.seq_no,
+      student_code: student_code !== undefined ? student_code : student.student_code,
+      citizen_id: citizen_id !== undefined ? citizen_id : student.citizen_id,
+      full_name: full_name !== undefined ? full_name : student.full_name,
+      dob: dob !== undefined ? normalizedDob.value : student.dob,
+      note: note !== undefined ? note : student.note
+    });
+    if (!updated) throw new Error('ไม่สามารถบันทึกข้อมูลนักเรียนได้');
+
+    appendAuditLogUnlocked_(session.user_id, 'Students', student_id, oldVal, {
+      seq_no: seq_no, student_code: student_code, full_name: full_name, dob: normalizedDob.value, note: note
+    });
+
+    return { ok: true };
   });
-  if (!updated) throw new Error('ไม่สามารถบันทึกข้อมูลนักเรียนได้');
-
-  appendAuditLog(session.user_id, 'Students', student_id, oldVal, {
-    seq_no: seq_no, student_code: student_code, full_name: full_name, dob: normalizedDob.value, note: note
-  });
-
-  return { ok: true };
 }
 
 // Delete a student. Only admin or homeroom teacher.
@@ -248,9 +246,29 @@ function serverDeleteStudent(token, student_id) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
-  appendAuditLog(session.user_id, 'Students', student_id, student, null);
-  dbDelete('Students', 'student_id', student_id);
-  return { ok: true };
+  return withDbLock_(function() {
+    var childTabs = [
+      'Attendance',
+      'IndicatorScores',
+      'SummativeScores',
+      'Characteristics',
+      'ReadThinkWrite',
+      'DevActivity'
+    ];
+    var relatedDeleted = 0;
+    childTabs.forEach(function(tabName) {
+      relatedDeleted += dbDeleteWhereExactUnlocked_(tabName, 'student_id', student_id);
+    });
+
+    var deleted = dbDeleteUnlocked_('Students', 'student_id', student_id);
+    if (!deleted) throw new Error('ไม่สามารถลบนักเรียนได้');
+
+    appendAuditLogUnlocked_(session.user_id, 'Students', student_id, student, {
+      deleted: true,
+      related_rows_deleted: relatedDeleted
+    });
+    return { ok: true, related_rows_deleted: relatedDeleted };
+  });
 }
 
 function serverImportStudentsCSV(token, class_id, rows) {
@@ -264,6 +282,7 @@ function serverImportStudentsCSV(token, class_id, rows) {
     throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
   }
 
+  return withDbLock_(function() {
   var existing = dbFind('Students', 'class_id', class_id);
   var byId = {};
   var byCode = {};
@@ -318,7 +337,7 @@ function serverImportStudentsCSV(token, class_id, rows) {
 
     if (target) {
       var oldVal = JSON.parse(JSON.stringify(target));
-      dbUpdate('Students', 'student_id', target.student_id, {
+      dbUpdateUnlocked_('Students', 'student_id', target.student_id, {
         seq_no: seqNo,
         student_code: studentCode,
         citizen_id: citizenId,
@@ -334,7 +353,7 @@ function serverImportStudentsCSV(token, class_id, rows) {
       target.note = note;
       if (studentCode) byCode[studentCode] = target;
       if (citizenId) byCitizenId[citizenId] = target;
-      appendAuditLog(session.user_id, 'Students', target.student_id, oldVal, { imported: true, action: 'update' });
+      appendAuditLogUnlocked_(session.user_id, 'Students', target.student_id, oldVal, { imported: true, action: 'update' });
       updated++;
     } else {
       var newId = studentId || generateId('student');
@@ -348,16 +367,17 @@ function serverImportStudentsCSV(token, class_id, rows) {
         dob: dob,
         note: note
       };
-      dbInsert('Students', newStudent);
+      dbInsertUnlocked_('Students', newStudent);
       byId[newId] = newStudent;
       if (studentCode) byCode[studentCode] = newStudent;
       if (citizenId) byCitizenId[citizenId] = newStudent;
-      appendAuditLog(session.user_id, 'Students', newId, null, { imported: true, action: 'create', class_id: class_id });
+      appendAuditLogUnlocked_(session.user_id, 'Students', newId, null, { imported: true, action: 'create', class_id: class_id });
       created++;
     }
   });
 
   return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+  });
 }
 
 function classHasHomeroomTeacher(cls, userId) {

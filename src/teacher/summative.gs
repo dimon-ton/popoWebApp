@@ -52,25 +52,11 @@ function parseMakeupGrade(value, student_id) {
 // Returns: { students, weights, scores, subject_info, class_info, can_edit }
 // scores: map of student_id -> { coursework, midterm, final, total, computed_grade, makeup_grade, final_grade }
 function getSummativeData(token, class_id, subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  var subj = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (!subj) throw new Error('ไม่พบวิชา: ' + subject_id);
-
-  // Authorization: admin or teacher assigned to this (class, subject)
-  var can_edit = false;
-  if (session.role === 'admin') {
-    can_edit = true;
-  } else {
-    var enrollment = dbGetAll('Enrollments').filter(function(e) {
-      return e.class_id === class_id && e.subject_id === subject_id && e.teacher_user_id === session.user_id;
-    });
-    can_edit = enrollment.length > 0;
-  }
+  var session = requireSession_(token);
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var cls = access.class_info;
+  var subj = access.subject_info;
+  var can_edit = true;
 
   // Get students ordered by seq_no
   var students = dbFind('Students', 'class_id', class_id);
@@ -114,110 +100,43 @@ function getSummativeData(token, class_id, subject_id) {
 // rows: array of { student_id, coursework, midterm, final, makeup_grade }
 // Uses upsert pattern inside one LockService acquisition.
 function serverSaveSummative(token, class_id, subject_id, rows) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  // Authorization check
-  if (session.role !== 'admin') {
-    var enrollment = dbGetAll('Enrollments').filter(function(e) {
-      return e.class_id === class_id && e.subject_id === subject_id && e.teacher_user_id === session.user_id;
-    });
-    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์แก้ไขคะแนนของวิชานี้');
-  }
+  var session = requireSession_(token);
+  requireSubjectAccess_(session, class_id, subject_id);
 
   if (!rows || rows.length === 0) return { ok: true };
+  validateRowsBelongToClass_(rows, class_id);
 
   var maxes = getSummativeScoreMaxes(subject_id);
 
-  var lock = LockService.getDocumentLock();
-  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
-  try {
-    var sheet = getSheet('SummativeScores');
-    var data = sheet.getDataRange().getValues();
-    var headers = data[0];
-    var idCol = headers.indexOf('id');
-    var sidCol = headers.indexOf('student_id');
-    var subjCol = headers.indexOf('subject_id');
-    var cwCol = headers.indexOf('coursework');
-    var midCol = headers.indexOf('midterm');
-    var finCol = headers.indexOf('final');
-    var totCol = headers.indexOf('total');
-    var cgCol = headers.indexOf('computed_grade');
-    var mgCol = headers.indexOf('makeup_grade');
-    var fgCol = headers.indexOf('final_grade');
-    var updByCol = headers.indexOf('updated_by');
-    var updAtCol = headers.indexOf('updated_at');
+  var now = new Date().toISOString();
+  var upsertRows = rows.map(function(row) {
+    var student_id = String(row.student_id);
+    var cw = parseSummativeScore(row.coursework, maxes.coursework, 'ระหว่างเรียน', student_id);
+    var mid = parseSummativeScore(row.midterm, maxes.midterm, 'สอบกลางภาค', student_id);
+    var fin = parseSummativeScore(row.final, maxes.final, 'สอบปลายภาค', student_id);
+    var makeup = parseMakeupGrade(row.makeup_grade, student_id);
 
-    var now = new Date().toISOString();
-
-    rows.forEach(function(row) {
-      var student_id = row.student_id;
-      var cw = parseSummativeScore(row.coursework, maxes.coursework, 'ระหว่างเรียน', student_id);
-      var mid = parseSummativeScore(row.midterm, maxes.midterm, 'สอบกลางภาค', student_id);
-      var fin = parseSummativeScore(row.final, maxes.final, 'สอบปลายภาค', student_id);
-      var makeup = parseMakeupGrade(row.makeup_grade, student_id);
-
-      var total = '';
-      if (cw !== '' && mid !== '' && fin !== '') {
-        total = Number(cw) + Number(mid) + Number(fin);
-      } else if (cw !== '' || mid !== '' || fin !== '') {
-        var sum = 0;
-        if (cw !== '') sum += Number(cw);
-        if (mid !== '') sum += Number(mid);
-        if (fin !== '') sum += Number(fin);
-        total = sum;
-      }
-
-      var computed_grade = computeGrade(total);
-      var final_grade = (makeup !== '' && !isNaN(makeup)) ? makeup : computed_grade;
-
-      // Find existing row to update
-      var found = false;
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][sidCol] === student_id && data[i][subjCol] === subject_id) {
-          sheet.getRange(i + 1, cwCol + 1).setValue(cw);
-          sheet.getRange(i + 1, midCol + 1).setValue(mid);
-          sheet.getRange(i + 1, finCol + 1).setValue(fin);
-          sheet.getRange(i + 1, totCol + 1).setValue(total);
-          sheet.getRange(i + 1, cgCol + 1).setValue(computed_grade);
-          sheet.getRange(i + 1, mgCol + 1).setValue(makeup);
-          sheet.getRange(i + 1, fgCol + 1).setValue(final_grade);
-          sheet.getRange(i + 1, updByCol + 1).setValue(session.user_id);
-          sheet.getRange(i + 1, updAtCol + 1).setValue(now);
-          data[i][cwCol] = cw;
-          data[i][midCol] = mid;
-          data[i][finCol] = fin;
-          data[i][totCol] = total;
-          data[i][cgCol] = computed_grade;
-          data[i][mgCol] = makeup;
-          data[i][fgCol] = final_grade;
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        var newId = generateId('ssum');
-        var newRow = headers.map(function() { return ''; });
-        newRow[idCol] = newId;
-        newRow[sidCol] = student_id;
-        newRow[subjCol] = subject_id;
-        newRow[cwCol] = cw;
-        newRow[midCol] = mid;
-        newRow[finCol] = fin;
-        newRow[totCol] = total;
-        newRow[cgCol] = computed_grade;
-        newRow[mgCol] = makeup;
-        newRow[fgCol] = final_grade;
-        newRow[updByCol] = session.user_id;
-        newRow[updAtCol] = now;
-        sheet.appendRow(newRow);
-        data.push(newRow);
-      }
-    });
-  } finally {
-    lock.releaseLock();
-  }
+    var total = '';
+    if (cw !== '' || mid !== '' || fin !== '') {
+      total = (cw === '' ? 0 : Number(cw)) + (mid === '' ? 0 : Number(mid)) + (fin === '' ? 0 : Number(fin));
+    }
+    var computed_grade = computeGrade(total);
+    var final_grade = (makeup !== '' && !isNaN(makeup)) ? makeup : computed_grade;
+    return {
+      student_id: student_id,
+      subject_id: String(subject_id),
+      coursework: cw,
+      midterm: mid,
+      final: fin,
+      total: total,
+      computed_grade: computed_grade,
+      makeup_grade: makeup,
+      final_grade: final_grade,
+      updated_by: session.user_id,
+      updated_at: now
+    };
+  });
+  dbBatchUpsertRows_('SummativeScores', ['student_id', 'subject_id'], upsertRows, 'id', 'ssum');
 
   appendAuditLog(session.user_id, 'SummativeScores', subject_id, null,
     { class_id: class_id, subject_id: subject_id, rows_saved: rows.length });

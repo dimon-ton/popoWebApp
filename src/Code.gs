@@ -183,7 +183,7 @@ function doGet(e) {
   } catch (err) {
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
-      '<b>เกิดข้อผิดพลาด (GET):</b> ' + err.message + '</div>'
+      '<b>เกิดข้อผิดพลาด (GET):</b> ' + escapeHtml_(err.message) + '</div>'
     ).setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
@@ -215,12 +215,12 @@ function doPost(e) {
       case 'add_user':
         requireAdmin(session);
         return ContentService.createTextOutput(JSON.stringify(
-          serverAddUser(params.username, params.full_name, params.role, params.password)
+          serverAddUser(params.token, params.username, params.full_name, params.role, params.password)
         )).setMimeType(ContentService.MimeType.JSON);
       case 'reset_password':
         requireAdmin(session);
         return ContentService.createTextOutput(JSON.stringify(
-          serverResetPassword(params.user_id, params.new_password)
+          serverResetPassword(params.token, params.user_id, params.new_password)
         )).setMimeType(ContentService.MimeType.JSON);
       default:
         return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown action' }))
@@ -229,7 +229,7 @@ function doPost(e) {
   } catch (err) {
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;padding:32px;color:#c0392b">' +
-      '<b>เกิดข้อผิดพลาด:</b> ' + err.message + '</div>'
+      '<b>เกิดข้อผิดพลาด:</b> ' + escapeHtml_(err.message) + '</div>'
     ).setTitle(APP_TITLE).setFaviconUrl(APP_FAVICON_URL).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 }
@@ -390,7 +390,7 @@ function getPageHtml(token, page) {
     tmpl.data = { session: session, token: token, setup_status: page === 'dashboard' ? getAdminSetupStatus(session) : {} };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -422,7 +422,7 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
     tmpl.data = { session: session, token: token, class_id: classId || '', subject_id: subjectId || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -437,7 +437,7 @@ function getClassStudentsPageHtml(token, class_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -452,7 +452,7 @@ function getAttendancePageHtml(token, class_id, subject_id, week) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '', week: parseInt(week) || 1 };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -467,7 +467,7 @@ function getSummativePageHtml(token, class_id, subject_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -482,7 +482,7 @@ function getCharacteristicsPageHtml(token, class_id, subject_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -497,7 +497,7 @@ function getReadThinkWritePageHtml(token, class_id, subject_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -512,7 +512,7 @@ function getReportPageHtml(token, class_id, subject_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -527,7 +527,7 @@ function getFormativePageHtml(token, class_id, subject_id) {
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -558,7 +558,7 @@ function getIndicatorsPageHtml(token, subject_id) {
     tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -573,14 +573,15 @@ function getSubjectIndicatorsRefPageHtml(token, subject_id) {
     tmpl.data = { session: session, token: token, subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
 // US-001: returns row counts for all DB tabs (admin-only, dev tool)
-function getDbStatus() {
+function getDbStatus(token) {
+  requireAdminToken_(token);
   var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
-  if (!id) throw new Error('DB_SHEET_ID not set. Run setupDatabase() first.');
+  if (!id) throw new Error('DB_SHEET_ID not set. Run setupDatabase_() from the Apps Script editor first.');
   var ss = SpreadsheetApp.openById(id);
   return TAB_ORDER.map(function(tabName) {
     if (!ss.getSheetByName(tabName) && TAB_SCHEMA && TAB_SCHEMA[tabName]) {
@@ -598,23 +599,23 @@ function handleReadAction(action, params, session) {
     switch (action) {
       case 'get_users_list':
         requireAdmin(session);
-        result = { users: getUsersList() };
+        result = { users: getUsersList(params.token) };
         break;
       case 'get_enrollments_data':
         requireAdmin(session);
-        result = getEnrollmentsData();
+        result = getEnrollmentsData_();
         break;
       case 'get_teacher_enrollments':
         requireAdmin(session);
-        result = { enrollments: getTeacherEnrollments(params.teacher_user_id) };
+        result = { enrollments: getTeacherEnrollments_(params.teacher_user_id) };
         break;
       case 'get_all_pairs_matrix':
         requireAdmin(session);
-        result = { rows: getAllPairsMatrix() };
+        result = { rows: getAllPairsMatrix_() };
         break;
       case 'get_workload_data':
         requireAdmin(session);
-        result = getWorkloadData();
+        result = getWorkloadData_();
         break;
       default:
         result = { error: 'Unknown read action: ' + action };

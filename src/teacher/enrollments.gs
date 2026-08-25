@@ -3,7 +3,7 @@
 
 // ---- Server functions called from the admin enrollments page ----
 
-function getEnrollmentsData() {
+function getEnrollmentsData_() {
   // Returns all data needed for the /admin/enrollments page
   ensureColumns('Subjects', ['class_id']);
   var teachers = dbGetAll('Users').filter(function(u) { return u.role === 'teacher'; });
@@ -30,7 +30,7 @@ function getEnrollmentsData() {
   };
 }
 
-function getTeacherEnrollments(teacherUserId) {
+function getTeacherEnrollments_(teacherUserId) {
   var enrollments = dbGetAll('Enrollments').filter(function(e) {
     return e.teacher_user_id === teacherUserId;
   });
@@ -55,125 +55,125 @@ function getTeacherEnrollments(teacherUserId) {
   });
 }
 
+function addEnrollmentAtomic_(session, teacherUserId, classId, subjectId) {
+  if (!teacherUserId || !classId || !subjectId) return { error: 'Missing required fields' };
+
+  return withDbLock_(function() {
+    var enrollments = dbGetAll('Enrollments');
+    var existing = null;
+    for (var i = 0; i < enrollments.length; i++) {
+      if (String(enrollments[i].class_id) === String(classId) &&
+          String(enrollments[i].subject_id) === String(subjectId)) {
+        existing = enrollments[i];
+        break;
+      }
+    }
+
+    if (existing) {
+      if (String(existing.teacher_user_id) === String(teacherUserId)) {
+        return { status: 'unchanged', message: 'คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว' };
+      }
+      var otherTeacher = dbFindOne('Users', 'user_id', existing.teacher_user_id);
+      return {
+        status: 'conflict',
+        existing_enrollment_id: existing.enrollment_id,
+        other_teacher_name: otherTeacher ? otherTeacher.full_name : existing.teacher_user_id,
+        other_teacher_id: existing.teacher_user_id,
+        message: 'conflict'
+      };
+    }
+
+    var enrollmentId = generateId('enr');
+    dbInsertUnlocked_('Enrollments', {
+      enrollment_id: enrollmentId,
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherUserId,
+      dev_activity_result: ''
+    });
+    appendAuditLogUnlocked_(session.user_id, 'Enrollments', enrollmentId, null, {
+      class_id: classId, subject_id: subjectId, teacher_user_id: teacherUserId
+    });
+    return { status: 'created', enrollment_id: enrollmentId };
+  });
+}
+
 function handleAddEnrollment(e, session) {
   requireAdmin(session);
   var params = e.parameter;
-  var teacherUserId = params.teacher_user_id;
-  var classId = params.class_id;
-  var subjectId = params.subject_id;
-
-  if (!teacherUserId || !classId || !subjectId) {
-    return jsonResponse({ error: 'Missing required fields' });
+  var result = addEnrollmentAtomic_(session, params.teacher_user_id, params.class_id, params.subject_id);
+  if (result.status === 'created') {
+    invalidateWorkloadCache();
+    result.enrollments = getTeacherEnrollments_(params.teacher_user_id);
   }
+  return jsonResponse(result);
+}
 
-  // Check uniqueness: is this (class, subject) already assigned?
-  var enrollments = dbGetAll('Enrollments');
-  var existing = null;
-  for (var i = 0; i < enrollments.length; i++) {
-    if (enrollments[i].class_id === classId && enrollments[i].subject_id === subjectId) {
-      existing = enrollments[i];
-      break;
-    }
-  }
-
-  if (existing) {
-    if (existing.teacher_user_id === teacherUserId) {
-      // Already assigned to this teacher — no change needed
-      return jsonResponse({ status: 'unchanged', message: 'คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว' });
-    }
-    // Assigned to a different teacher — return conflict for UI confirmation
-    var otherTeacher = dbFindOne('Users', 'user_id', existing.teacher_user_id);
-    return jsonResponse({
-      status: 'conflict',
-      existing_enrollment_id: existing.enrollment_id,
-      other_teacher_name: otherTeacher ? otherTeacher.full_name : existing.teacher_user_id,
-      other_teacher_id: existing.teacher_user_id,
-      message: 'conflict'
+function reassignEnrollmentAtomic_(session, enrollmentId, newTeacherUserId) {
+  if (!enrollmentId || !newTeacherUserId) return { error: 'Missing required fields' };
+  return withDbLock_(function() {
+    var existing = dbFindOne('Enrollments', 'enrollment_id', enrollmentId);
+    if (!existing) return { error: 'Enrollment not found' };
+    var oldValue = {
+      class_id: existing.class_id,
+      subject_id: existing.subject_id,
+      teacher_user_id: existing.teacher_user_id
+    };
+    var newValue = {
+      class_id: existing.class_id,
+      subject_id: existing.subject_id,
+      teacher_user_id: newTeacherUserId
+    };
+    var updated = dbUpdateUnlocked_('Enrollments', 'enrollment_id', enrollmentId, {
+      teacher_user_id: newTeacherUserId
     });
-  }
-
-  // Safe to insert
-  var enrollmentId = generateId('enr');
-  dbInsert('Enrollments', {
-    enrollment_id: enrollmentId,
-    class_id: classId,
-    subject_id: subjectId,
-    teacher_user_id: teacherUserId,
-    dev_activity_result: ''
+    if (!updated) return { error: 'Enrollment not found' };
+    appendAuditLogUnlocked_(session.user_id, 'Enrollments', enrollmentId, oldValue, newValue);
+    return { status: 'reassigned', old_teacher_id: existing.teacher_user_id };
   });
-  appendAuditLog(session.user_id, 'Enrollments', enrollmentId, null, {
-    class_id: classId, subject_id: subjectId, teacher_user_id: teacherUserId
-  });
+}
 
-  invalidateWorkloadCache();
-  var newEnrollments = getTeacherEnrollments(teacherUserId);
-  return jsonResponse({ status: 'created', enrollment_id: enrollmentId, enrollments: newEnrollments });
+function removeEnrollmentAtomic_(session, enrollmentId) {
+  if (!enrollmentId) return { error: 'Missing enrollment_id' };
+  return withDbLock_(function() {
+    var existing = dbFindOne('Enrollments', 'enrollment_id', enrollmentId);
+    if (!existing) return { error: 'Enrollment not found' };
+    var oldValue = {
+      class_id: existing.class_id,
+      subject_id: existing.subject_id,
+      teacher_user_id: existing.teacher_user_id
+    };
+    var deleted = dbDeleteUnlocked_('Enrollments', 'enrollment_id', enrollmentId);
+    if (!deleted) return { error: 'Enrollment not found' };
+    appendAuditLogUnlocked_(session.user_id, 'Enrollments', enrollmentId, oldValue, null);
+    return { status: 'removed', teacher_user_id: existing.teacher_user_id };
+  });
 }
 
 function handleConfirmReassign(e, session) {
   requireAdmin(session);
   var params = e.parameter;
-  var existingEnrollmentId = params.existing_enrollment_id;
-  var newTeacherUserId = params.new_teacher_user_id;
-  var classId = params.class_id;
-  var subjectId = params.subject_id;
-
-  if (!existingEnrollmentId || !newTeacherUserId) {
-    return jsonResponse({ error: 'Missing required fields' });
+  var result = reassignEnrollmentAtomic_(session, params.existing_enrollment_id, params.new_teacher_user_id);
+  if (result.status === 'reassigned') {
+    invalidateWorkloadCache();
+    result.enrollments = getTeacherEnrollments_(params.new_teacher_user_id);
   }
-
-  var existing = dbFindOne('Enrollments', 'enrollment_id', existingEnrollmentId);
-  if (!existing) return jsonResponse({ error: 'Enrollment not found' });
-
-  var oldTeacherId = existing.teacher_user_id;
-
-  // Audit: removal from old teacher
-  appendAuditLog(session.user_id, 'Enrollments', existingEnrollmentId,
-    { class_id: classId, subject_id: subjectId, teacher_user_id: oldTeacherId },
-    { class_id: classId, subject_id: subjectId, teacher_user_id: newTeacherUserId }
-  );
-
-  // Update the row
-  dbUpdate('Enrollments', 'enrollment_id', existingEnrollmentId, {
-    teacher_user_id: newTeacherUserId
-  });
-
-  // Audit: addition to new teacher
-  appendAuditLog(session.user_id, 'Enrollments', existingEnrollmentId,
-    null,
-    { class_id: classId, subject_id: subjectId, teacher_user_id: newTeacherUserId }
-  );
-
-  invalidateWorkloadCache();
-  var newEnrollments = getTeacherEnrollments(newTeacherUserId);
-  return jsonResponse({ status: 'reassigned', enrollments: newEnrollments });
+  return jsonResponse(result);
 }
 
 function handleRemoveEnrollment(e, session) {
   requireAdmin(session);
   var params = e.parameter;
-  var enrollmentId = params.enrollment_id;
-  var teacherUserId = params.teacher_user_id;
-
-  if (!enrollmentId) return jsonResponse({ error: 'Missing enrollment_id' });
-
-  var existing = dbFindOne('Enrollments', 'enrollment_id', enrollmentId);
-  if (!existing) return jsonResponse({ error: 'Enrollment not found' });
-
-  appendAuditLog(session.user_id, 'Enrollments', enrollmentId, {
-    class_id: existing.class_id,
-    subject_id: existing.subject_id,
-    teacher_user_id: existing.teacher_user_id
-  }, null);
-
-  dbDelete('Enrollments', 'enrollment_id', enrollmentId);
-  invalidateWorkloadCache();
-
-  var updated = teacherUserId ? getTeacherEnrollments(teacherUserId) : [];
-  return jsonResponse({ status: 'removed', enrollments: updated });
+  var result = removeEnrollmentAtomic_(session, params.enrollment_id);
+  if (result.status === 'removed') {
+    invalidateWorkloadCache();
+    var teacherUserId = params.teacher_user_id || result.teacher_user_id;
+    result.enrollments = teacherUserId ? getTeacherEnrollments_(teacherUserId) : [];
+  }
+  return jsonResponse(result);
 }
 
-function getAllPairsMatrix() {
+function getAllPairsMatrix_() {
   // Returns assignment-ready class-specific subject rows for the "All pairs" tab
   var classes = dbGetAll('Classes');
   var levelCounts = buildClassLevelCounts(classes);
@@ -223,7 +223,7 @@ function clientGetEnrollmentsData(token) {
   try {
     var session = getSession(token);
     requireAdmin(session);
-    return getEnrollmentsData();
+    return getEnrollmentsData_();
   } catch (err) {
     return { error: err.message };
   }
@@ -233,7 +233,7 @@ function clientGetTeacherEnrollments(token, teacherUserId) {
   try {
     var session = getSession(token);
     requireAdmin(session);
-    return { enrollments: getTeacherEnrollments(teacherUserId) };
+    return { enrollments: getTeacherEnrollments_(teacherUserId) };
   } catch (err) {
     return { error: err.message };
   }
@@ -243,7 +243,7 @@ function clientGetAllPairsMatrix(token) {
   try {
     var session = getSession(token);
     requireAdmin(session);
-    return { rows: getAllPairsMatrix() };
+    return { rows: getAllPairsMatrix_() };
   } catch (err) {
     return { error: err.message };
   }
@@ -251,44 +251,13 @@ function clientGetAllPairsMatrix(token) {
 
 function clientAddEnrollment(token, teacherUserId, classId, subjectId) {
   try {
-    var session = getSession(token);
-    requireAdmin(session);
-    if (!teacherUserId || !classId || !subjectId) return { error: 'Missing required fields' };
-
-    var enrollments = dbGetAll('Enrollments');
-    var existing = null;
-    for (var i = 0; i < enrollments.length; i++) {
-      if (enrollments[i].class_id === classId && enrollments[i].subject_id === subjectId) {
-        existing = enrollments[i]; break;
-      }
+    var session = requireAdminToken_(token);
+    var result = addEnrollmentAtomic_(session, teacherUserId, classId, subjectId);
+    if (result.status === 'created') {
+      invalidateWorkloadCache();
+      result.enrollments = getTeacherEnrollments_(teacherUserId);
     }
-
-    if (existing) {
-      if (existing.teacher_user_id === teacherUserId) {
-        return { status: 'unchanged', message: 'คู่นี้ถูกกำหนดให้ครูนี้อยู่แล้ว' };
-      }
-      var otherTeacher = dbFindOne('Users', 'user_id', existing.teacher_user_id);
-      return {
-        status: 'conflict',
-        existing_enrollment_id: existing.enrollment_id,
-        other_teacher_name: otherTeacher ? otherTeacher.full_name : existing.teacher_user_id,
-        other_teacher_id: existing.teacher_user_id
-      };
-    }
-
-    var enrollmentId = generateId('enr');
-    dbInsert('Enrollments', {
-      enrollment_id: enrollmentId,
-      class_id: classId,
-      subject_id: subjectId,
-      teacher_user_id: teacherUserId,
-      dev_activity_result: ''
-    });
-    appendAuditLog(session.user_id, 'Enrollments', enrollmentId, null, {
-      class_id: classId, subject_id: subjectId, teacher_user_id: teacherUserId
-    });
-    invalidateWorkloadCache();
-    return { status: 'created', enrollment_id: enrollmentId, enrollments: getTeacherEnrollments(teacherUserId) };
+    return result;
   } catch (err) {
     return { error: err.message };
   }
@@ -296,19 +265,14 @@ function clientAddEnrollment(token, teacherUserId, classId, subjectId) {
 
 function clientRemoveEnrollment(token, enrollmentId, teacherUserId) {
   try {
-    var session = getSession(token);
-    requireAdmin(session);
-    if (!enrollmentId) return { error: 'Missing enrollment_id' };
-
-    var existing = dbFindOne('Enrollments', 'enrollment_id', enrollmentId);
-    if (!existing) return { error: 'Enrollment not found' };
-
-    appendAuditLog(session.user_id, 'Enrollments', enrollmentId, {
-      class_id: existing.class_id, subject_id: existing.subject_id, teacher_user_id: existing.teacher_user_id
-    }, null);
-    dbDelete('Enrollments', 'enrollment_id', enrollmentId);
-    invalidateWorkloadCache();
-    return { status: 'removed', enrollments: teacherUserId ? getTeacherEnrollments(teacherUserId) : [] };
+    var session = requireAdminToken_(token);
+    var result = removeEnrollmentAtomic_(session, enrollmentId);
+    if (result.status === 'removed') {
+      invalidateWorkloadCache();
+      var ownerId = teacherUserId || result.teacher_user_id;
+      result.enrollments = ownerId ? getTeacherEnrollments_(ownerId) : [];
+    }
+    return result;
   } catch (err) {
     return { error: err.message };
   }
@@ -316,21 +280,13 @@ function clientRemoveEnrollment(token, enrollmentId, teacherUserId) {
 
 function clientConfirmReassign(token, existingEnrollmentId, newTeacherUserId, classId, subjectId) {
   try {
-    var session = getSession(token);
-    requireAdmin(session);
-    if (!existingEnrollmentId || !newTeacherUserId) return { error: 'Missing required fields' };
-
-    var existing = dbFindOne('Enrollments', 'enrollment_id', existingEnrollmentId);
-    if (!existing) return { error: 'Enrollment not found' };
-
-    var oldTeacherId = existing.teacher_user_id;
-    appendAuditLog(session.user_id, 'Enrollments', existingEnrollmentId,
-      { class_id: classId, subject_id: subjectId, teacher_user_id: oldTeacherId },
-      { class_id: classId, subject_id: subjectId, teacher_user_id: newTeacherUserId }
-    );
-    dbUpdate('Enrollments', 'enrollment_id', existingEnrollmentId, { teacher_user_id: newTeacherUserId });
-    invalidateWorkloadCache();
-    return { status: 'reassigned', enrollments: getTeacherEnrollments(newTeacherUserId) };
+    var session = requireAdminToken_(token);
+    var result = reassignEnrollmentAtomic_(session, existingEnrollmentId, newTeacherUserId);
+    if (result.status === 'reassigned') {
+      invalidateWorkloadCache();
+      result.enrollments = getTeacherEnrollments_(newTeacherUserId);
+    }
+    return result;
   } catch (err) {
     return { error: err.message };
   }
@@ -432,7 +388,7 @@ function clientImportEnrollmentsCSV(token, rows) {
         var existing = enrollmentMap[key];
         if (!existing) {
           var newId = generateId('enr');
-          dbInsert('Enrollments', {
+          dbInsertUnlocked_('Enrollments', {
             enrollment_id: newId,
             class_id: a.class_id,
             subject_id: a.subject_id,
@@ -440,15 +396,15 @@ function clientImportEnrollmentsCSV(token, rows) {
             dev_activity_result: ''
           });
           enrollmentMap[key] = { enrollment_id: newId, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id };
-          appendAuditLog(session.user_id, 'Enrollments', newId, null, { imported: true, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id });
+          appendAuditLogUnlocked_(session.user_id, 'Enrollments', newId, null, { imported: true, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id });
           created++;
         } else if (existing.teacher_user_id === a.teacher_user_id) {
           unchanged++;
         } else {
-          appendAuditLog(session.user_id, 'Enrollments', existing.enrollment_id,
+          appendAuditLogUnlocked_(session.user_id, 'Enrollments', existing.enrollment_id,
             { class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: existing.teacher_user_id },
             { imported: true, class_id: a.class_id, subject_id: a.subject_id, teacher_user_id: a.teacher_user_id });
-          dbUpdate('Enrollments', 'enrollment_id', existing.enrollment_id, { teacher_user_id: a.teacher_user_id });
+          dbUpdateUnlocked_('Enrollments', 'enrollment_id', existing.enrollment_id, { teacher_user_id: a.teacher_user_id });
           existing.teacher_user_id = a.teacher_user_id;
           reassigned++;
         }

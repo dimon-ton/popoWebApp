@@ -184,21 +184,11 @@ function getAttendanceSourceValues(token, class_id, current_subject_id, source_s
 // Returns:
 //   { students, week, weekStart, dates, attendance, subject_info, class_info, can_edit }
 function getAttendanceData(token, class_id, subject_id, week) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var enrollments = dbGetAll('Enrollments');
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-  var subj = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (!subj || !attendanceSubjectBelongsToClass(subj, class_id, enrollments)) {
-    throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
-  }
-  var can_edit = session.role === 'admin' || enrollments.some(function(enrollment) {
-    return String(enrollment.class_id) === String(class_id) &&
-      String(enrollment.subject_id) === String(subject_id) &&
-      String(enrollment.teacher_user_id) === String(session.user_id);
-  });
+  var session = requireSession_(token);
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var cls = access.class_info;
+  var subj = access.subject_info;
+  var can_edit = true;
 
   var weekNum = parseInt(week) || 1;
   if (weekNum < 1) weekNum = 1;

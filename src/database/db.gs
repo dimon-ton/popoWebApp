@@ -170,6 +170,184 @@ function removeColumns(tabName, obsoleteHeaders) {
   }
 }
 
+// Transaction helper for multi-step operations that must be atomic.
+function withDbLock_(callback) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถล็อกฐานข้อมูลได้ กรุณาลองใหม่');
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Internal write helpers. Caller must already hold the DB lock.
+function dbInsertUnlocked_(tabName, row) {
+  var sheet = getSheet(tabName);
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = headers.map(function(h) { return row[h] !== undefined ? row[h] : ''; });
+  sheet.appendRow(values);
+}
+
+function dbUpdateUnlocked_(tabName, idField, idValue, updates) {
+  var sheet = getSheet(tabName);
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return false;
+  var headers = data[0];
+  var idCol = headers.indexOf(idField);
+  if (idCol === -1) throw new Error('ID column not found: ' + idField);
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === idValue) {
+      Object.keys(updates).forEach(function(key) {
+        var col = headers.indexOf(key);
+        if (col === -1) return;
+        var range = sheet.getRange(i + 1, col + 1);
+        var value = updates[key];
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          range.setNumberFormat('@');
+        }
+        range.setValue(value);
+      });
+      return true;
+    }
+  }
+  return false;
+}
+
+function dbDeleteUnlocked_(tabName, idField, idValue) {
+  var sheet = getSheet(tabName);
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return false;
+  var headers = data[0];
+  var idCol = headers.indexOf(idField);
+  if (idCol === -1) throw new Error('ID column not found: ' + idField);
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (data[i][idCol] === idValue) {
+      sheet.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function dbDeleteWhereExactUnlocked_(tabName, field, value) {
+  var sheet = getSheet(tabName);
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return 0;
+  var headers = data[0];
+  var col = headers.indexOf(field);
+  if (col === -1) return 0;
+
+  var deleted = 0;
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][col]) === String(value)) {
+      sheet.deleteRow(i + 1);
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
+function appendAuditLogUnlocked_(userId, entity, entityId, oldValue, newValue) {
+  dbInsertUnlocked_('AuditLog', {
+    timestamp: new Date().toISOString(),
+    user_id: userId,
+    entity: entity,
+    entity_id: entityId,
+    old_value: JSON.stringify(oldValue),
+    new_value: JSON.stringify(newValue)
+  });
+}
+
+// Batch upsert using composite keys. Existing rows are written back in contiguous
+// ranges and new rows are appended in one setValues call, avoiding per-cell RPCs.
+function dbBatchUpsertRows_(tabName, keyFields, rows, idField, idPrefix) {
+  return withDbLock_(function() {
+    var sheet = getSheet(tabName);
+    var data = sheet.getDataRange().getValues();
+    if (!data.length) throw new Error('Missing header row: ' + tabName);
+    var headers = data[0];
+    var headerIndex = {};
+    headers.forEach(function(header, index) { headerIndex[header] = index; });
+    keyFields.forEach(function(field) {
+      if (headerIndex[field] === undefined) throw new Error('Key column not found: ' + field);
+    });
+
+    function makeKeyFromArray(rowArray) {
+      return keyFields.map(function(field) { return String(rowArray[headerIndex[field]]); }).join('|');
+    }
+    function makeKeyFromObject(rowObject) {
+      return keyFields.map(function(field) { return String(rowObject[field] === undefined ? '' : rowObject[field]); }).join('|');
+    }
+
+    var existingByKey = {};
+    for (var i = 1; i < data.length; i++) existingByKey[makeKeyFromArray(data[i])] = i;
+
+    var modified = {};
+    var appended = [];
+    var appendedByKey = {};
+    (rows || []).forEach(function(rowObject) {
+      var key = makeKeyFromObject(rowObject);
+      var existingIndex = existingByKey[key];
+      if (existingIndex !== undefined) {
+        Object.keys(rowObject).forEach(function(field) {
+          var col = headerIndex[field];
+          if (col !== undefined) data[existingIndex][col] = rowObject[field];
+        });
+        modified[existingIndex] = data[existingIndex];
+        return;
+      }
+
+      if (appendedByKey[key] !== undefined) {
+        var pendingRow = appended[appendedByKey[key]];
+        Object.keys(rowObject).forEach(function(field) {
+          var pendingCol = headerIndex[field];
+          if (pendingCol !== undefined) pendingRow[pendingCol] = rowObject[field];
+        });
+        return;
+      }
+
+      var newRow = headers.map(function() { return ''; });
+      Object.keys(rowObject).forEach(function(field) {
+        var col = headerIndex[field];
+        if (col !== undefined) newRow[col] = rowObject[field];
+      });
+      if (idField && headerIndex[idField] !== undefined && !newRow[headerIndex[idField]]) {
+        newRow[headerIndex[idField]] = generateId(idPrefix || 'row');
+      }
+      appendedByKey[key] = appended.length;
+      appended.push(newRow);
+    });
+
+    var modifiedIndexes = Object.keys(modified).map(function(index) { return Number(index); }).sort(function(a, b) { return a - b; });
+    var runStart = null;
+    var runRows = [];
+    function flushRun() {
+      if (runStart === null || !runRows.length) return;
+      sheet.getRange(runStart + 1, 1, runRows.length, headers.length).setValues(runRows);
+      runStart = null;
+      runRows = [];
+    }
+    modifiedIndexes.forEach(function(index) {
+      if (runStart === null) {
+        runStart = index;
+      } else if (index !== runStart + runRows.length) {
+        flushRun();
+        runStart = index;
+      }
+      runRows.push(modified[index]);
+    });
+    flushRun();
+
+    if (appended.length) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, appended.length, headers.length).setValues(appended);
+    }
+    return { updated: modifiedIndexes.length, created: appended.length };
+  });
+}
+
 function generateId(prefix) {
   return prefix + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
 }

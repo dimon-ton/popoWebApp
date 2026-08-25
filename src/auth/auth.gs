@@ -1,6 +1,7 @@
 // Authentication: login, session management, role checks
 
 var SESSION_TTL_SECONDS = 43200; // 12 hours
+var MIN_PASSWORD_LENGTH = 8;
 
 function ensureUserAuthColumns() {
   ensureColumns('Users', ['avatar', 'must_change_pwd', 'last_login_at']);
@@ -92,12 +93,16 @@ function computeHash(password, salt) {
 }
 
 function generateToken() {
-  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  var result = '';
-  for (var i = 0; i < 40; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // UUIDs are generated server-side and are preferable to Math.random() for session secrets.
+  return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+}
+
+function validatePassword_(password) {
+  password = String(password || '');
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error('รหัสผ่านต้องมีอย่างน้อย ' + MIN_PASSWORD_LENGTH + ' ตัวอักษร');
   }
-  return result;
+  return password;
 }
 
 function loginError(msg) {
@@ -121,7 +126,8 @@ function getLoginHtml() {
 
 // US-003: User management — list, add, reset password
 
-function getUsersList() {
+function getUsersList(token) {
+  requireAdminToken_(token);
   ensureUserAuthColumns();
   var users = dbGetAll('Users');
   return users.map(function(u) {
@@ -129,7 +135,8 @@ function getUsersList() {
   });
 }
 
-function serverAddUser(username, full_name, role, password) {
+function serverAddUser(token, username, full_name, role, password) {
+  var session = requireAdminToken_(token);
   ensureUserAuthColumns();
   username = (username || '').trim();
   full_name = (full_name || '').trim();
@@ -142,33 +149,38 @@ function serverAddUser(username, full_name, role, password) {
   if (role !== 'teacher' && role !== 'admin') {
     return { error: 'บทบาทไม่ถูกต้อง' };
   }
+  validatePassword_(password);
 
-  var existing = dbFindOne('Users', 'username', username);
-  if (existing) return { error: 'ชื่อผู้ใช้นี้มีอยู่แล้ว' };
+  return withDbLock_(function() {
+    var existing = dbFindOne('Users', 'username', username);
+    if (existing) return { error: 'ชื่อผู้ใช้นี้มีอยู่แล้ว' };
 
-  var salt = Utilities.getUuid();
-  var hash = computeHash(password, salt);
-  var userId = generateId('user');
-  dbInsert('Users', {
-    user_id: userId,
-    username: username,
-    password_hash: hash,
-    salt: salt,
-    full_name: full_name,
-    role: role,
-    must_change_pwd: role === 'teacher' ? 'true' : '',
-    created_at: new Date().toISOString()
+    var salt = Utilities.getUuid();
+    var hash = computeHash(password, salt);
+    var userId = generateId('user');
+    dbInsertUnlocked_('Users', {
+      user_id: userId,
+      username: username,
+      password_hash: hash,
+      salt: salt,
+      full_name: full_name,
+      role: role,
+      must_change_pwd: role === 'teacher' ? 'true' : '',
+      created_at: new Date().toISOString()
+    });
+    appendAuditLogUnlocked_(session.user_id, 'Users', userId, null, { username: username, role: role });
+    return { ok: true, user_id: userId };
   });
-  appendAuditLog(userId, 'Users', userId, null, { username: username, role: role });
-  return { ok: true, user_id: userId };
 }
 
-function serverResetPassword(user_id, new_password) {
+function serverResetPassword(token, user_id, new_password) {
+  var session = requireAdminToken_(token);
   ensureUserAuthColumns();
   new_password = new_password || '';
   if (!user_id || !new_password) {
     return { error: 'กรุณากรอกรหัสผ่านใหม่' };
   }
+  validatePassword_(new_password);
 
   var user = dbFindOne('Users', 'user_id', user_id);
   if (!user) return { error: 'ไม่พบผู้ใช้' };
@@ -182,11 +194,12 @@ function serverResetPassword(user_id, new_password) {
   });
   if (!updated) return { error: 'ไม่สามารถอัพเดตรหัสผ่านได้' };
 
-  appendAuditLog(user_id, 'Users', user_id, { action: 'password_reset' }, { action: 'password_reset', username: user.username });
+  appendAuditLog(session.user_id, 'Users', user_id, { action: 'password_reset' }, { action: 'password_reset', username: user.username });
   return { ok: true };
 }
 
-function serverEditUser(user_id, full_name, role) {
+function serverEditUser(token, user_id, full_name, role) {
+  var session = requireAdminToken_(token);
   ensureUserAuthColumns();
   full_name = (full_name || '').trim();
   role = (role || '').trim();
@@ -204,7 +217,7 @@ function serverEditUser(user_id, full_name, role) {
   var updated = dbUpdate('Users', 'user_id', user_id, { full_name: full_name, role: role });
   if (!updated) return { error: 'ไม่สามารถแก้ไขข้อมูลได้' };
 
-  appendAuditLog(user_id, 'Users', user_id, { full_name: user.full_name, role: user.role }, { full_name: full_name, role: role });
+  appendAuditLog(session.user_id, 'Users', user_id, { full_name: user.full_name, role: user.role }, { full_name: full_name, role: role });
   return { ok: true };
 }
 
@@ -232,16 +245,18 @@ function serverEditProfile(token, full_name) {
 }
 
 function getUsersListForPage(token) {
-  var session = getSession(token);
-  if (!session || session.role !== 'admin') return { error: 'Forbidden' };
-  return { users: getUsersList() };
+  try {
+    return { users: getUsersList(token) };
+  } catch (err) {
+    return { error: 'Forbidden' };
+  }
 }
 
 function serverImportUsersCSV(token, rows) {
-  var session = getSession(token);
-  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var session = requireAdminToken_(token);
   ensureUserAuthColumns();
 
+  return withDbLock_(function() {
   var users = dbGetAll('Users');
   var byId = {};
   var byUsername = {};
@@ -271,6 +286,10 @@ function serverImportUsersCSV(token, rows) {
       warnings.push('แถวที่ ' + lineNum + ': บทบาทไม่ถูกต้อง จึงใช้ teacher');
       role = 'teacher';
     }
+    if (password && password.length < MIN_PASSWORD_LENGTH) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะรหัสผ่านต้องมีอย่างน้อย ' + MIN_PASSWORD_LENGTH + ' ตัวอักษร');
+      return;
+    }
 
     var target = null;
     if (userId && byId[userId]) {
@@ -291,10 +310,10 @@ function serverImportUsersCSV(token, rows) {
       } else if (mustChange) {
         updates.must_change_pwd = mustChange;
       }
-      dbUpdate('Users', 'user_id', target.user_id, updates);
+      dbUpdateUnlocked_('Users', 'user_id', target.user_id, updates);
       target.full_name = fullName;
       target.role = role;
-      appendAuditLog(session.user_id, 'Users', target.user_id, oldVal, { imported: true, action: 'update', username: username, password_changed: !!password });
+      appendAuditLogUnlocked_(session.user_id, 'Users', target.user_id, oldVal, { imported: true, action: 'update', username: username, password_changed: !!password });
       updated++;
     } else {
       if (!password) {
@@ -313,15 +332,20 @@ function serverImportUsersCSV(token, rows) {
         must_change_pwd: mustChange || (role === 'teacher' ? 'true' : ''),
         created_at: new Date().toISOString()
       };
-      dbInsert('Users', newUser);
+      if (byUsername[username]) {
+        warnings.push('แถวที่ ' + lineNum + ': ข้ามผู้ใช้ใหม่ "' + username + '" เพราะ username ซ้ำ');
+        return;
+      }
+      dbInsertUnlocked_('Users', newUser);
       byId[newUserId] = newUser;
       byUsername[username] = newUser;
-      appendAuditLog(session.user_id, 'Users', newUserId, null, { imported: true, action: 'create', username: username, role: role });
+      appendAuditLogUnlocked_(session.user_id, 'Users', newUserId, null, { imported: true, action: 'create', username: username, role: role });
       created++;
     }
   });
 
   return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
+  });
 }
 
 function serverLogin(username, password) {
@@ -362,7 +386,7 @@ function serverChangePassword(token, old_password, new_password) {
     var session = getSession(token);
     if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
     if (!old_password || !new_password) return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
-    if (new_password.length < 4) return { error: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' };
+    if (new_password.length < MIN_PASSWORD_LENGTH) return { error: 'รหัสผ่านต้องมีอย่างน้อย ' + MIN_PASSWORD_LENGTH + ' ตัวอักษร' };
 
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (!user) return { error: 'ไม่พบผู้ใช้' };
@@ -399,7 +423,7 @@ function getChangePasswordHtml(token) {
     tmpl.data = { session: session, token: token };
     return tmpl.evaluate().getContent();
   } catch (err) {
-    return '<div style="font-family:sans-serif;padding:32px;color:#c0392b"><b>Error:</b> ' + err.message + '</div>';
+    return safeErrorHtml_('เกิดข้อผิดพลาด', err);
   }
 }
 
@@ -509,7 +533,7 @@ function serverDeleteUser(token, user_id) {
   return { ok: true };
 }
 
-function authorizeDrive() {
+function authorizeDrive_() {
   var files = DriveApp.getFiles();
   return 'Drive authorized: ' + (files.hasNext() ? 'ok' : 'empty');
 }
