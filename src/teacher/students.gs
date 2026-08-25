@@ -1,7 +1,7 @@
 // US-005: Student roster CRUD
 
 // Returns students for a class, ordered by seq_no.
-// Access: admin OR homeroom teacher of the class.
+// Access: admin, homeroom teacher, or a teacher enrolled in any subject for the class.
 function getStudentsList(token, class_id) {
   var session = requireSession_(token);
   var cls = requireClassRosterAccess_(session, class_id);
@@ -141,17 +141,10 @@ function sanitizeRows(rows) {
   return (rows || []).map(sanitizeRow);
 }
 
-// Add a student. Only admin or homeroom teacher of the class.
+// Add a student. Admin, homeroom teacher, or an enrolled subject teacher.
 function serverAddStudent(token, class_id, seq_no, student_code, citizen_id, full_name, dob, note) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  if (session.role !== 'admin' && !classHasHomeroomTeacher(cls, session.user_id)) {
-    throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
-  }
+  var session = requireSession_(token);
+  requireClassRosterAccess_(session, class_id);
 
   var normalizedDob = normalizeStudentDobForStorage(dob);
   if (!normalizedDob.ok) throw new Error('รูปแบบวันเกิดไม่ถูกต้อง กรุณาใช้รูปแบบ yyyy-mm-dd เช่น 2017-01-01');
@@ -187,18 +180,13 @@ function serverAddStudent(token, class_id, seq_no, student_code, citizen_id, ful
   });
 }
 
-// Update a student's note (and other editable fields). Only admin or homeroom teacher.
+// Update student information. Admin, homeroom teacher, or an enrolled subject teacher.
 function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id, full_name, dob, note) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var session = requireSession_(token);
 
   var student = dbFindOne('Students', 'student_id', student_id);
   if (!student) throw new Error('ไม่พบนักเรียน');
-
-  var cls = dbFindOne('Classes', 'class_id', student.class_id);
-  if (session.role !== 'admin' && (!cls || !classHasHomeroomTeacher(cls, session.user_id))) {
-    throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
-  }
+  requireClassRosterAccess_(session, student.class_id);
 
   var normalizedDob = dob !== undefined ? normalizeStudentDobForStorage(dob) : { ok: true, value: student.dob };
   if (!normalizedDob.ok) throw new Error('รูปแบบวันเกิดไม่ถูกต้อง กรุณาใช้รูปแบบ yyyy-mm-dd เช่น 2017-01-01');
@@ -233,18 +221,13 @@ function serverUpdateStudent(token, student_id, seq_no, student_code, citizen_id
   });
 }
 
-// Delete a student. Only admin or homeroom teacher.
+// Delete a student. Admin, homeroom teacher, or an enrolled subject teacher.
 function serverDeleteStudent(token, student_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  var session = requireSession_(token);
 
   var student = dbFindOne('Students', 'student_id', student_id);
   if (!student) throw new Error('ไม่พบนักเรียน');
-
-  var cls = dbFindOne('Classes', 'class_id', student.class_id);
-  if (session.role !== 'admin' && (!cls || !classHasHomeroomTeacher(cls, session.user_id))) {
-    throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
-  }
+  requireClassRosterAccess_(session, student.class_id);
 
   return withDbLock_(function() {
     var childTabs = [
@@ -272,15 +255,8 @@ function serverDeleteStudent(token, student_id) {
 }
 
 function serverImportStudentsCSV(token, class_id, rows) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  if (session.role !== 'admin' && !classHasHomeroomTeacher(cls, session.user_id)) {
-    throw new Error('ไม่มีสิทธิ์แก้ไขชั้นเรียนนี้');
-  }
+  var session = requireSession_(token);
+  requireClassRosterAccess_(session, class_id);
 
   return withDbLock_(function() {
   var existing = dbFind('Students', 'class_id', class_id);

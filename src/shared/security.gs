@@ -17,7 +17,14 @@ function requireClassRosterAccess_(session, classId) {
   var cls = dbFindOne('Classes', 'class_id', classId);
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + classId);
 
-  if (session.role !== 'admin' && !classHasHomeroomTeacher(cls, session.user_id)) {
+  var canManageRoster = session.role === 'admin' ||
+    classHasHomeroomTeacher(cls, session.user_id) ||
+    dbGetAll('Enrollments').some(function(enrollment) {
+      return String(enrollment.class_id) === String(classId) &&
+        String(enrollment.teacher_user_id) === String(session.user_id);
+    });
+
+  if (!canManageRoster) {
     throw new Error('ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนของชั้นเรียนนี้');
   }
   return cls;

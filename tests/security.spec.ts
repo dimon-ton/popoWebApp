@@ -47,6 +47,21 @@ function rpcFailure(page: any, functionName: string, args: unknown[]) {
   );
 }
 
+function rpcWithSession(page: any, functionName: string, args: unknown[]) {
+  return page.evaluate(
+    ({ functionName, args }: { functionName: string; args: unknown[] }) =>
+      new Promise<{ ok: boolean; value?: any; error?: string }>((resolve) => {
+        const runner = (window as any).google.script.run
+          .withSuccessHandler((value: unknown) => resolve({ ok: true, value }))
+          .withFailureHandler((error: { message?: string }) =>
+            resolve({ ok: false, error: error?.message || String(error) })
+          );
+        runner[functionName]((window as any).TOKEN, ...args);
+      }),
+    { functionName, args }
+  );
+}
+
 test.describe('Security: RPC authorization boundaries', () => {
   test.beforeAll(async () => {
     await cleanupTestData();
@@ -102,6 +117,71 @@ test.describe('Security: RPC authorization boundaries', () => {
 
       expect(result.ok).toBeFalsy();
       expect(result.error).toContain('ไม่มีสิทธิ์');
+
+      const rosterResult = await rpcWithSession(page, 'getStudentsList', [classB]);
+      expect(rosterResult.ok).toBeFalsy();
+      expect(rosterResult.error).toContain('ไม่มีสิทธิ์');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('teacher enrolled in a class can view and edit its student roster', async ({ browser }) => {
+    const classId = await seedTestClass({ suffix: 'security_roster', level: 'ป.3', section: '1' });
+    const subjectId = await seedTestSubject({
+      suffix: 'security_roster',
+      name: 'วิชาทะเบียนนักเรียน',
+      code: 'SECR',
+      class_id: classId,
+    });
+    const studentId = await seedTestStudent({
+      class_suffix: 'security_roster',
+      seq: 1,
+      full_name: 'test_นักเรียนก่อนแก้ไข',
+    });
+    const teacherId = await seedTestUser({
+      suffix: 'security_roster',
+      role: 'teacher',
+      password: 'test1234',
+      full_name: 'ครูทะเบียนนักเรียน',
+    });
+    await seedTestEnrollment({
+      suffix: 'security_roster',
+      class_id: classId,
+      subject_id: subjectId,
+      teacher_user_id: teacherId,
+    });
+
+    const { context, page } = await loginAsTeacher(browser, teacherId);
+    try {
+      const roster = await rpcWithSession(page, 'getStudentsList', [classId]);
+      expect(roster.ok).toBeTruthy();
+      expect(roster.value?.can_edit).toBe(true);
+      expect(roster.value?.students).toEqual(
+        expect.arrayContaining([expect.objectContaining({ student_id: studentId })])
+      );
+
+      const update = await rpcWithSession(page, 'serverUpdateStudent', [
+        studentId,
+        1,
+        'SEC-R-001',
+        '',
+        'test_นักเรียนหลังแก้ไข',
+        '2017-01-01',
+        'แก้ไขโดยครูประจำวิชา',
+      ]);
+      expect(update.ok).toBeTruthy();
+
+      const updatedRoster = await rpcWithSession(page, 'getStudentsList', [classId]);
+      expect(updatedRoster.value?.students).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            student_id: studentId,
+            full_name: 'test_นักเรียนหลังแก้ไข',
+            note: 'แก้ไขโดยครูประจำวิชา',
+          }),
+        ])
+      );
     } finally {
       await context.close();
     }
