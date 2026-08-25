@@ -54,6 +54,7 @@
 var TOKEN = '<?= data.token || '' ?>';
 var CLASS_ID = '<?!= data.class_id || '' ?>';
 var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
+var GRADE_REPORT_SCHOOL_LOGO_URL = 'https://raw.githubusercontent.com/dimon-ton/popoWebApp/master/assets/school_logo.jpg';
 var currentData = null;
 
 function navigate(page) {
@@ -382,9 +383,8 @@ function pageReferenceCover(d, n) {
   var gradeHeader = gradeKeys.map(function(g) { return '<th>' + g + '</th>'; }).join('');
   var countRow = gradeKeys.map(function(g) { return '<td>' + num(grades[g] && grades[g].count || 0) + '</td>'; }).join('');
   var pctRow = gradeKeys.map(function(g) { return '<td>' + num(grades[g] && grades[g].pct || '0.00') + '</td>'; }).join('');
-  var coverMark = m.school.school_logo
-    ? '<img class="report-school-logo" src="' + escHtml(m.school.school_logo) + '" alt="โลโก้โรงเรียน">'
-    : '<div class="report-cover-mark">ตรา</div>';
+  var coverMark = '<img class="report-school-logo" src="' +
+    escHtml(GRADE_REPORT_SCHOOL_LOGO_URL) + '" alt="โลโก้โรงเรียน">';
   var body = coverMark +
     '<div class="form-title">แบบบันทึกผลการเรียนประจำรายวิชา ' + educationLevelLabel + '</div>' +
     '<div class="form-meta">' +
