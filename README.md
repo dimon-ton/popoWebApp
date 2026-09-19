@@ -56,6 +56,19 @@ OpenCode users may copy `opencode.json.example` to `opencode.json` and provide
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` through environment variables. The live file
 is also ignored.
 
+## P1–P3 curriculum branch
+
+The P1–P3 score screens use two 50-point terms. Each term has configurable learning
+outcomes scaled to 35 points and a 15-point final assessment. The new score tabs are
+`LearningOutcomes`, `LearningOutcomeScores`, and `TermAssessments`. Existing indicator
+and summative records remain stored but are excluded from P1–P3 grades and reports.
+
+The first P1–P3 score or report request creates the three tabs under the database lock.
+`setupDatabase_()` also creates them and remains safe to rerun. Configure outcomes for
+each subject and term before entering scores.
+
+Run local curriculum checks with `node --test tests/curriculum.unit.test.cjs`.
+
 ## Playwright tests
 
 The suite uses one worker because Google Sheet mutations are lock-serialized. It traverses

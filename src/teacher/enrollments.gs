@@ -47,6 +47,7 @@ function getTeacherEnrollments_(teacherUserId) {
     return {
       enrollment_id: e.enrollment_id,
       class_id: e.class_id,
+      level: cls.level || '',
       class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
       subject_id: e.subject_id,
       subject_name: sub.subject_name || e.subject_id,

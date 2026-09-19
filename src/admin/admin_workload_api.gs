@@ -125,6 +125,7 @@ function clientGetTeacherOwnClasses(token) {
       var sub = subjects[e.subject_id] || {};
       return {
         class_id: e.class_id,
+        level: cls.level || '',
         class_label: fmtClassLabelWithCounts(cls.level, cls.section, levelCounts),
         subject_id: e.subject_id,
         subject_name: sub.subject_name || e.subject_id,

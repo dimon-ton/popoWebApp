@@ -352,6 +352,8 @@ function loadSubjects() {
         opt.textContent = subjectTitle;
         opt.setAttribute('data-subject-name', s.subject_name || s.subject_id);
         opt.setAttribute('data-subject-title', subjectTitle);
+        opt.setAttribute('data-class-level', s.class_level || '');
+        opt.setAttribute('data-class-id', s.class_id || '');
         sel.appendChild(opt);
       });
       if (SUBJECT_ID) {
@@ -390,6 +392,14 @@ function onSubjectChange() {
     updateIndicatorTitles();
     editorSection.style.display = 'none';
   } else {
+    var selected = sel.options[sel.selectedIndex];
+    if (/^ป\.[123]$/.test(String(selected.getAttribute('data-class-level') || '').replace(/\s+/g, ''))) {
+      showNavLoading();
+      google.script.run.withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function(err) { hideNavLoading(); showToast(err.message, 'error'); })
+        .getPageHtmlWithParams(TOKEN, 'admin_indicators', selected.getAttribute('data-class-id') || '', val);
+      return;
+    }
     SUBJECT_ID = val;
     SUBJECT_NAME = sel.options[sel.selectedIndex].getAttribute('data-subject-name') || sel.options[sel.selectedIndex].text;
     SUBJECT_TITLE = sel.options[sel.selectedIndex].getAttribute('data-subject-title') || SUBJECT_NAME;

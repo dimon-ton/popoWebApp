@@ -118,6 +118,39 @@ function handleTestApi(e) {
         });
         return jsonOk({ subject_id: params.subject_id });
 
+      case 'seed_learning_outcome':
+        ensureTestPrefix(params.outcome_id);
+        ensureTestPrefix(params.subject_id);
+        dbDelete('LearningOutcomes', 'outcome_id', params.outcome_id);
+        dbInsert('LearningOutcomes', {
+          outcome_id: params.outcome_id, subject_id: params.subject_id,
+          term: Number(params.term), code: params.code || params.outcome_id,
+          description: params.description || 'test outcome',
+          max_score: Number(params.max_score || 10), display_order: Number(params.display_order || 1)
+        });
+        return jsonOk({ outcome_id: params.outcome_id });
+
+      case 'seed_learning_outcome_score':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.outcome_id);
+        dbBatchUpsertRows_('LearningOutcomeScores', ['student_id', 'subject_id', 'outcome_id'], [{
+          student_id: params.student_id, subject_id: params.subject_id,
+          outcome_id: params.outcome_id, score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id, updated_at: new Date().toISOString()
+        }], 'id', 'test_los');
+        return jsonOk({ student_id: params.student_id, outcome_id: params.outcome_id });
+
+      case 'seed_term_assessment':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        dbBatchUpsertRows_('TermAssessments', ['student_id', 'subject_id', 'term'], [{
+          student_id: params.student_id, subject_id: params.subject_id,
+          term: Number(params.term), score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id, updated_at: new Date().toISOString()
+        }], 'id', 'test_term');
+        return jsonOk({ student_id: params.student_id, term: params.term });
+
       case 'seed_indicator':
         ensureTestPrefix(params.indicator_id);
         dbDelete('Indicators', 'indicator_id', params.indicator_id);
@@ -326,6 +359,9 @@ function handleTestApi(e) {
           'Indicators': 'indicator_id',
           'Attendance': 'attendance_id',
           'IndicatorScores': 'id',
+          'LearningOutcomes': 'outcome_id',
+          'LearningOutcomeScores': 'id',
+          'TermAssessments': 'id',
           'SummativeScores': 'id',
           'Characteristics': 'id',
           'ReadThinkWrite': 'id',

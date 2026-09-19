@@ -2,7 +2,7 @@
 //   1. Open the Apps Script project.
 //   2. Select "setupDatabase_" in the function dropdown.
 //   3. Click Run. Approve the OAuth prompts.
-//   4. The script creates a new Google Sheet with all 16 tabs (headers in row 1),
+//   4. The script creates a new Google Sheet with all tabs (headers in row 1),
 //      seeds a default admin user, and stores the Sheet's ID in
 //      Script Property DB_SHEET_ID so the rest of the app finds it.
 //
@@ -22,6 +22,9 @@ var TAB_SCHEMA = {
   'SubjectWeights':   ['subject_id', 'class_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
   'Attendance':       ['attendance_id', 'student_id', 'subject_id', 'date', 'period', 'status', 'updated_by', 'updated_at'],
   'IndicatorScores':  ['id', 'student_id', 'subject_id', 'indicator_id', 'score', 'updated_by', 'updated_at'],
+  'LearningOutcomes': ['outcome_id', 'subject_id', 'term', 'code', 'description', 'max_score', 'display_order'],
+  'LearningOutcomeScores': ['id', 'student_id', 'subject_id', 'outcome_id', 'score', 'updated_by', 'updated_at'],
+  'TermAssessments': ['id', 'student_id', 'subject_id', 'term', 'score', 'updated_by', 'updated_at'],
   'SummativeScores':  ['id', 'student_id', 'subject_id', 'coursework', 'midterm', 'final', 'total', 'computed_grade', 'makeup_grade', 'final_grade', 'updated_by', 'updated_at'],
   'Characteristics':  ['id', 'student_id', 'subject_id', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 'total', 'label', 'updated_by', 'updated_at'],
   'ReadThinkWrite':   ['id', 'student_id', 'subject_id', 'r1', 'r2', 'r3', 't1', 't2', 't3', 't4', 'w1', 'w2', 'w3', 'total', 'label', 'updated_by', 'updated_at'],
@@ -33,7 +36,7 @@ var TAB_SCHEMA = {
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance',
-  'IndicatorScores', 'SummativeScores', 'Characteristics',
+  'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 

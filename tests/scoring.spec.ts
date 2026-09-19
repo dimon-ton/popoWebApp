@@ -30,7 +30,7 @@ test.describe('US-008: Formative indicator scoring', () => {
 
   test.beforeAll(async () => {
     await cleanupTestData();
-    classId = await seedTestClass({ suffix: 'us008_c1', level: 'ป.1', section: '1' });
+    classId = await seedTestClass({ suffix: 'us008_c1', level: 'ป.4', section: '1' });
     subjectId = await seedTestSubject({ suffix: 'us008_eng', name: 'ภาษาอังกฤษทดสอบ008', code: 'TST008', group: 1 });
     studentId = await seedTestStudent({ class_suffix: 'us008_c1', seq: 1, full_name: 'test_นักเรียนUS008' });
     teacherId = await seedTestUser({ suffix: 'us008_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS008' });
@@ -106,7 +106,7 @@ test.describe('US-009: Summative scoring and grade computation', () => {
 
   test.beforeAll(async () => {
     await cleanupTestData();
-    classId = await seedTestClass({ suffix: 'us009_c1', level: 'ป.1', section: '1' });
+    classId = await seedTestClass({ suffix: 'us009_c1', level: 'ป.4', section: '1' });
     subjectId = await seedTestSubject({ suffix: 'us009_eng', name: 'ภาษาอังกฤษทดสอบ009', code: 'TST009', group: 1 });
     await seedTestSubjectWeights({
       subject_id: subjectId,
@@ -403,7 +403,7 @@ test.describe('US-013: Cover report aggregates', () => {
   test.beforeAll(async () => {
     test.setTimeout(180_000);
     await cleanupTestData();
-    classId = await seedTestClass({ suffix: 'us013_c1', level: 'ป.1', section: '1' });
+    classId = await seedTestClass({ suffix: 'us013_c1', level: 'ป.4', section: '1' });
     subjectId = await seedTestSubject({ suffix: 'us013_eng', name: 'ภาษาอังกฤษทดสอบ013', code: 'TST013', group: 1 });
     teacherId = await seedTestUser({ suffix: 'us013_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS013' });
     await seedTestEnrollment({
@@ -473,7 +473,7 @@ test.describe('US-014: PDF export of cover report', () => {
 
   test.beforeAll(async () => {
     await cleanupTestData();
-    classId = await seedTestClass({ suffix: 'us014_c1', level: 'ป.1', section: '1' });
+    classId = await seedTestClass({ suffix: 'us014_c1', level: 'ป.4', section: '1' });
     subjectId = await seedTestSubject({ suffix: 'us014_eng', name: 'ภาษาอังกฤษทดสอบ014', code: 'TST014', group: 1 });
     teacherId = await seedTestUser({ suffix: 'us014_teacher', role: 'teacher', password: 'test1234', full_name: 'test_ครูUS014' });
     await seedTestEnrollment({

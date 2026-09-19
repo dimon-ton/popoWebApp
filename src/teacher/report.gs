@@ -34,7 +34,7 @@ function getReportData(token, class_id, subject_id) {
   var studentIds = students.map(function(s) { return s.student_id; });
 
   // --- Grade distribution from SummativeScores ---
-  var allSummative = dbGetAll('SummativeScores');
+  var allSummative = isCurriculumLevel_(cls.level) ? [] : dbGetAll('SummativeScores');
   var gradeLabels = [4, 3.5, 3, 2.5, 2, 1.5, 1, 0];
   var gradeCounts = {};
   gradeLabels.forEach(function(g) { gradeCounts[String(g)] = 0; });
@@ -118,7 +118,7 @@ function getReportData(token, class_id, subject_id) {
     return { student_id: s.student_id, full_name: s.full_name, seq_no: s.seq_no, result: devMap[s.student_id] || '' };
   });
 
-  return {
+  var report = {
     school_info: school_info,
     class_info: withClassLabel(cls),
     subject_info: subj,
@@ -133,6 +133,19 @@ function getReportData(token, class_id, subject_id) {
     dev_students: dev_students,
     can_edit: true
   };
+  if (isCurriculumLevel_(cls.level)) {
+    var curriculum = getCurriculumData(token, class_id, subject_id);
+    report.curriculum_data = curriculum;
+    report.grade_dist = gradeLabels.map(function(g) {
+      var count = curriculum.students.filter(function(student) { return student.final_grade !== '' && Number(student.final_grade) === g; }).length;
+      return { grade: g, count: count, pct: total_students ? Math.round(count * 1000 / total_students) / 10 : 0 };
+    });
+    report.ability_dist = ['เชี่ยวชาญ', 'ชำนาญ', 'พัฒนา', 'เริ่มต้น'].map(function(label) {
+      var count = curriculum.students.filter(function(student) { return student.ability === label; }).length;
+      return { label: label, count: count, pct: total_students ? Math.round(count * 1000 / total_students) / 10 : 0 };
+    });
+  }
+  return report;
 }
 
 // Full printable ป.พ.5 report packet data.
@@ -146,11 +159,11 @@ function getReportBookData(token, class_id, subject_id) {
   var studentSet = {};
   studentIds.forEach(function(id) { studentSet[id] = true; });
 
-  var indicators = dbFind('Indicators', 'subject_id', subject_id);
+  var indicators = d.curriculum_data ? [] : dbFind('Indicators', 'subject_id', subject_id);
   indicators.sort(function(a, b) { return Number(a.display_order) - Number(b.display_order); });
 
   var formativeScoreMap = {};
-  dbGetAll('IndicatorScores').forEach(function(row) {
+  (d.curriculum_data ? [] : dbGetAll('IndicatorScores')).forEach(function(row) {
     if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
     if (!formativeScoreMap[row.student_id]) formativeScoreMap[row.student_id] = {};
     formativeScoreMap[row.student_id][row.indicator_id] = row.score === '' ? '' : Number(row.score);
@@ -178,7 +191,7 @@ function getReportBookData(token, class_id, subject_id) {
   });
 
   var summativeMap = {};
-  dbGetAll('SummativeScores').forEach(function(row) {
+  (d.curriculum_data ? [] : dbGetAll('SummativeScores')).forEach(function(row) {
     if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
     summativeMap[row.student_id] = {
       coursework: reportValueOrBlank(row.coursework),
@@ -400,7 +413,7 @@ function serverExportReportPdf(token, class_id, subject_id) {
 
   // --- Build the cover sheet ---
   var rows = [];
-  rows.push(['รายงานผลการเรียน', '', '', '']);
+  rows.push([d.curriculum_data ? 'แบบบันทึกผลการพัฒนาคุณภาพผู้เรียนประจำรายวิชา' : 'รายงานผลการเรียน', '', '', '']);
   rows.push(['โรงเรียน', school.school_name || '-', 'ปีการศึกษา', school.academic_year || '-']);
   rows.push(['อำเภอ', school.district   || '-', 'จังหวัด',   school.province    || '-']);
   rows.push(['ที่อยู่', school.school_address || '-', 'เขตพื้นที่', school.education_area || '-']);
@@ -414,10 +427,10 @@ function serverExportReportPdf(token, class_id, subject_id) {
   rows.push(['', '', '', '']);
 
   // Grade distribution table header
-  rows.push(['ผลการเรียน (คะแนน)', '', '', '']);
-  rows.push(['ผลการเรียน', 'จำนวนนักเรียน', 'ร้อยละ', '']);
-  (d.grade_dist || []).forEach(function(row) {
-    rows.push([String(row.grade), row.count, row.pct + '%', '']);
+  rows.push([d.curriculum_data ? 'ผลการประเมินระดับความสามารถ' : 'ผลการเรียน (คะแนน)', '', '', '']);
+  rows.push([d.curriculum_data ? 'ระดับความสามารถ' : 'ผลการเรียน', 'จำนวนนักเรียน', 'ร้อยละ', '']);
+  (d.curriculum_data ? d.ability_dist : d.grade_dist || []).forEach(function(row) {
+    rows.push([String(d.curriculum_data ? row.label : row.grade), row.count, row.pct + '%', '']);
   });
   rows.push(['', '', '', '']);
 

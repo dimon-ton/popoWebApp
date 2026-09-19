@@ -150,7 +150,22 @@ function renderReport(d) {
 }
 
 function buildReportBookHtml(d) {
-  var pages = [
+  var pages = d.curriculum_data ? [
+    pageCurriculumCover,
+    pageReferenceStudentRoster,
+    pageReferenceAttendance,
+    pageCurriculumTermOne,
+    pageCurriculumTermTwo,
+    pageCurriculumYearSummary,
+    pageReferenceSubjectDescription,
+    pageReferenceReadThinkWriteGrid,
+    pageReferenceCharacteristicsGrid,
+    pageReferenceDevActivityDoc,
+    pageReferenceCharacteristicsAssessment,
+    pageReferenceReadThinkWriteAssessment,
+    pageReferenceFinalSummary,
+    pageAppendix
+  ] : [
     pageReferenceCover,
     pageReferenceStudentRoster,
     pageReferenceAttendance,
@@ -166,7 +181,7 @@ function buildReportBookHtml(d) {
     pageAppendix
   ];
   var pageNumber = 1;
-  return pages.map(function(fn) {
+  var html = pages.map(function(fn) {
     var rendered = fn(d, pageNumber);
     if (Array.isArray(rendered)) {
       pageNumber += rendered.length;
@@ -175,6 +190,8 @@ function buildReportBookHtml(d) {
     pageNumber++;
     return rendered;
   }).join('');
+  html = html.replace(/__REPORT_TOTAL_PAGES__/g, String(pageNumber - 1));
+  return d.curriculum_data ? html.replace(/<section class="a4-page /g, '<section class="a4-page curriculum-page ') : html;
 }
 
 function pageShell(number, title, subtitle, body, extraClass) {
@@ -182,7 +199,7 @@ function pageShell(number, title, subtitle, body, extraClass) {
     '<h1 class="report-page-title">' + escHtml(title) + '</h1>' +
     (subtitle ? '<div class="report-page-subtitle">' + escHtml(subtitle) + '</div>' : '') +
     body +
-    '<div class="page-number">หน้า ' + number + ' / 14</div>' +
+    '<div class="page-number">หน้า ' + number + ' / __REPORT_TOTAL_PAGES__</div>' +
   '</section>';
 }
 
@@ -448,6 +465,15 @@ function pageReferenceStudentRoster(d, n) {
 }
 
 function pageReferenceSubjectDescription(d, n) {
+  if (d.curriculum_data) {
+    var rows = [1, 2].map(function(term) {
+      var items = (d.curriculum_data.outcomes || {})[String(term)] || [];
+      return '<h3>ภาคเรียนที่ ' + term + '</h3><ol>' + items.map(function(item) {
+        return '<li>' + blank(item.code) + ' — ' + blank(item.description) + ' (คะแนนเต็ม ' + num(item.max_score) + ')</li>';
+      }).join('') + '</ol>';
+    }).join('');
+    return referenceShell(n, '<div class="description-block"><div class="form-title">รายการผลลัพธ์การเรียนรู้</div>' + rows + '</div>');
+  }
   var body = '<div class="description-block"><div style="font-weight:700;text-align:center;margin-bottom:5mm">คำอธิบายรายวิชา</div><div style="min-height:92mm"></div></div>';
   return referenceShell(n, body);
 }
@@ -499,6 +525,67 @@ function pageReferenceScoreGridSummary(d, n) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td class="left">' + blank(studentName(s)) + '</td><td></td><td>' + num(s.coursework) + '</td><td>' + num(s.midterm) + '</td><td>' + num(s.final) + '</td><td>' + num(s.total) + '</td><td class="bold">' + num(s.final_grade || s.computed_grade) + '</td><td></td></tr>';
   }).join('');
   var body = '<div class="form-title">' + blank((meta(d).subj.subject_name || '') + '  ' + (meta(d).classLabel || '')) + '</div><table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:58mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="4">รวมคะแนน</th>' + rotatedTh('ผลการเรียน', 'rowspan="3" style="width:12mm"') + rotatedTh('สอบแก้ตัว', 'rowspan="3" style="width:12mm"') + '</tr><tr><th>ระหว่างเรียน</th><th>สอบกลางภาค</th><th>สอบปลายภาค</th><th>ทั้งหมด</th></tr><tr><th>50</th><th>20</th><th>30</th><th>100</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  return referenceShell(n, body, 'landscape-table');
+}
+
+function pageCurriculumCover(d, n) {
+  var m = meta(d);
+  var levels = d.ability_dist || [];
+  var levelRows = levels.map(function(row) {
+    return '<tr><td>' + blank(row.label) + '</td><td>' + num(row.count) + '</td><td>' + pct(row.pct) + '</td></tr>';
+  }).join('');
+  var body = '<div class="form-title">แบบบันทึกผลการพัฒนาคุณภาพผู้เรียนประจำรายวิชา</div>' +
+    '<div class="form-meta">' +
+    '<span class="meta-label">โรงเรียน</span><span class="meta-value">' + blank(m.school.school_name) + '</span>' +
+    '<span class="meta-label">ปีการศึกษา</span><span class="meta-value">' + blank(reportYear(d)) + '</span>' +
+    '<span class="meta-label">ชั้น</span><span class="meta-value">' + blank(m.classLabel) + '</span>' +
+    '<span class="meta-label">รายวิชา</span><span class="meta-value">' + blank(m.subj.subject_name) + '</span>' +
+    '<span class="meta-label">รหัสวิชา</span><span class="meta-value">' + blank(m.subj.subject_code) + '</span>' +
+    '<span class="meta-label">เวลาเรียน</span><span class="meta-value">' + blank(m.subj.hours_per_year) + ' ชั่วโมง/ปี</span>' +
+    '<span class="meta-label">ครูผู้สอน</span><span class="meta-value">' + blank(d.teacher_name) + '</span>' +
+    '</div><div class="form-title">สรุปผลการประเมินระดับความสามารถ</div>' +
+    '<table class="report-table form-summary-table"><thead><tr><th>ระดับความสามารถ</th><th>จำนวนนักเรียน</th><th>ร้อยละ</th></tr></thead><tbody>' + levelRows + '</tbody></table>' +
+    '<p>นักเรียนทั้งหมด ' + num(d.total_students) + ' คน · ผลลัพธ์การเรียนรู้ 35 คะแนน และประเมินปลายภาค 15 คะแนนต่อภาคเรียน</p>' +
+    '<div class="approval-heading">การอนุมัติผลการเรียน</div>' + approvalBlock(d);
+  return referenceShell(n, body, 'cover-page');
+}
+
+function pageCurriculumTermOne(d, n) { return pageCurriculumTermGrid(d, n, 1); }
+function pageCurriculumTermTwo(d, n) { return pageCurriculumTermGrid(d, n, 2); }
+
+function pageCurriculumTermGrid(d, n, term) {
+  var data = d.curriculum_data || {};
+  var outcomes = (data.outcomes || {})[String(term)] || [];
+  var chunks = chunkArray(outcomes, 10);
+  if (!chunks.length) chunks = [[]];
+  return chunks.map(function(items, chunkIndex) {
+    var isLast = chunkIndex === chunks.length - 1;
+    var headings = items.map(function(item) {
+      return '<th title="' + escHtml(item.description) + '">' + blank(item.code) + '<br>/' + num(item.max_score) + '</th>';
+    }).join('');
+    var rows = (data.students || []).map(function(student) {
+      var termResult = student['term' + term] || {};
+      var scores = items.map(function(item) { return '<td>' + num((student.scores || {})[item.outcome_id]) + '</td>'; }).join('');
+      return '<tr><td>' + blank(student.seq_no) + '</td><td class="left">' + blank(student.full_name) + '</td>' + scores +
+        (isLast ? '<td>' + num(termResult.raw) + '</td><td>' + num(termResult.scaled) + '</td><td>' + num(termResult.assessment) + '</td><td>' + num(termResult.total) + '</td><td>' + num(termResult.grade) + '</td><td>' + blank(termResult.ability) + '</td>' : '') + '</tr>';
+    }).join('');
+    var summaryHead = isLast ? '<th>ดิบ</th><th>ผลลัพธ์ /35</th><th>ปลายภาค /15</th><th>รวม /50</th><th>เกรด</th><th>ระดับ</th>' : '';
+    var descriptions = items.map(function(item) { return '<li>' + blank(item.code) + ' — ' + blank(item.description) + ' (' + num(item.max_score) + ')</li>'; }).join('');
+    var body = '<div class="form-title">ผลลัพธ์การเรียนรู้ ภาคเรียนที่ ' + term + '</div>' +
+      '<table class="report-table form-grid-table score-grid-table"><thead><tr><th>ที่</th><th class="student-name-head">ชื่อ - สกุล</th>' + headings + summaryHead + '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="rubric-explanation"><b>รายการผลลัพธ์การเรียนรู้</b><ol>' + descriptions + '</ol></div>';
+    return referenceShell(n + chunkIndex, body, 'landscape-table');
+  });
+}
+
+function pageCurriculumYearSummary(d, n) {
+  var rows = ((d.curriculum_data || {}).students || []).map(function(student) {
+    return '<tr><td>' + blank(student.seq_no) + '</td><td class="left">' + blank(student.full_name) + '</td>' +
+      '<td>' + num(student.term1.total) + '</td><td>' + num(student.term1.grade) + '</td>' +
+      '<td>' + num(student.term2.total) + '</td><td>' + num(student.term2.grade) + '</td>' +
+      '<td>' + num(student.year_total) + '</td><td>' + num(student.final_grade) + '</td><td>' + blank(student.ability) + '</td></tr>';
+  }).join('');
+  var body = '<div class="form-title">สรุปผลการประเมินประจำปี</div><table class="report-table form-grid-table"><thead><tr><th>ที่</th><th class="student-name-head">ชื่อ - สกุล</th><th>ภาค 1 /50</th><th>เกรด 1</th><th>ภาค 2 /50</th><th>เกรด 2</th><th>รวม /100</th><th>เกรดปี</th><th>ระดับความสามารถ</th></tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -558,6 +645,11 @@ function pageReferenceReadThinkWriteAssessment(d, n) {
 }
 
 function pageReferenceFinalSummary(d, n) {
+  if (d.curriculum_data) {
+    var abilityRows = (d.ability_dist || []).map(function(row) { return '<tr><td>' + blank(row.label) + '</td><td>' + num(row.count) + '</td><td>' + pct(row.pct) + '</td></tr>'; }).join('');
+    var curriculumBody = '<div class="description-block"><div class="form-title">สรุประดับความสามารถ</div><table class="report-table"><thead><tr><th>ระดับ</th><th>จำนวน</th><th>ร้อยละ</th></tr></thead><tbody>' + abilityRows + '</tbody></table><br>' + gradeScaleTable() + '</div>';
+    return referenceShell(n, curriculumBody);
+  }
   var chars = d.char_dist || [];
   var rtw = d.rtw_dist || [];
   var rows = ['ดีเยี่ยม','ดี','ผ่านเกณฑ์','ไม่ผ่าน'].map(function(label, i) {
@@ -716,7 +808,9 @@ function pageTeacherNotes(d, n) {
 }
 
 function pageAppendix(d, n) {
-  var items = ['ตรวจสอบรายชื่อนักเรียนครบถ้วน', 'ตรวจสอบคะแนนระหว่างเรียน', 'ตรวจสอบคะแนนปลายภาค/ปลายปี', 'ตรวจสอบเวลาเรียน', 'ตรวจสอบคุณลักษณะอันพึงประสงค์', 'ตรวจสอบการอ่าน คิดวิเคราะห์ และเขียน', 'ตรวจสอบกิจกรรมพัฒนาผู้เรียน', 'ลงนามรับรองเอกสาร'];
+  var items = d.curriculum_data
+    ? ['ตรวจสอบรายชื่อนักเรียนครบถ้วน', 'ตรวจสอบผลลัพธ์การเรียนรู้ทั้งสองภาคเรียน', 'ตรวจสอบคะแนนประเมินปลายภาคทั้งสองภาคเรียน', 'ตรวจสอบเวลาเรียน', 'ตรวจสอบคุณลักษณะอันพึงประสงค์', 'ตรวจสอบการอ่าน คิดวิเคราะห์ และเขียน', 'ตรวจสอบกิจกรรมพัฒนาผู้เรียน', 'ลงนามรับรองเอกสาร']
+    : ['ตรวจสอบรายชื่อนักเรียนครบถ้วน', 'ตรวจสอบคะแนนระหว่างเรียน', 'ตรวจสอบคะแนนปลายภาค/ปลายปี', 'ตรวจสอบเวลาเรียน', 'ตรวจสอบคุณลักษณะอันพึงประสงค์', 'ตรวจสอบการอ่าน คิดวิเคราะห์ และเขียน', 'ตรวจสอบกิจกรรมพัฒนาผู้เรียน', 'ลงนามรับรองเอกสาร'];
   var body = section('รายการตรวจสอบก่อนจัดเก็บเอกสาร', '<div class="appendix-list">' + items.map(function(item, i) {
     return '<div class="appendix-item"><span class="check-box"></span><span>' + (i + 1) + '. ' + escHtml(item) + '</span><span>วันที่ ..........</span></div>';
   }).join('') + '</div>') +

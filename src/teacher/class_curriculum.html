@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ผลลัพธ์การเรียนรู้ ป.1–ป.3 — PopoWebApp</title>
+  <?!= include('_styles') ?>
+  <style>
+    .curriculum-toolbar { display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:16px }
+    .curriculum-toolbar label { display:block; font-weight:600; margin-bottom:5px }
+    .curriculum-toolbar input, .curriculum-toolbar select { padding:8px; border:1px solid var(--border); border-radius:6px }
+    .curriculum-table-wrap { overflow-x:auto }
+    .curriculum-table { width:100%; border-collapse:collapse; min-width:900px }
+    .curriculum-table th,.curriculum-table td { padding:7px; border:1px solid var(--border); text-align:center }
+    .curriculum-table .student-name-col { text-align:left; vertical-align:middle; min-width:170px }
+    .curriculum-table input { width:70px; padding:6px; text-align:center }
+    .curriculum-table .outcome-description { text-align:left }
+    .curriculum-summary { margin:10px 0; color:var(--text-muted) }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard');return false">หน้าหลัก</a>
+  <div class="navbar-user"><div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div><div class="navbar-dropdown"><a href="#" onclick="navigate('profile_edit');return false">แก้ไขโปรไฟล์</a><div class="dropdown-divider"></div><a href="#" onclick="doLogout();return false">ออกจากระบบ</a></div></div>
+</div>
+<div class="container wide">
+  <h2 class="page-title" id="pageHeading">ผลลัพธ์การเรียนรู้ ป.1–ป.3</h2>
+  <p>ภาคเรียนละ 50 คะแนน: ผลลัพธ์การเรียนรู้ 35 คะแนน และประเมินปลายภาค 15 คะแนน</p>
+  <div class="card">
+    <div class="curriculum-toolbar">
+      <div><label for="termSelect">ภาคเรียน</label><select id="termSelect" onchange="render()"><option value="1">ภาคเรียนที่ 1</option><option value="2">ภาคเรียนที่ 2</option></select></div>
+    </div>
+    <h3>กำหนดผลลัพธ์การเรียนรู้</h3>
+    <p class="curriculum-summary">กำหนดคะแนนเต็มตามรายวิชา ระบบจะแปลงผลรวมเป็น 35 คะแนน คะแนนต่ำกว่าครึ่งของคะแนนเต็มจะแสดงคำเตือน</p>
+    <div class="curriculum-toolbar">
+      <div><label for="outcomeCode">รหัส</label><input id="outcomeCode" placeholder="เช่น 1"></div>
+      <div><label for="outcomeDescription">คำอธิบาย</label><input id="outcomeDescription" style="min-width:280px" placeholder="ผลลัพธ์การเรียนรู้"></div>
+      <div><label for="outcomeMax">คะแนนเต็ม</label><input id="outcomeMax" type="number" min="0.5" step="0.5" value="10"></div>
+      <div><label for="outcomeOrder">ลำดับ</label><input id="outcomeOrder" type="number" min="0" step="1" value="1"></div>
+      <button class="btn-primary" id="saveOutcomeBtn" onclick="saveOutcome()">เพิ่มผลลัพธ์</button>
+      <button class="btn-secondary" id="cancelOutcomeBtn" onclick="clearOutcomeForm()" style="display:none">ยกเลิกแก้ไข</button>
+    </div>
+    <div class="curriculum-table-wrap"><table class="curriculum-table"><thead><tr><th>ลำดับ</th><th>รหัส</th><th>คำอธิบาย</th><th>คะแนนเต็ม</th><th></th></tr></thead><tbody id="outcomeBody"></tbody></table></div>
+  </div>
+  <div class="card">
+    <h3>บันทึกคะแนนรายภาคเรียน</h3>
+    <div class="loading-msg" id="loadingMsg">กำลังโหลดข้อมูล...</div>
+    <div class="curriculum-table-wrap"><table class="curriculum-table" id="scoreTable" style="display:none"><thead id="scoreHead"></thead><tbody id="scoreBody"></tbody></table></div>
+    <div class="curriculum-summary" id="scoreNote"></div>
+    <button class="btn-save" id="saveScoresBtn" onclick="saveScores()" style="display:none">บันทึกคะแนน</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+var CLASS_ID = '<?!= data.class_id || '' ?>';
+var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
+var currentData = null;
+var editingOutcomeId = '';
+var dirty = false;
+function esc(value) { return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function toast(message, kind) { var el=document.getElementById('toast'); el.textContent=message; el.className='toast '+(kind||'success'); el.style.display='block'; setTimeout(function(){el.style.display='none';},4000); }
+function navigate(page) {
+  if (dirty && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?')) return;
+  showNavLoading();
+  google.script.run.withSuccessHandler(function(html){document.open();document.write(html);document.close();})
+    .withFailureHandler(function(err){hideNavLoading();toast(err.message,'error');}).getPageHtml(TOKEN,page);
+}
+function doLogout(){
+  if(dirty&&!confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการออกจากระบบหรือไม่?'))return;
+  google.script.run.withSuccessHandler(function(){localStorage.removeItem('popo_token');location.reload();})
+    .withFailureHandler(function(err){toast(err.message,'error');}).serverLogout(TOKEN);
+}
+window.addEventListener('beforeunload',function(event){if(dirty){event.preventDefault();event.returnValue='';}});
+function selectedTerm(){return Number(document.getElementById('termSelect').value);}
+function load() {
+  google.script.run.withSuccessHandler(function(data){currentData=data;dirty=false;render();})
+    .withFailureHandler(function(err){document.getElementById('loadingMsg').textContent=err.message;toast(err.message,'error');})
+    .getCurriculumData(TOKEN,CLASS_ID,SUBJECT_ID);
+}
+function grade(total) {
+  if(total==='') return '';
+  var n=Number(total);
+  return n>=80?4:n>=75?3.5:n>=70?3:n>=65?2.5:n>=60?2:n>=55?1.5:n>=50?1:0;
+}
+function ability(value){return value===''?'':value>=3.5?'เชี่ยวชาญ':value>=2.5?'ชำนาญ':value>=1.5?'พัฒนา':'เริ่มต้น';}
+function clearOutcomeForm(){editingOutcomeId='';document.getElementById('outcomeCode').value='';document.getElementById('outcomeDescription').value='';document.getElementById('outcomeMax').value='10';document.getElementById('saveOutcomeBtn').textContent='เพิ่มผลลัพธ์';document.getElementById('cancelOutcomeBtn').style.display='none';}
+function editOutcome(id){
+  var item=(currentData.outcomes[String(selectedTerm())]||[]).filter(function(row){return row.outcome_id===id;})[0];
+  if(!item)return;
+  editingOutcomeId=id;
+  document.getElementById('outcomeCode').value=item.code;
+  document.getElementById('outcomeDescription').value=item.description;
+  document.getElementById('outcomeMax').value=item.max_score;
+  document.getElementById('outcomeOrder').value=item.display_order;
+  document.getElementById('saveOutcomeBtn').textContent='บันทึกการแก้ไข';
+  document.getElementById('cancelOutcomeBtn').style.display='inline-block';
+}
+function saveOutcome(){
+  if(dirty){toast('กรุณาบันทึกคะแนนก่อนแก้ไขผลลัพธ์','error');return;}
+  var item={outcome_id:editingOutcomeId,term:selectedTerm(),code:document.getElementById('outcomeCode').value,description:document.getElementById('outcomeDescription').value,max_score:document.getElementById('outcomeMax').value,display_order:document.getElementById('outcomeOrder').value};
+  google.script.run.withSuccessHandler(function(){clearOutcomeForm();load();toast('บันทึกผลลัพธ์แล้ว');})
+    .withFailureHandler(function(err){toast(err.message,'error');})
+    .serverSaveLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,item);
+}
+function deleteOutcome(id){
+  if(dirty){toast('กรุณาบันทึกคะแนนก่อนลบผลลัพธ์','error');return;}
+  if(!confirm('ลบผลลัพธ์การเรียนรู้นี้?'))return;
+  google.script.run.withSuccessHandler(function(){load();toast('ลบแล้ว');})
+    .withFailureHandler(function(err){toast(err.message,'error');})
+    .serverDeleteLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,id);
+}
+function render(){
+  if(!currentData)return;
+  if(dirty && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการเปลี่ยนภาคเรียนหรือไม่?')){document.getElementById('termSelect').value=String(currentData.activeTerm||1);return;}
+  dirty=false;
+  var term=selectedTerm();currentData.activeTerm=term;clearOutcomeForm();
+  var items=currentData.outcomes[String(term)]||[];
+  var cls=currentData.class_info||{},subject=currentData.subject_info||{};
+  document.getElementById('pageHeading').textContent='ผลลัพธ์การเรียนรู้ — '+(cls.class_label||cls.level||'')+' — '+(subject.subject_name||'');
+  document.getElementById('outcomeBody').innerHTML=items.map(function(item){return '<tr><td>'+esc(item.display_order)+'</td><td>'+esc(item.code)+'</td><td class="outcome-description">'+esc(item.description)+'</td><td>'+esc(item.max_score)+'</td><td><button class="btn-secondary" onclick="editOutcome(\''+esc(item.outcome_id)+'\')">แก้ไข</button> <button class="btn-secondary" onclick="deleteOutcome(\''+esc(item.outcome_id)+'\')">ลบ</button></td></tr>';}).join('')||'<tr><td colspan="5">ยังไม่มีผลลัพธ์การเรียนรู้</td></tr>';
+  document.getElementById('outcomeOrder').value=items.length+1;
+  document.getElementById('loadingMsg').style.display='none';
+  document.getElementById('scoreTable').style.display=items.length?'table':'none';
+  document.getElementById('saveScoresBtn').style.display=items.length?'inline-block':'none';
+  document.getElementById('scoreNote').textContent=items.length?'เกรดจะแสดงเมื่อกรอกคะแนนผลลัพธ์ทุกข้อและคะแนนปลายภาคครบ':'เพิ่มผลลัพธ์การเรียนรู้ก่อนบันทึกคะแนน';
+  document.getElementById('scoreHead').innerHTML='<tr><th>ที่</th><th class="student-name-col">ชื่อ-สกุล</th>'+items.map(function(item){return '<th title="'+esc(item.description)+'">'+esc(item.code)+'<br>/'+esc(item.max_score)+'</th>';}).join('')+'<th>ปลายภาค<br>/15</th><th>ผลลัพธ์<br>/35</th><th>รวม<br>/50</th><th>เกรด</th><th>ระดับ</th></tr>';
+  document.getElementById('scoreBody').innerHTML=(currentData.students||[]).map(function(student){
+    var result=student['term'+term]||{};
+    return '<tr data-student="'+esc(student.student_id)+'"><td>'+esc(student.seq_no)+'</td><td class="student-name-col">'+esc(student.full_name)+'</td>'+items.map(function(item){var value=student.scores[item.outcome_id];return '<td><input class="outcome-score" type="number" min="0" max="'+esc(item.max_score)+'" step="0.5" data-outcome="'+esc(item.outcome_id)+'" value="'+esc(value===undefined?'':value)+'" oninput="updateRow(this)"></td>';}).join('')+'<td><input class="assessment-score" type="number" min="0" max="15" step="0.5" value="'+esc(student.assessments[String(term)])+'" oninput="updateRow(this)"></td><td class="scaled">'+esc(result.scaled)+'</td><td class="term-total">'+esc(result.total)+'</td><td class="term-grade">'+esc(result.grade)+'</td><td class="term-ability">'+esc(result.ability)+'</td></tr>';
+  }).join('');
+}
+function updateRow(input){
+  dirty=true;var row=input.closest('tr'),items=currentData.outcomes[String(selectedTerm())]||[];
+  var raw=0,max=0,complete=true,warning=false;
+  items.forEach(function(item){var field=row.querySelector('[data-outcome="'+item.outcome_id+'"]');var value=field.value;if(value===''){complete=false;return;}var n=Number(value);if(!isFinite(n)||n<0||n>Number(item.max_score)){complete=false;field.style.borderColor='var(--red)';return;}field.style.borderColor='';raw+=n;max+=Number(item.max_score);if(n<Number(item.max_score)/2)warning=true;});
+  var assessment=row.querySelector('.assessment-score');if(assessment.value===''||Number(assessment.value)<0||Number(assessment.value)>15)complete=false;
+  var scaled=complete?Math.round(raw/max*35):'',total=complete?scaled+Number(assessment.value):'',result=complete?grade(total*2):'';
+  row.querySelector('.scaled').textContent=scaled;row.querySelector('.term-total').textContent=total;row.querySelector('.term-grade').textContent=result;row.querySelector('.term-ability').textContent=ability(result);
+  row.title=warning?'มีคะแนนผลลัพธ์ต่ำกว่าครึ่งของคะแนนเต็ม':'';
+  row.style.backgroundColor=warning?'#fff7e8':'';
+}
+function saveScores(){
+  var term=selectedTerm(),items=currentData.outcomes[String(term)]||[];
+  var rows=Array.prototype.map.call(document.querySelectorAll('#scoreBody tr'),function(tr){var scores={};items.forEach(function(item){scores[item.outcome_id]=tr.querySelector('[data-outcome="'+item.outcome_id+'"]').value;});return {student_id:tr.getAttribute('data-student'),scores:scores,assessment:tr.querySelector('.assessment-score').value};});
+  var button=document.getElementById('saveScoresBtn');button.disabled=true;
+  google.script.run.withSuccessHandler(function(){button.disabled=false;dirty=false;load();toast('บันทึกคะแนนแล้ว');})
+    .withFailureHandler(function(err){button.disabled=false;toast(err.message,'error');})
+    .serverSaveCurriculumScores(TOKEN,CLASS_ID,SUBJECT_ID,term,rows);
+}
+load();
+</script>
+</body>
+</html>

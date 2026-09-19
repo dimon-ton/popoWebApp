@@ -437,6 +437,7 @@ function getSubjectsList(token) {
   subjects = subjects.map(function(s) {
     var cls = classesById[s.class_id] || null;
     s.class_label = cls ? fmtClassLabelWithCounts(cls.level, cls.section, levelCounts) : '';
+    s.class_level = cls ? cls.level : '';
     return s;
   });
   return { subjects: subjects };

@@ -145,26 +145,28 @@ function renderWeights(weights) {
   tbody.innerHTML = '';
   weights.forEach(function(w) {
     var tr = document.createElement('tr');
+    var curriculum = /^ป\.[123]$/.test(String(w.grade_level || '').replace(/\s+/g, ''));
     tr.setAttribute('data-subject-id', w.subject_id);
     tr.setAttribute('data-class-id', w.class_id || '');
     tr.setAttribute('data-grade-level', w.grade_level || '');
-    var preMid = Number(w.pre_mid_max) || 0;
-    var mid = Number(w.mid_max) || 0;
-    var postMid = Number(w.post_mid_max) || 0;
-    var finalExam = Number(w.final_exam_max) || 0;
+    var preMid = curriculum ? 35 : Number(w.pre_mid_max) || 0;
+    var mid = curriculum ? 15 : Number(w.mid_max) || 0;
+    var postMid = curriculum ? 35 : Number(w.post_mid_max) || 0;
+    var finalExam = curriculum ? 15 : Number(w.final_exam_max) || 0;
+    var disabled = curriculum ? ' disabled title="หลักสูตร ป.1–ป.3 กำหนดคะแนนภาคละ 35+15"' : '';
     var cwMax = preMid + mid + postMid;
     var total = preMid + mid + postMid + finalExam;
     var sumClass = total === 100 ? 'sum-cell ok' : 'sum-cell bad';
     tr.innerHTML =
       '<td class="left">' +
         '<strong>' + escHtml((w.subject_code ? w.subject_code + ' - ' : '') + (w.subject_name || w.subject_id)) + '</strong>' +
-        '<div style="font-size:12px;color:var(--text-muted)">ชั้นเรียน: ' + escHtml(w.class_label || '-') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-muted)">ชั้นเรียน: ' + escHtml(w.class_label || '-') + (curriculum ? ' · หลักสูตร ป.1–ป.3: 35+15 ต่อภาคเรียน' : '') + '</div>' +
       '</td>' +
-      '<td class="col-group"><input type="number" class="pre-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + preMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
-      '<td class="col-group"><input type="number" class="mid" data-sid="' + escHtml(w.subject_id) + '" value="' + mid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
-      '<td class="col-group"><input type="number" class="post-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + postMid + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td class="col-group"><input type="number" class="pre-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + preMid + '" min="0" max="100" oninput="updateRow(this)"' + disabled + '></td>' +
+      '<td class="col-group"><input type="number" class="mid" data-sid="' + escHtml(w.subject_id) + '" value="' + mid + '" min="0" max="100" oninput="updateRow(this)"' + disabled + '></td>' +
+      '<td class="col-group"><input type="number" class="post-mid" data-sid="' + escHtml(w.subject_id) + '" value="' + postMid + '" min="0" max="100" oninput="updateRow(this)"' + disabled + '></td>' +
       '<td class="col-group cw-sum" id="cw-' + escHtml(w.subject_id) + '">' + cwMax + '</td>' +
-      '<td><input type="number" class="final-exam" data-sid="' + escHtml(w.subject_id) + '" value="' + finalExam + '" min="0" max="100" oninput="updateRow(this)"></td>' +
+      '<td><input type="number" class="final-exam" data-sid="' + escHtml(w.subject_id) + '" value="' + finalExam + '" min="0" max="100" oninput="updateRow(this)"' + disabled + '></td>' +
       '<td class="' + sumClass + '" id="sum-' + escHtml(w.subject_id) + '">' + total + '</td>';
     tbody.appendChild(tr);
   });
@@ -217,7 +219,7 @@ function quickFillColumn(columnClass) {
   document.querySelectorAll('#weightsBody tr').forEach(function(tr) {
     if (tr.style.display === 'none') return;
     var input = tr.querySelector('.' + columnClass);
-    if (!input) return;
+    if (!input || input.disabled) return;
     input.value = value;
     updateRow(input);
     changed++;
@@ -251,6 +253,7 @@ function saveWeights() {
   var errorSubjects = [];
 
   document.querySelectorAll('#weightsBody tr').forEach(function(tr) {
+    if (tr.querySelector('.pre-mid').disabled) return;
     var sid = tr.getAttribute('data-subject-id');
     var preMid = parseInt(tr.querySelector('.pre-mid').value) || 0;
     var mid = parseInt(tr.querySelector('.mid').value) || 0;

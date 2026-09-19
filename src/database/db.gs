@@ -4,7 +4,7 @@
 var TABS = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance',
-  'IndicatorScores', 'SummativeScores', 'Characteristics',
+  'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 
