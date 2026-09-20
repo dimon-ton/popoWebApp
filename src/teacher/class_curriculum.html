@@ -28,14 +28,6 @@
   <h2 class="page-title" id="pageHeading">ผลลัพธ์การเรียนรู้ ป.1–ป.3</h2>
   <p>ภาคเรียนละ 50 คะแนน: ผลลัพธ์การเรียนรู้ 35 คะแนน และประเมินปลายภาค 15 คะแนน</p>
   <div class="card">
-    <h3>ข้อมูลความสามารถสำหรับรายงาน</h3>
-    <div class="curriculum-toolbar">
-      <div><label for="abilityType">ประเภทความสามารถ</label><select id="abilityType"><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select></div>
-      <div><label for="abilityName">ชื่อความสามารถ</label><input id="abilityName" style="min-width:280px" placeholder="เช่น ด้านวิทยาศาสตร์ สิ่งแวดล้อมและเทคโนโลยี"></div>
-      <button class="btn-primary" id="saveReportProfileBtn" onclick="saveReportProfile()">บันทึกข้อมูลรายงาน</button>
-    </div>
-  </div>
-  <div class="card">
     <div class="curriculum-toolbar">
       <div><label for="termSelect">ภาคเรียน</label><select id="termSelect" onchange="render()"><option value="1">ภาคเรียนที่ 1</option><option value="2">ภาคเรียนที่ 2</option></select></div>
     </div>
@@ -141,17 +133,6 @@ function deleteOutcome(id){
     .withFailureHandler(function(err){toast(err.message,'error');})
     .serverDeleteLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,id);
 }
-function saveReportProfile(){
-  if(dirty){toast('กรุณาบันทึกคะแนนก่อนแก้ไขข้อมูลรายงาน','error');return;}
-  var button=document.getElementById('saveReportProfileBtn');
-  var type=document.getElementById('abilityType').value;
-  var name=document.getElementById('abilityName').value.trim();
-  if(!name){toast('กรุณาระบุชื่อความสามารถ','error');return;}
-  if(!startCurriculumAction(button,'กำลังบันทึกข้อมูลรายงาน...'))return;
-  google.script.run.withSuccessHandler(function(){load();toast('บันทึกข้อมูลรายงานแล้ว');})
-    .withFailureHandler(function(err){toast(err.message,'error');finishCurriculumAction(button);})
-    .serverSaveCurriculumReportProfile(TOKEN,CLASS_ID,SUBJECT_ID,type,name);
-}
 function render(){
   if(!currentData)return;
   if(dirty && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการเปลี่ยนภาคเรียนหรือไม่?')){document.getElementById('termSelect').value=String(currentData.activeTerm||1);return;}
@@ -160,8 +141,6 @@ function render(){
   var items=currentData.outcomes[String(term)]||[];
   var cls=currentData.class_info||{},subject=currentData.subject_info||{};
   document.getElementById('pageHeading').textContent='ผลลัพธ์การเรียนรู้ — '+(cls.class_label||cls.level||'')+' — '+(subject.subject_name||'');
-  document.getElementById('abilityType').value=subject.curriculum_ability_type||'พื้นฐาน';
-  document.getElementById('abilityName').value=subject.curriculum_ability_name||'';
   document.getElementById('outcomeBody').innerHTML=items.map(function(item){return '<tr><td>'+esc(item.display_order)+'</td><td class="outcome-description">'+esc(item.description)+'</td><td>'+esc(item.max_score)+'</td><td><button class="btn-secondary" onclick="editOutcome(\''+esc(item.outcome_id)+'\')">แก้ไข</button> <button class="btn-secondary" onclick="deleteOutcome(\''+esc(item.outcome_id)+'\')">ลบ</button></td></tr>';}).join('')||'<tr><td colspan="4">ยังไม่มีผลลัพธ์การเรียนรู้</td></tr>';
   document.getElementById('loadingMsg').style.display='none';
   document.getElementById('scoreTable').style.display=items.length?'table':'none';

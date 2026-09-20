@@ -54,9 +54,17 @@
       </div>
       <div class="form-group">
         <label>ชั้นเรียน</label>
-        <select id="newClassIds" style="min-width:180px">
+        <select id="newClassIds" style="min-width:180px" onchange="toggleNewSubjectAbility()">
           <option value="">เลือกชั้นเรียน</option>
         </select>
+      </div>
+      <div class="form-group" id="newAbilityTypeGroup" style="display:none">
+        <label for="newAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
+        <select id="newAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
+      </div>
+      <div class="form-group" id="newAbilityNameGroup" style="display:none">
+        <label for="newAbilityName">ชื่อความสามารถ (ป.1–ป.3)</label>
+        <input type="text" id="newAbilityName" placeholder="เช่น ด้านภาษา">
       </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
@@ -67,7 +75,7 @@
   <div class="card">
     <h3>นำเข้ารายวิชาด้วย CSV</h3>
     <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
+      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง รายวิชาใหม่ ป.1–ป.3 ต้องกรอกประเภทและชื่อความสามารถ ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
       <div style="margin-top: 8px;">
         <strong>ลำดับคอลัมน์:</strong>
         <code>class_id</code>,
@@ -77,6 +85,8 @@
         <code>รหัสวิชา</code>,
         <code>ชื่อวิชา*</code>,
         <code>กลุ่มสาระฯ</code>,
+        <code>ประเภทความสามารถ</code>,
+        <code>ชื่อความสามารถ</code>,
         <code>จำนวนชั่วโมง</code>,
         <code>กลุ่มน้ำหนัก</code>,
         <code>ก่อนกลางภาค</code>,
@@ -152,6 +162,14 @@
       <label>เวลาเรียน (ชม./ปี)</label>
       <input type="number" id="editHours" placeholder="80" min="0">
     </div>
+    <div class="form-group" id="editAbilityTypeGroup" style="display:none">
+      <label for="editAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
+      <select id="editAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
+    </div>
+    <div class="form-group" id="editAbilityNameGroup" style="display:none">
+      <label for="editAbilityName">ชื่อความสามารถ (ป.1–ป.3)</label>
+      <input type="text" id="editAbilityName" placeholder="เช่น ด้านภาษา">
+    </div>
     <div class="modal-actions">
       <button class="btn-primary" id="saveEditBtn" onclick="saveSubjectEdit()">บันทึก</button>
       <button class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
@@ -209,6 +227,30 @@ function fmtCls(level, section) {
   return String(level || '') + (section ? '/' + section : '');
 }
 
+function isP1P3Level(level) {
+  return /^ป\.[123]$/.test(String(level || '').replace(/\s+/g, ''));
+}
+
+function selectedNewClassIsP1P3() {
+  var classId = document.getElementById('newClassIds').value;
+  var cls = allClasses.find(function(item) { return String(item.class_id) === classId; });
+  return !!cls && isP1P3Level(cls.level);
+}
+
+function toggleNewSubjectAbility() {
+  var visible = selectedNewClassIsP1P3();
+  document.getElementById('newAbilityTypeGroup').style.display = visible ? '' : 'none';
+  document.getElementById('newAbilityNameGroup').style.display = visible ? '' : 'none';
+}
+
+function subjectAbilityValues(prefix) {
+  var type = document.getElementById(prefix + 'AbilityType').value;
+  var name = document.getElementById(prefix + 'AbilityName').value.trim();
+  if (!type) { showToast('กรุณาเลือกประเภทความสามารถ', 'error'); return null; }
+  if (!name) { showToast('กรุณาระบุชื่อความสามารถ', 'error'); return null; }
+  return { type: type, name: name };
+}
+
 function loadClassesForSubjects() {
   google.script.run
     .withSuccessHandler(function(result) {
@@ -218,6 +260,7 @@ function loadClassesForSubjects() {
       }).join('');
       var select = document.getElementById('newClassIds');
       if (select) select.innerHTML = options;
+      toggleNewSubjectAbility();
     })
     .withFailureHandler(function(err) { showToast('โหลดชั้นเรียนไม่สำเร็จ: ' + err.message, 'error'); })
     .getClassesList(TOKEN);
@@ -268,6 +311,8 @@ function addSubject() {
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
   if (!classId) { showToast('กรุณาเลือกชั้นเรียน', 'error'); return; }
+  var ability = selectedNewClassIsP1P3() ? subjectAbilityValues('new') : { type: '', name: '' };
+  if (!ability) return;
 
   var btn = document.getElementById('addSubjectBtn');
   btn.disabled = true;
@@ -282,6 +327,9 @@ function addSubject() {
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
       document.getElementById('newClassIds').value = '';
+      document.getElementById('newAbilityType').value = '';
+      document.getElementById('newAbilityName').value = '';
+      toggleNewSubjectAbility();
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
       loadSubjects();
@@ -290,7 +338,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group);
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group, ability.type, ability.name);
 }
 
 function openEditModal(subject_id) {
@@ -302,6 +350,11 @@ function openEditModal(subject_id) {
   document.getElementById('editSubjectName').value = s.subject_name || '';
   document.getElementById('editSubjectGroup').value = s.subject_group || '';
   document.getElementById('editHours').value = s.hours_per_year || '';
+  var isP1P3 = isP1P3Level(s.class_level);
+  document.getElementById('editAbilityTypeGroup').style.display = isP1P3 ? '' : 'none';
+  document.getElementById('editAbilityNameGroup').style.display = isP1P3 ? '' : 'none';
+  document.getElementById('editAbilityType').value = s.curriculum_ability_type || '';
+  document.getElementById('editAbilityName').value = s.curriculum_ability_name || '';
   
   document.getElementById('editModalOverlay').classList.add('open');
 }
@@ -318,6 +371,9 @@ function saveSubjectEdit() {
   var hours = document.getElementById('editHours').value.trim();
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
+  var currentSubject = allSubjects.find(function(item) { return item.subject_id === subject_id; });
+  var ability = currentSubject && isP1P3Level(currentSubject.class_level) ? subjectAbilityValues('edit') : { type: '', name: '' };
+  if (!ability) return;
 
   var btn = document.getElementById('saveEditBtn');
   btn.disabled = true;
@@ -334,7 +390,7 @@ function saveSubjectEdit() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group);
+    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group, ability.type, ability.name);
 }
 
 function parseCSV(text) {
@@ -383,10 +439,10 @@ function normalizeCSVHeader(header) {
 }
 
 function downloadCSVTemplate() {
-  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
+  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'ประเภทความสามารถ', 'ชื่อความสามารถ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
   var rows = [
-    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', '200', '1', '30', '20', '20', '30'],
-    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', '200', '1', '30', '20', '20', '30']
+    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', 'ด้านภาษา', '200', '1', '30', '20', '20', '30'],
+    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', 'ด้านภาษา', '200', '1', '30', '20', '20', '30']
   ];
   var csv = [headers].concat(rows).map(function(row) {
     return row.map(csvEscape).join(',');
@@ -435,6 +491,8 @@ function importCSVFile() {
       var codeIdx = headers.indexOf('รหัสวิชา');
       var nameIdx = headers.indexOf('ชื่อวิชา');
       var subjectGroupIdx = headers.indexOf('กลุ่มสาระฯ');
+      var abilityTypeIdx = headers.indexOf('ประเภทความสามารถ');
+      var abilityNameIdx = headers.indexOf('ชื่อความสามารถ');
       var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
       var groupIdx = headers.indexOf('กลุ่มน้ำหนัก');
       var preMidIdx = headers.indexOf('ก่อนกลางภาค');
@@ -472,6 +530,8 @@ function importCSVFile() {
           subject_code: code,
           subject_name: name,
           subject_group: subjectGroup,
+          curriculum_ability_type: abilityTypeIdx !== -1 && row[abilityTypeIdx] ? row[abilityTypeIdx].trim() : '',
+          curriculum_ability_name: abilityNameIdx !== -1 && row[abilityNameIdx] ? row[abilityNameIdx].trim() : '',
           hours: hours,
           weight_group: group,
           pre_mid_max: preMidIdx !== -1 && row[preMidIdx] ? row[preMidIdx].trim() : '',

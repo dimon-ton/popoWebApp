@@ -90,27 +90,6 @@ function getCurriculumData(token, class_id, subject_id) {
   };
 }
 
-function serverSaveCurriculumReportProfile(token, class_id, subject_id, ability_type, ability_name) {
-  var context = requireCurriculumAccess_(token, class_id, subject_id);
-  var type = String(ability_type || '').trim();
-  var name = String(ability_name || '').trim();
-  if (type !== 'พื้นฐาน' && type !== 'การประยุกต์ใช้ในชีวิตประจำวัน') {
-    throw new Error('กรุณาเลือกประเภทความสามารถ');
-  }
-  if (!name) throw new Error('กรุณาระบุชื่อความสามารถ');
-  ensureColumns('Subjects', ['curriculum_ability_type', 'curriculum_ability_name']);
-  var oldSubject = dbFindOne('Subjects', 'subject_id', subject_id);
-  dbUpdate('Subjects', 'subject_id', subject_id, {
-    curriculum_ability_type: type,
-    curriculum_ability_name: name
-  });
-  appendAuditLog(context.session.user_id, 'Subjects', subject_id, oldSubject, {
-    curriculum_ability_type: type,
-    curriculum_ability_name: name
-  });
-  return { ok: true };
-}
-
 function serverSaveLearningOutcome(token, class_id, subject_id, item) {
   var context = requireCurriculumAccess_(token, class_id, subject_id);
   item = item || {};

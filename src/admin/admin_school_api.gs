@@ -410,8 +410,18 @@ function serverImportClassesCSV(token, rows) {
 // ── Subjects ──────────────────────────────────────────────────────────────────
 
 function ensureSubjectsSchema() {
-  ensureColumns('Subjects', ['class_id', 'subject_group']);
+  ensureColumns('Subjects', ['class_id', 'subject_group', 'curriculum_ability_type', 'curriculum_ability_name']);
   removeColumns('Subjects', ['description']);
+}
+
+function validateSubjectAbility_(type, name) {
+  var abilityType = String(type || '').trim();
+  var abilityName = String(name || '').trim();
+  if (abilityType !== 'พื้นฐาน' && abilityType !== 'การประยุกต์ใช้ในชีวิตประจำวัน') {
+    throw new Error('กรุณาเลือกประเภทความสามารถสำหรับรายวิชา ป.1–ป.3');
+  }
+  if (!abilityName) throw new Error('กรุณาระบุชื่อความสามารถสำหรับรายวิชา ป.1–ป.3');
+  return { curriculum_ability_type: abilityType, curriculum_ability_name: abilityName };
 }
 
 function getSubjectsList(token) {
@@ -501,7 +511,7 @@ function insertSubjectWeightsIfMissing(subject_id, group) {
   });
 }
 
-function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, class_ids, subject_group) {
+function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, class_ids, subject_group, ability_type, ability_name) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSubjectsSchema();
@@ -511,6 +521,14 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
   if (classIdList.length === 0 && !subject_id) throw new Error('กรุณาเลือกชั้นเรียนอย่างน้อย 1 รายการ');
 
   var grp = parseInt(weight_group) || 1;
+  var classesById = {};
+  dbGetAll('Classes').forEach(function(cls) { classesById[String(cls.class_id)] = cls; });
+  var abilityByClass = {};
+  classIdList.forEach(function(classId) {
+    var cls = classesById[classId];
+    if (!cls) throw new Error('ไม่พบชั้นเรียนที่เลือก');
+    if (isCurriculumLevel_(cls.level)) abilityByClass[classId] = validateSubjectAbility_(ability_type, ability_name);
+  });
 
   if (classIdList.length === 0) {
     classIdList = [''];
@@ -525,7 +543,7 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
       existing = dbFindOne('Subjects', 'subject_id', newSubjectId);
       if (existing) throw new Error('เกิดข้อผิดพลาดในการสร้าง subject_id กรุณาลองใหม่');
     }
-    dbInsert('Subjects', {
+    var newSubject = {
       subject_id: newSubjectId,
       class_id: classId,
       subject_name: subject_name || '',
@@ -533,7 +551,12 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
       hours_per_year: parseInt(hours_per_year) || 0,
       weight_group: grp,
       subject_group: subject_group || ''
-    });
+    };
+    if (abilityByClass[classId]) {
+      newSubject.curriculum_ability_type = abilityByClass[classId].curriculum_ability_type;
+      newSubject.curriculum_ability_name = abilityByClass[classId].curriculum_ability_name;
+    }
+    dbInsert('Subjects', newSubject);
     insertSubjectWeightsIfMissing(newSubjectId, grp);
     createdIds.push(newSubjectId);
   });
@@ -541,22 +564,30 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
   return { ok: true, subject_id: createdIds[0], subject_ids: createdIds };
 }
 
-function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, subject_group) {
+function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, subject_group, ability_type, ability_name) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSubjectsSchema();
   
   var oldSubject = dbFindOne('Subjects', 'subject_id', subject_id);
+  if (!oldSubject) throw new Error('ไม่พบรายวิชา');
   var oldGroup = oldSubject ? oldSubject.weight_group : null;
+  var cls = dbFindOne('Classes', 'class_id', oldSubject.class_id);
+  var ability = cls && isCurriculumLevel_(cls.level) ? validateSubjectAbility_(ability_type, ability_name) : null;
   
   var newGroup = parseInt(weight_group) || 1;
-  dbUpdate('Subjects', 'subject_id', subject_id, {
+  var subjectUpdates = {
     subject_name: subject_name,
     subject_code: subject_code,
     hours_per_year: parseInt(hours_per_year) || 0,
     weight_group: newGroup,
     subject_group: subject_group || ''
-  });
+  };
+  if (ability) {
+    subjectUpdates.curriculum_ability_type = ability.curriculum_ability_type;
+    subjectUpdates.curriculum_ability_name = ability.curriculum_ability_name;
+  }
+  dbUpdate('Subjects', 'subject_id', subject_id, subjectUpdates);
   
   // If weight group changed, also sync SubjectWeights
   if (oldGroup !== null && parseInt(oldGroup) !== newGroup) {
@@ -792,6 +823,8 @@ function serverImportSubjectsCSV(token, rows) {
     var hoursCol = subjectHeaders.indexOf('hours_per_year');
     var groupCol = subjectHeaders.indexOf('weight_group');
     var subjectGroupCol = subjectHeaders.indexOf('subject_group');
+    var abilityTypeCol = subjectHeaders.indexOf('curriculum_ability_type');
+    var abilityNameCol = subjectHeaders.indexOf('curriculum_ability_name');
 
     var weightsSheet = getSheet('SubjectWeights');
     var weightsData = weightsSheet.getDataRange().getValues();
@@ -827,7 +860,7 @@ function serverImportSubjectsCSV(token, rows) {
       classesByLevelSection[String(c.level || '').trim() + '|' + String(c.section || '').trim()] = c;
     });
 
-    function makeSubjectRow(subjectId, classId, name, code, hours, group, subjectGroup) {
+    function makeSubjectRow(subjectId, classId, name, code, hours, group, subjectGroup, ability) {
       var row = subjectHeaders.map(function() { return ''; });
       row[subjectIdCol] = subjectId;
       if (classIdCol !== -1) row[classIdCol] = classId;
@@ -836,6 +869,10 @@ function serverImportSubjectsCSV(token, rows) {
       row[hoursCol] = hours;
       row[groupCol] = group;
       if (subjectGroupCol !== -1) row[subjectGroupCol] = subjectGroup;
+      if (ability) {
+        row[abilityTypeCol] = ability.curriculum_ability_type;
+        row[abilityNameCol] = ability.curriculum_ability_name;
+      }
       return row;
     }
 
@@ -934,10 +971,27 @@ function serverImportSubjectsCSV(token, rows) {
       var hours = parseInt(hoursStr) || 0;
       var group = parseInt(row.weight_group, 10) || 1;
       var importWeights = getImportWeights(row, group, lineNum);
+      var abilityType = String(row.curriculum_ability_type || '').trim();
+      var abilityName = String(row.curriculum_ability_name || '').trim();
 
       if (!name) {
         warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุชื่อวิชา');
         return;
+      }
+      // Reject an incomplete P1–P3 row before ensureImportClass can create a class.
+      var matchedClass = classesById[classId] || classesByLevelSection[classLevel + '|' + classSection];
+      var targetLevel = matchedClass ? matchedClass.level : classLevel;
+      var targetClassId = matchedClass ? matchedClass.class_id :
+        (classId || (classLevel && classSection ? generateClassId(classLevel, classSection) : ''));
+      var priorSubject = subjectId && subjectsById[subjectId];
+      if (!priorSubject && code && targetClassId) priorSubject = subjectsByCodeAndClass[code + '|' + targetClassId];
+      if (isCurriculumLevel_(targetLevel) && (!priorSubject || abilityType || abilityName)) {
+        try {
+          validateSubjectAbility_(abilityType, abilityName);
+        } catch (err) {
+          warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะ' + err.message);
+          return;
+        }
       }
       classId = ensureImportClass(classId, classLevel, classSection, lineNum);
       if (!classId) {
@@ -964,6 +1018,17 @@ function serverImportSubjectsCSV(token, rows) {
         existing = subjectsById[subjectId];
       }
 
+      var cls = classesById[classId];
+      var ability = null;
+      if (cls && isCurriculumLevel_(cls.level) && (!existing || abilityType || abilityName)) {
+        try {
+          ability = validateSubjectAbility_(abilityType, abilityName);
+        } catch (err) {
+          warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะ' + err.message);
+          return;
+        }
+      }
+
       if (existing) {
         var oldValue = {
           subject_name: existing.row[subjectNameCol],
@@ -979,17 +1044,25 @@ function serverImportSubjectsCSV(token, rows) {
         subjectSheet.getRange(existing.rowIndex, hoursCol + 1).setValue(hours);
         subjectSheet.getRange(existing.rowIndex, groupCol + 1).setValue(group);
         if (subjectGroupCol !== -1) subjectSheet.getRange(existing.rowIndex, subjectGroupCol + 1).setValue(subjectGroup);
+        if (ability) {
+          subjectSheet.getRange(existing.rowIndex, abilityTypeCol + 1).setValue(ability.curriculum_ability_type);
+          subjectSheet.getRange(existing.rowIndex, abilityNameCol + 1).setValue(ability.curriculum_ability_name);
+        }
         if (classIdCol !== -1) existing.row[classIdCol] = classId;
         existing.row[subjectNameCol] = name;
         existing.row[subjectCodeCol] = code;
         existing.row[hoursCol] = hours;
         existing.row[groupCol] = group;
         if (subjectGroupCol !== -1) existing.row[subjectGroupCol] = subjectGroup;
+        if (ability) {
+          existing.row[abilityTypeCol] = ability.curriculum_ability_type;
+          existing.row[abilityNameCol] = ability.curriculum_ability_name;
+        }
         ensureSubjectWeights(subjectId, group, importWeights);
         updatedCount++;
         auditRows.push({ entity_id: subjectId, old_value: oldValue, new_value: { imported: true, action: 'update' } });
       } else {
-        var newRow = makeSubjectRow(subjectId, classId, name, code, hours, group, subjectGroup);
+        var newRow = makeSubjectRow(subjectId, classId, name, code, hours, group, subjectGroup, ability);
         subjectSheet.appendRow(newRow);
         subjectsById[subjectId] = { rowIndex: subjectSheet.getLastRow(), row: newRow };
         if (code) subjectsByCodeAndClass[code + '|' + classId] = subjectsById[subjectId];

@@ -83,19 +83,85 @@ test('saving an outcome uses its order as the stored code and rejects a duplicat
   assert.throws(() => api.serverSaveLearningOutcome('token', 'class', 'subject', { term: 1, display_order: 2, description: 'ซ้ำ', max_score: 10 }), /ลำดับผลลัพธ์การเรียนรู้ซ้ำ/);
 });
 
-test('capability wording is saved on the subject for the P1-P3 report', () => {
-  const writes = [];
+test('only admins can set required P1-P3 subject capability on create and edit', () => {
+  const inserts = [];
+  const updates = [];
+  let role = 'admin';
   const api = vm.createContext({ Math, Number, String, isFinite });
-  vm.runInContext(fs.readFileSync(path.join(root, 'curriculum.gs'), 'utf8'), api);
-  api.requireCurriculumAccess_ = () => ({ session: { user_id: 'teacher' } });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'admin_school_api.gs'), 'utf8'), api);
+  api.getSession = () => ({ role, user_id: 'user' });
   api.ensureColumns = () => {};
-  api.dbFindOne = () => ({ subject_id: 'subject' });
-  api.dbUpdate = (_tab, _field, _id, updates) => writes.push(updates);
+  api.removeColumns = () => {};
+  api.isCurriculumLevel_ = context.isCurriculumLevel_;
+  api.dbGetAll = (tab) => tab === 'Classes' ? [{ class_id: 'p1', level: 'ป.1' }, { class_id: 'p4', level: 'ป.4' }] : [];
+  api.dbFindOne = (tab, _key, value) => {
+    if (tab === 'Classes') return { class_id: value, level: value === 'p1' ? 'ป.1' : 'ป.4' };
+    if (tab === 'Subjects') return value === 'existing' ? { subject_id: 'existing', class_id: 'p1', weight_group: 1 } : null;
+    if (tab === 'SubjectWeights') return { subject_id: value };
+    return null;
+  };
+  api.dbInsert = (tab, row) => { if (tab === 'Subjects') inserts.push(row); };
+  api.dbUpdate = (tab, _field, _id, row) => { if (tab === 'Subjects') updates.push(row); };
+  api.DEFAULT_WEIGHTS = { '1': {} };
   api.appendAuditLog = () => {};
-  api.serverSaveCurriculumReportProfile('token', 'class', 'subject', 'การประยุกต์ใช้ในชีวิตประจำวัน', 'ด้านภาษา');
-  assert.equal(writes[0].curriculum_ability_type, 'การประยุกต์ใช้ในชีวิตประจำวัน');
-  assert.equal(writes[0].curriculum_ability_name, 'ด้านภาษา');
-  assert.throws(() => api.serverSaveCurriculumReportProfile('token', 'class', 'subject', 'อื่น', 'ด้านภาษา'), /ประเภทความสามารถ/);
+
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', '', ''), /ประเภทความสามารถ/);
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', ''), /ชื่อความสามารถ/);
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'อื่น', 'ภาษา'), /ประเภทความสามารถ/);
+  api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', 'ด้านภาษา');
+  assert.equal(inserts[0].curriculum_ability_name, 'ด้านภาษา');
+  api.serverAddSubject('token', '', 'วิทยาศาสตร์', 'SCI', 80, 1, 'p4', '', '', '');
+  assert.equal(inserts[1].curriculum_ability_type, undefined);
+
+  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', '', ''), /ประเภทความสามารถ/);
+  api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'การประยุกต์ใช้ในชีวิตประจำวัน', 'ด้านภาษา');
+  assert.equal(updates[0].curriculum_ability_type, 'การประยุกต์ใช้ในชีวิตประจำวัน');
+  role = 'teacher';
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', 'ด้านภาษา'), /ไม่มีสิทธิ์/);
+  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'พื้นฐาน', 'ด้านภาษา'), /ไม่มีสิทธิ์/);
+  assert.equal(api.serverSaveCurriculumReportProfile, undefined);
+});
+
+test('subject CSV requires capability for new P1-P3 rows and preserves it on legacy updates', () => {
+  function sheet(rows) {
+    return {
+      rows,
+      getDataRange() { return { getValues: () => this.rows }; },
+      getRange(row, col) { return { setValue: (value) => { this.rows[row - 1][col - 1] = value; } }; },
+      appendRow(row) { this.rows.push(row); },
+      getLastRow() { return this.rows.length; },
+    };
+  }
+  const subjects = sheet([
+    ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group', 'curriculum_ability_type', 'curriculum_ability_name'],
+    ['existing', 'p1', 'ภาษาไทย', 'TH', 80, 1, 'ภาษาไทย', 'พื้นฐาน', 'เดิม'],
+  ]);
+  const weights = sheet([['subject_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max']]);
+  const api = vm.createContext({ Math, Number, String, isFinite });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'admin_school_api.gs'), 'utf8'), api);
+  api.getSession = () => ({ role: 'admin', user_id: 'admin' });
+  api.ensureColumns = () => {};
+  api.removeColumns = () => {};
+  api.isCurriculumLevel_ = context.isCurriculumLevel_;
+  api.getSheet = (name) => name === 'Subjects' ? subjects : weights;
+  api.dbGetAll = (name) => name === 'Classes' ? [{ class_id: 'p1', level: 'ป.1', section: '1' }, { class_id: 'p4', level: 'ป.4', section: '1' }] : [];
+  api.LockService = { getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
+  api.DEFAULT_WEIGHTS = { '1': { coursework_max: 70, final_max: 30, pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30 } };
+  api.appendAuditLog = () => {};
+  const result = api.serverImportSubjectsCSV('token', [
+    { subject_id: 'existing', class_id: 'p1', subject_name: 'ภาษาไทยใหม่', subject_code: 'TH', hours: '80', weight_group: '1' },
+    { class_id: 'p1', subject_name: 'ไม่ครบ', subject_code: 'BAD', hours: '80', weight_group: '1' },
+    { class_level: 'ป.2', class_section: '1', subject_name: 'ไม่ครบอีก', subject_code: 'BAD2', hours: '80', weight_group: '1' },
+    { class_id: 'p1', subject_name: 'อังกฤษ', subject_code: 'EN', hours: '80', weight_group: '1', curriculum_ability_type: 'พื้นฐาน', curriculum_ability_name: 'ด้านภาษา' },
+    { class_id: 'p4', subject_name: 'วิทยาศาสตร์', subject_code: 'SCI', hours: '80', weight_group: '1' },
+  ]);
+  assert.equal(result.created_count, 2);
+  assert.equal(result.updated_count, 1);
+  assert.match(result.warnings.join(' '), /ประเภทความสามารถ/);
+  assert.equal(subjects.rows[1][7], 'พื้นฐาน');
+  assert.equal(subjects.rows[1][8], 'เดิม');
+  assert.equal(subjects.rows.find((row) => row[3] === 'EN')[8], 'ด้านภาษา');
+  assert.equal(subjects.rows.find((row) => row[3] === 'BAD'), undefined);
 });
 
 test('report data derives year grade from new tabs only', () => {
