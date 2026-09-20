@@ -90,23 +90,43 @@ function getCurriculumData(token, class_id, subject_id) {
   };
 }
 
+function serverSaveCurriculumReportProfile(token, class_id, subject_id, ability_type, ability_name) {
+  var context = requireCurriculumAccess_(token, class_id, subject_id);
+  var type = String(ability_type || '').trim();
+  var name = String(ability_name || '').trim();
+  if (type !== 'พื้นฐาน' && type !== 'การประยุกต์ใช้ในชีวิตประจำวัน') {
+    throw new Error('กรุณาเลือกประเภทความสามารถ');
+  }
+  if (!name) throw new Error('กรุณาระบุชื่อความสามารถ');
+  ensureColumns('Subjects', ['curriculum_ability_type', 'curriculum_ability_name']);
+  var oldSubject = dbFindOne('Subjects', 'subject_id', subject_id);
+  dbUpdate('Subjects', 'subject_id', subject_id, {
+    curriculum_ability_type: type,
+    curriculum_ability_name: name
+  });
+  appendAuditLog(context.session.user_id, 'Subjects', subject_id, oldSubject, {
+    curriculum_ability_type: type,
+    curriculum_ability_name: name
+  });
+  return { ok: true };
+}
+
 function serverSaveLearningOutcome(token, class_id, subject_id, item) {
   var context = requireCurriculumAccess_(token, class_id, subject_id);
   item = item || {};
   var term = Number(item.term);
   var max = Number(item.max_score);
-  var code = String(item.code || '').trim();
   var description = String(item.description || '').trim();
   var order = Number(item.display_order || 0);
-  if ((term !== 1 && term !== 2) || !code || !description || !isFinite(max) || max <= 0 || !isFinite(order) || order < 0) {
-    throw new Error('กรุณาระบุภาคเรียน รหัส คำอธิบาย คะแนนเต็ม และลำดับให้ถูกต้อง');
+  if ((term !== 1 && term !== 2) || !description || !isFinite(max) || max <= 0 || !Number.isInteger(order) || order < 1) {
+    throw new Error('กรุณาระบุภาคเรียน ลำดับ คำอธิบาย และคะแนนเต็มให้ถูกต้อง');
   }
   var existing = dbFind('LearningOutcomes', 'subject_id', subject_id);
   var outcomeId = String(item.outcome_id || '');
-  if (existing.some(function(row) { return String(row.term) === String(term) && String(row.code).trim() === code && row.outcome_id !== outcomeId; })) {
-    throw new Error('รหัสผลลัพธ์การเรียนรู้ซ้ำในภาคเรียนเดียวกัน');
+  if (existing.some(function(row) { return Number(row.term) === term && Number(row.display_order) === order && row.outcome_id !== outcomeId; })) {
+    throw new Error('ลำดับผลลัพธ์การเรียนรู้ซ้ำในภาคเรียนเดียวกัน');
   }
-  var record = { subject_id: String(subject_id), term: term, code: code, description: description, max_score: max, display_order: order };
+  var record = { subject_id: String(subject_id), term: term, code: String(order), description: description, max_score: max, display_order: order };
   if (outcomeId) {
     var old = existing.filter(function(row) { return row.outcome_id === outcomeId; })[0];
     if (!old) throw new Error('ไม่พบผลลัพธ์การเรียนรู้');

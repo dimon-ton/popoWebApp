@@ -15,7 +15,7 @@ var TAB_SCHEMA = {
   'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'avatar', 'must_change_pwd', 'last_login_at', 'created_at'],
   'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days', 'semester', 'school_address', 'phone_number', 'education_area', 'school_logo', 'measurement_head_name', 'academic_head_name', 'director_name'],
   'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id', 'homeroom_teacher_user_ids'],
-  'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group'],
+  'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group', 'curriculum_ability_type', 'curriculum_ability_name'],
   'Enrollments':      ['enrollment_id', 'class_id', 'subject_id', 'teacher_user_id', 'dev_activity_result'],
   'Students':         ['student_id', 'class_id', 'seq_no', 'student_code', 'citizen_id', 'full_name', 'dob', 'note'],
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],

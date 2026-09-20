@@ -17,11 +17,12 @@ function getReportData(token, class_id, subject_id) {
   var enrollment = dbGetAll('Enrollments').filter(function(e) {
     return e.class_id === class_id && e.subject_id === subject_id;
   });
-  var teacher_name = '';
-  if (enrollment.length > 0 && enrollment[0].teacher_user_id) {
-    var teacher = dbFindOne('Users', 'user_id', enrollment[0].teacher_user_id);
-    if (teacher) teacher_name = teacher.full_name || '';
-  }
+  var teacher_names = enrollment.map(function(row) {
+    if (!row.teacher_user_id) return '';
+    var teacher = dbFindOne('Users', 'user_id', row.teacher_user_id);
+    return teacher ? teacher.full_name || '' : '';
+  }).filter(String).filter(function(name, index, names) { return names.indexOf(name) === index; });
+  var teacher_name = teacher_names[0] || '';
 
   // Homeroom teachers. Supports the new JSON list and the old single-teacher field.
   var homeroom_teacher_names = getHomeroomTeacherNames(cls);
@@ -123,6 +124,7 @@ function getReportData(token, class_id, subject_id) {
     class_info: withClassLabel(cls),
     subject_info: subj,
     teacher_name: teacher_name,
+    teacher_names: teacher_names,
     homeroom_teacher_name: homeroom_teacher_name,
     homeroom_teacher_names: homeroom_teacher_names,
     total_students: total_students,

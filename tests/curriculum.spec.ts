@@ -30,6 +30,8 @@ test.describe('P1–P3 learning outcomes and report', () => {
   test('existing score URLs show the new term editor', async ({ page }) => {
     await page.goto(`${url}?page=class_formative&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#pageHeading')).toContainText('ผลลัพธ์การเรียนรู้');
+    await expect(page.locator('#outcomeOrder')).toBeVisible();
+    await expect(page.locator('#outcomeCode')).toHaveCount(0);
     await expect(page.locator('#scoreBody')).toContainText('36');
     await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#termSelect')).toBeVisible();
@@ -38,7 +40,8 @@ test.describe('P1–P3 learning outcomes and report', () => {
   test('report uses new term and annual results instead of legacy grade', async ({ page }) => {
     await page.goto(`${url}?page=class_report&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.a4-report-book')).toContainText('สรุปผลการประเมินประจำปี');
+    await expect(page.locator('.a4-report-book')).toContainText('ผลลัพธ์การเรียนรู้รายวิชา');
+    await expect(page.locator('.a4-report-book')).toContainText('สรุปผลการประเมิน');
     await expect(page.locator('.a4-report-book')).toContainText('78');
     await expect(page.locator('.a4-report-book')).toContainText('เชี่ยวชาญ');
     await expect(page.locator('.a4-report-book')).not.toContainText('สอบกลางภาค');

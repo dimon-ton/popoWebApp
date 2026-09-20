@@ -154,17 +154,15 @@ function buildReportBookHtml(d) {
     pageCurriculumCover,
     pageReferenceStudentRoster,
     pageReferenceAttendance,
+    pageCurriculumOutcomeList,
     pageCurriculumTermOne,
+    pageCurriculumTermOneSummary,
     pageCurriculumTermTwo,
     pageCurriculumYearSummary,
-    pageReferenceSubjectDescription,
     pageReferenceReadThinkWriteGrid,
     pageReferenceCharacteristicsGrid,
     pageReferenceDevActivityDoc,
-    pageReferenceCharacteristicsAssessment,
-    pageReferenceReadThinkWriteAssessment,
-    pageReferenceFinalSummary,
-    pageAppendix
+    pageReferenceFinalSummary
   ] : [
     pageReferenceCover,
     pageReferenceStudentRoster,
@@ -243,6 +241,28 @@ function standardReportSectionHeading(d, title) {
     '<div class="form-subtitle">รายวิชา ' + blank(m.subj.subject_name) +
     '<br>' + gradeLabel + blank(gradeNumber) +
     ' ปีการศึกษา ' + blank(reportYear(d)) + '</div>';
+}
+
+function curriculumAbilityText(d) {
+  var subj = (d.subject_info || {});
+  var type = String(subj.curriculum_ability_type || '').trim();
+  var name = String(subj.curriculum_ability_name || '').trim();
+  if (!type && !name) return 'ความสามารถ';
+  var prefix = type === 'การประยุกต์ใช้ในชีวิตประจำวัน'
+    ? 'ความสามารถด้านการประยุกต์ใช้ในชีวิตประจำวัน'
+    : type === 'พื้นฐาน' ? 'ความสามารถพื้นฐาน' : 'ความสามารถ';
+  return prefix + (name ? ' ' + name : '');
+}
+
+function curriculumPageHeading(d, title, includeAbility) {
+  var m = meta(d);
+  var gradeNumber = (String(m.cls.level || '').match(/\d+/) || [''])[0];
+  return '<div class="curriculum-page-heading">' +
+    '<div class="curriculum-page-heading-title">' + escHtml(title) + '</div>' +
+    (includeAbility ? '<div>' + blank(curriculumAbilityText(d)) + '</div>' : '') +
+    '<div>รายวิชา ' + blank(m.subj.subject_name) + '</div>' +
+    '<div>ชั้นประถมศึกษาปีที่ ' + blank(gradeNumber) + ' ปีการศึกษา ' + blank(reportYear(d)) + '</div>' +
+  '</div>';
 }
 
 var THAI_MONTH_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -474,15 +494,6 @@ function pageReferenceStudentRoster(d, n) {
 }
 
 function pageReferenceSubjectDescription(d, n) {
-  if (d.curriculum_data) {
-    var rows = [1, 2].map(function(term) {
-      var items = (d.curriculum_data.outcomes || {})[String(term)] || [];
-      return '<h3>ภาคเรียนที่ ' + term + '</h3><ol>' + items.map(function(item) {
-        return '<li>' + blank(item.code) + ' — ' + blank(item.description) + ' (คะแนนเต็ม ' + num(item.max_score) + ')</li>';
-      }).join('') + '</ol>';
-    }).join('');
-    return referenceShell(n, '<div class="description-block"><div class="form-title">รายการผลลัพธ์การเรียนรู้</div>' + rows + '</div>');
-  }
   var body = '<div class="description-block"><div style="font-weight:700;text-align:center;margin-bottom:5mm">คำอธิบายรายวิชา</div><div style="min-height:92mm"></div></div>';
   return referenceShell(n, body);
 }
@@ -503,8 +514,9 @@ function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
-  var heading = !d.curriculum_data && startIndex === 0
-    ? standardReportSectionHeading(d, 'บันทึกการมาเรียน') : '';
+  var heading = d.curriculum_data
+    ? curriculumPageHeading(d, 'บันทึกเวลาเรียน', true)
+    : startIndex === 0 ? standardReportSectionHeading(d, 'บันทึกการมาเรียน') : '';
   var body = heading + '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
   return referenceShell(n, body, 'landscape-table');
 }
@@ -543,24 +555,60 @@ function pageReferenceScoreGridSummary(d, n) {
 
 function pageCurriculumCover(d, n) {
   var m = meta(d);
-  var levels = d.ability_dist || [];
-  var levelRows = levels.map(function(row) {
-    return '<tr><td>' + blank(row.label) + '</td><td>' + num(row.count) + '</td><td>' + pct(row.pct) + '</td></tr>';
+  var gradeNumber = (String(m.cls.level || '').match(/\d+/) || [''])[0];
+  var homeroomNames = d.homeroom_teacher_names || (d.homeroom_teacher_name ? [d.homeroom_teacher_name] : []);
+  var teacherNames = d.teacher_names || (d.teacher_name ? [d.teacher_name] : []);
+  var counts = {};
+  (d.ability_dist || []).forEach(function(row) { counts[String(row.label)] = row; });
+  var labels = ['เริ่มต้น', 'พัฒนา', 'ชำนาญ', 'เชี่ยวชาญ'];
+  var countCells = labels.map(function(label) { return '<td>' + num(counts[label] && counts[label].count || 0) + '</td>'; }).join('');
+  var pctCells = labels.map(function(label) { return '<td>' + num(counts[label] && counts[label].pct || '0.00') + '</td>'; }).join('');
+  var people = function(label, names) {
+    return '<div class="curriculum-cover-person"><b>' + escHtml(label) + '</b><span>' +
+      (names.length ? names.map(blank).join('<br>') : '........................................') + '</span></div>';
+  };
+  var signatures = teacherNames.map(function(name) {
+    return '<div class="curriculum-signature"><span>ลงชื่อ</span><span class="curriculum-signature-rule"></span><span>ครูผู้สอน</span><div>(' + blank(name) + ')</div></div>';
   }).join('');
-  var body = '<div class="form-title">แบบบันทึกผลการพัฒนาคุณภาพผู้เรียนประจำรายวิชา</div>' +
-    '<div class="form-meta">' +
-    '<span class="meta-label">โรงเรียน</span><span class="meta-value">' + blank(m.school.school_name) + '</span>' +
-    '<span class="meta-label">ปีการศึกษา</span><span class="meta-value">' + blank(reportYear(d)) + '</span>' +
-    '<span class="meta-label">ชั้น</span><span class="meta-value">' + blank(m.classLabel) + '</span>' +
-    '<span class="meta-label">รายวิชา</span><span class="meta-value">' + blank(m.subj.subject_name) + '</span>' +
-    '<span class="meta-label">รหัสวิชา</span><span class="meta-value">' + blank(m.subj.subject_code) + '</span>' +
-    '<span class="meta-label">เวลาเรียน</span><span class="meta-value">' + blank(m.subj.hours_per_year) + ' ชั่วโมง/ปี</span>' +
-    '<span class="meta-label">ครูผู้สอน</span><span class="meta-value">' + blank(d.teacher_name) + '</span>' +
-    '</div><div class="form-title">สรุปผลการประเมินระดับความสามารถ</div>' +
-    '<table class="report-table form-summary-table"><thead><tr><th>ระดับความสามารถ</th><th>จำนวนนักเรียน</th><th>ร้อยละ</th></tr></thead><tbody>' + levelRows + '</tbody></table>' +
-    '<p>นักเรียนทั้งหมด ' + num(d.total_students) + ' คน · ผลลัพธ์การเรียนรู้ 35 คะแนน และประเมินปลายภาค 15 คะแนนต่อภาคเรียน</p>' +
-    '<div class="approval-heading">การอนุมัติผลการเรียน</div>' + approvalBlock(d);
-  return referenceShell(n, body, 'cover-page');
+  var logo = m.school.school_logo || GRADE_REPORT_SCHOOL_LOGO_URL;
+  var body = '<img class="report-school-logo curriculum-cover-logo" src="' + escHtml(logo) + '" alt="โลโก้โรงเรียน">' +
+    '<div class="form-title">แบบบันทึกผลการพัฒนาคุณภาพผู้เรียนประจำรายวิชา</div>' +
+    '<div class="curriculum-cover-school">' + blank(m.school.school_name) + '</div>' +
+    '<div class="curriculum-cover-location">' + blank(m.school.school_address || '') +
+      (m.school.district ? ' อำเภอ' + blank(m.school.district) : '') +
+      (m.school.province ? ' จังหวัด' + blank(m.school.province) : '') + '</div>' +
+    (m.school.education_area ? '<div class="curriculum-cover-location">' + blank(m.school.education_area) + '</div>' : '') +
+    '<div class="curriculum-cover-ability">' + blank(curriculumAbilityText(d)) + '</div>' +
+    '<div class="curriculum-cover-subject">รายวิชา ' + blank(m.subj.subject_name) + '</div>' +
+    '<div class="curriculum-cover-facts"><span>ชั้นประถมศึกษาปีที่ ' + blank(gradeNumber) + '</span><span>ห้อง ' + blank(m.cls.section || '-') + '</span><span>ปีการศึกษา ' + blank(reportYear(d)) + '</span><span>เวลาเรียน ' + blank(m.subj.hours_per_year) + ' ชั่วโมง/ปี</span></div>' +
+    '<div class="curriculum-cover-people">' + people('ครูประจำชั้น', homeroomNames) + people('ครูผู้สอน', teacherNames) + '</div>' +
+    '<table class="report-table curriculum-cover-summary"><thead><tr><th rowspan="2">จำนวนนักเรียน</th><th colspan="4">ผลการประเมินระดับความสามารถ</th><th rowspan="2">หมายเหตุ<br>ย้ายออกกลางปี</th></tr><tr>' + labels.map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead>' +
+      '<tbody><tr><td>' + num(d.total_students || 0) + '</td>' + countCells + '<td rowspan="2">-</td></tr><tr><td>ร้อยละ</td>' + pctCells + '</tr></tbody></table>' +
+    '<div class="approval-heading">การอนุมัติผลการเรียน</div>' +
+    '<div class="curriculum-cover-approval">' + signatures +
+      '<div class="curriculum-signature"><span>ลงชื่อ</span><span class="curriculum-signature-rule"></span><span>หัวหน้างานบริหารวิชาการ</span><div>(' + blank(m.school.academic_head_name || '........................................') + ')</div></div>' +
+      '<div class="curriculum-approval-choice">◯ อนุมัติ　　◯ ไม่อนุมัติ</div>' +
+      '<div class="curriculum-signature"><span>ลงชื่อ</span><span class="curriculum-signature-rule"></span><span>ผู้อำนวยการโรงเรียน</span><div>(' + blank(m.school.director_name || '........................................') + ')</div></div>' +
+    '</div>';
+  return referenceShell(n, body, 'cover-page curriculum-cover');
+}
+
+function pageCurriculumOutcomeList(d, n) {
+  var outcomes = (d.curriculum_data && d.curriculum_data.outcomes) || {};
+  var items = [1, 2].reduce(function(all, term) {
+    return all.concat((outcomes[String(term)] || []).map(function(item) {
+      return { term: term, order: item.display_order, description: item.description };
+    }));
+  }, []);
+  return chunkArray(items, 10).map(function(chunk, index) {
+    var rows = chunk.map(function(item) {
+      return '<tr><td>ภาคเรียนที่ ' + item.term + '</td><td>' + num(item.order) + '</td><td class="left">' + blank(item.description) + '</td></tr>';
+    }).join('');
+    for (var i = chunk.length; i < 10; i++) rows += '<tr class="curriculum-outcome-blank"><td></td><td></td><td></td></tr>';
+    var body = curriculumPageHeading(d, 'ผลลัพธ์การเรียนรู้', true) +
+      '<table class="report-table curriculum-outcome-list"><thead><tr><th>ภาคเรียน</th><th>ข้อที่</th><th>ผลลัพธ์การเรียนรู้รายวิชา</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    return referenceShell(n + index, body, 'curriculum-outcome-page');
+  });
 }
 
 function pageCurriculumTermOne(d, n) { return pageCurriculumTermGrid(d, n, 1); }
@@ -570,36 +618,74 @@ function pageCurriculumTermGrid(d, n, term) {
   var data = d.curriculum_data || {};
   var outcomes = (data.outcomes || {})[String(term)] || [];
   var chunks = chunkArray(outcomes, 10);
-  if (!chunks.length) chunks = [[]];
   return chunks.map(function(items, chunkIndex) {
     var isLast = chunkIndex === chunks.length - 1;
-    var headings = items.map(function(item) {
-      return '<th title="' + escHtml(item.description) + '">' + blank(item.code) + '<br>/' + num(item.max_score) + '</th>';
-    }).join('');
+    var outcomeCount = Math.max(1, items.length);
+    var rawMax = outcomes.reduce(function(total, item) { return total + Number(item.max_score || 0); }, 0);
+    var orderHeaders = items.length ? items.map(function(item) {
+      return '<th title="' + escHtml(item.description) + '">' + num(item.display_order) + '</th>';
+    }).join('') : '<th></th>';
+    var maxHeaders = items.length ? items.map(function(item) { return '<th>' + num(item.max_score) + '</th>'; }).join('') : '<th></th>';
     var rows = (data.students || []).map(function(student) {
       var termResult = student['term' + term] || {};
-      var scores = items.map(function(item) { return '<td>' + num((student.scores || {})[item.outcome_id]) + '</td>'; }).join('');
+      var scores = items.length ? items.map(function(item) { return '<td>' + num((student.scores || {})[item.outcome_id]) + '</td>'; }).join('') : '<td></td>';
       return '<tr><td>' + blank(student.seq_no) + '</td><td class="left">' + blank(student.full_name) + '</td>' + scores +
         (isLast ? '<td>' + num(termResult.raw) + '</td><td>' + num(termResult.scaled) + '</td><td>' + num(termResult.assessment) + '</td><td>' + num(termResult.total) + '</td><td>' + num(termResult.grade) + '</td><td>' + blank(termResult.ability) + '</td>' : '') + '</tr>';
     }).join('');
-    var summaryHead = isLast ? '<th>ดิบ</th><th>ผลลัพธ์ /35</th><th>ปลายภาค /15</th><th>รวม /50</th><th>เกรด</th><th>ระดับ</th>' : '';
-    var descriptions = items.map(function(item) { return '<li>' + blank(item.code) + ' — ' + blank(item.description) + ' (' + num(item.max_score) + ')</li>'; }).join('');
-    var body = '<div class="form-title">ผลลัพธ์การเรียนรู้ ภาคเรียนที่ ' + term + '</div>' +
-      '<table class="report-table form-grid-table score-grid-table"><thead><tr><th>ที่</th><th class="student-name-head">ชื่อ - สกุล</th>' + headings + summaryHead + '</tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="rubric-explanation"><b>รายการผลลัพธ์การเรียนรู้</b><ol>' + descriptions + '</ol></div>';
-    return referenceShell(n + chunkIndex, body, 'landscape-table');
+    for (var i = (data.students || []).length; i < 30; i++) {
+      rows += '<tr><td>' + (i + 1) + '</td><td></td>' + Array(outcomeCount + (isLast ? 6 : 0) + 1).join('<td></td>') + '</tr>';
+    }
+    var summaryHeaders = isLast ? '<th>รวมดิบ</th><th>ผลลัพธ์</th><th>ปลายภาค</th><th>รวม</th><th>เกรด</th><th>ระดับ</th>' : '';
+    var summaryMax = isLast ? '<th>' + num(rawMax) + '</th><th>35</th><th>15</th><th>50</th><th></th><th></th>' : '';
+    var body = curriculumPageHeading(d, 'ผลการประเมินผลลัพธ์การเรียนรู้ ภาคเรียนที่ ' + term, false) +
+      '<table class="report-table form-grid-table curriculum-score-table"><thead>' +
+      '<tr><th rowspan="3" class="curriculum-number-col">เลขที่</th><th rowspan="3" class="student-name-head">ชื่อ - สกุล</th><th colspan="' + outcomeCount + '">ผลลัพธ์การเรียนรู้</th>' + (isLast ? '<th colspan="6">สรุปภาคเรียนที่ ' + term + '</th>' : '') + '</tr>' +
+      '<tr>' + orderHeaders + summaryHeaders + '</tr><tr>' + maxHeaders + summaryMax + '</tr>' +
+      '</thead><tbody>' + rows + '</tbody></table>';
+    return referenceShell(n + chunkIndex, body, 'landscape-table curriculum-score-page');
   });
 }
 
-function pageCurriculumYearSummary(d, n) {
-  var rows = ((d.curriculum_data || {}).students || []).map(function(student) {
+function curriculumScoreStats(students, valueOf) {
+  var values = students.map(valueOf).filter(function(value) { return value !== '' && value !== null && value !== undefined && isFinite(Number(value)); }).map(Number);
+  if (!values.length) return '';
+  var total = values.reduce(function(sum, value) { return sum + value; }, 0);
+  return '<div class="curriculum-score-stats"><span>คะแนนสูงสุด: ' + num(Math.max.apply(null, values)) + '</span><span>คะแนนต่ำสุด: ' + num(Math.min.apply(null, values)) + '</span><span>คะแนนเฉลี่ย: ' + num((total / values.length).toFixed(2)) + '</span></div>';
+}
+
+function pageCurriculumTermOneSummary(d, n) {
+  var students = ((d.curriculum_data || {}).students || []);
+  var rows = students.map(function(student) {
+    var result = student.term1 || {};
     return '<tr><td>' + blank(student.seq_no) + '</td><td class="left">' + blank(student.full_name) + '</td>' +
-      '<td>' + num(student.term1.total) + '</td><td>' + num(student.term1.grade) + '</td>' +
-      '<td>' + num(student.term2.total) + '</td><td>' + num(student.term2.grade) + '</td>' +
-      '<td>' + num(student.year_total) + '</td><td>' + num(student.final_grade) + '</td><td>' + blank(student.ability) + '</td></tr>';
+      '<td>' + num(result.scaled) + '</td><td>' + num(result.assessment) + '</td><td>' + num(result.total) + '</td>' +
+      '<td>' + (result.total === '' || result.total === undefined ? '' : num(Number(result.total) * 2)) + '</td>' +
+      '<td>' + num(result.grade) + '</td><td>' + blank(result.ability) + '</td><td></td></tr>';
   }).join('');
-  var body = '<div class="form-title">สรุปผลการประเมินประจำปี</div><table class="report-table form-grid-table"><thead><tr><th>ที่</th><th class="student-name-head">ชื่อ - สกุล</th><th>ภาค 1 /50</th><th>เกรด 1</th><th>ภาค 2 /50</th><th>เกรด 2</th><th>รวม /100</th><th>เกรดปี</th><th>ระดับความสามารถ</th></tr></thead><tbody>' + rows + '</tbody></table>';
-  return referenceShell(n, body, 'landscape-table');
+  for (var i = students.length; i < 30; i++) rows += '<tr><td>' + (i + 1) + '</td>' + Array(9).join('<td></td>') + '</tr>';
+  var body = curriculumPageHeading(d, 'สรุปผลการประเมิน ภาคเรียนที่ 1', false) +
+    '<table class="report-table form-grid-table curriculum-summary-table"><thead><tr><th rowspan="2">เลขที่</th><th rowspan="2" class="student-name-head">ชื่อ - สกุล</th><th colspan="3">ภาคเรียนที่ 1</th><th colspan="3">ผลการประเมิน</th><th rowspan="2">หมายเหตุ</th></tr>' +
+    '<tr><th>ผลลัพธ์ /35</th><th>ปลายภาค /15</th><th>รวม /50</th><th>ร้อยละ /100</th><th>ผลการเรียน</th><th>ระดับความสามารถ</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    curriculumScoreStats(students, function(student) { return (student.term1 || {}).total; });
+  return referenceShell(n, body, 'landscape-table curriculum-summary-page');
+}
+
+function pageCurriculumYearSummary(d, n) {
+  var students = ((d.curriculum_data || {}).students || []);
+  var rows = students.map(function(student) {
+    return '<tr><td>' + blank(student.seq_no) + '</td><td class="left">' + blank(student.full_name) + '</td>' +
+      '<td>' + num(student.term1.scaled) + '</td><td>' + num(student.term1.assessment) + '</td><td>' + num(student.term1.total) + '</td>' +
+      '<td>' + num(student.term2.scaled) + '</td><td>' + num(student.term2.assessment) + '</td><td>' + num(student.term2.total) + '</td>' +
+      '<td>' + num(student.year_total) + '</td><td>' + num(student.final_grade) + '</td><td>' + blank(student.ability) + '</td><td></td></tr>';
+  }).join('');
+  for (var i = students.length; i < 30; i++) rows += '<tr><td>' + (i + 1) + '</td>' + Array(12).join('<td></td>') + '</tr>';
+  var body = curriculumPageHeading(d, 'สรุปผลการประเมิน', false) +
+    '<table class="report-table form-grid-table curriculum-summary-table curriculum-year-table"><thead>' +
+    '<tr><th rowspan="2">เลขที่</th><th rowspan="2" class="student-name-head">ชื่อ - สกุล</th><th colspan="3">ผลประเมินภาค 1</th><th colspan="3">ผลประเมินภาค 2</th><th colspan="3">สรุปผลการประเมิน</th><th rowspan="2">หมายเหตุ</th></tr>' +
+    '<tr><th>ผลลัพธ์ /35</th><th>ปลายภาค /15</th><th>รวม /50</th><th>ผลลัพธ์ /35</th><th>ปลายภาค /15</th><th>รวม /50</th><th>รวม /100</th><th>ผลการเรียน</th><th>ระดับความสามารถ</th></tr>' +
+    '</thead><tbody>' + rows + '</tbody></table>' +
+    curriculumScoreStats(students, function(student) { return student.year_total; });
+  return referenceShell(n, body, 'landscape-table curriculum-summary-page');
 }
 
 function pageReferenceReadThinkWriteGrid(d, n) {

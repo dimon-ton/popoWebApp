@@ -2618,6 +2618,71 @@ body.page-class-report {
 .page-class-report .form-page .report-page-subtitle,
 .page-class-report .form-page .page-number { display: none; }
 .page-class-report .form-page.curriculum-page .page-number { display: block; }
+    .page-class-report .curriculum-page { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .page-class-report .curriculum-page-heading {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.32;
+      margin: 0 auto 5mm;
+    }
+    .page-class-report .curriculum-page-heading-title { font-size: 20px; font-weight: 700; }
+    .page-class-report .curriculum-cover-logo { margin: 0 auto 3mm; width: 25mm; height: 25mm; }
+    .page-class-report .curriculum-cover { text-align: center; }
+    .page-class-report .curriculum-cover-school { font-size: 19px; font-weight: 700; margin: 2mm 0; }
+    .page-class-report .curriculum-cover-location { font-size: 15px; line-height: 1.35; }
+    .page-class-report .curriculum-cover-ability { font-size: 16px; font-weight: 700; margin: 7mm 0 3mm; }
+    .page-class-report .curriculum-cover-subject { font-size: 17px; font-weight: 700; margin-bottom: 5mm; }
+    .page-class-report .curriculum-cover-facts {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 2mm 8mm;
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 auto 3mm;
+    }
+    .page-class-report .curriculum-cover-people {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      width: 170mm;
+      max-width: 100%;
+      margin: 0 auto 6mm;
+      text-align: left;
+      font-size: 15px;
+    }
+    .page-class-report .curriculum-cover-person { display: grid; grid-template-columns: 27mm 1fr; line-height: 1.5; }
+    .page-class-report .curriculum-cover-summary { width: 170mm; max-width: 100%; margin: 2mm auto 6mm; font-size: 14px; }
+    .page-class-report .curriculum-cover-summary th,
+    .page-class-report .curriculum-cover-summary td { padding: 1.2mm .8mm; }
+    .page-class-report .curriculum-cover-approval { width: 125mm; margin: 3mm auto 0; font-size: 14px; }
+    .page-class-report .curriculum-signature { margin: 6mm 0; display: grid; grid-template-columns: 14mm 1fr 36mm; align-items: end; gap: 1mm; }
+    .page-class-report .curriculum-signature-rule { border-bottom: 1px solid var(--report-line); height: 5mm; }
+    .page-class-report .curriculum-signature > div { grid-column: 2; text-align: center; font-size: 13px; }
+    .page-class-report .curriculum-approval-choice { margin: 4mm 0; }
+    .page-class-report .curriculum-outcome-list { width: 176mm; margin: 0 auto; font-size: 15px; table-layout: fixed; }
+    .page-class-report .curriculum-outcome-list th:first-child { width: 21mm; }
+    .page-class-report .curriculum-outcome-list th:nth-child(2) { width: 11mm; }
+    .page-class-report .curriculum-outcome-list td { height: 11mm; padding: 1mm 1.5mm; line-height: 1.3; vertical-align: middle; }
+    .page-class-report .curriculum-outcome-list td:last-child { text-align: left; }
+    .page-class-report .curriculum-outcome-blank td { height: 8mm; }
+    .page-class-report .curriculum-score-table,
+    .page-class-report .curriculum-summary-table { table-layout: fixed; font-size: 11px; }
+    .page-class-report .curriculum-score-table th,
+    .page-class-report .curriculum-summary-table th { line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+    .page-class-report .curriculum-score-table th:first-child,
+    .page-class-report .curriculum-summary-table th:first-child { width: 8mm; }
+    .page-class-report .curriculum-score-table .student-name-head,
+    .page-class-report .curriculum-summary-table .student-name-head { width: 48mm; }
+    .page-class-report .curriculum-score-table tbody td,
+    .page-class-report .curriculum-summary-table tbody td { height: 5.5mm; padding: .4mm .5mm; }
+    .page-class-report .curriculum-score-table tbody td:nth-child(-n+2),
+    .page-class-report .curriculum-summary-table tbody td:nth-child(-n+2) { background: #eaf8fc; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(3) { background: #fff4ed; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(4) { background: #ecf9e9; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(5) { background: #faeffc; }
+    .page-class-report .curriculum-score-stats { display: flex; justify-content: center; gap: 15mm; margin-top: 2mm; font-size: 12px; }
     .page-class-report .form-title {
       text-align: center;
       font-weight: 700;
@@ -2794,6 +2859,7 @@ body.page-class-report {
       background: #fff;
     }
     .page-class-report .cover-page .form-title { font-size: 17px; }
+    .page-class-report .curriculum-cover .form-title { font-size: 20px; }
     .page-class-report .cover-page .form-meta { font-size: 13px; }
     .page-class-report .cover-page .form-summary-table { font-size: 12px; }
     .page-class-report .cover-page .approval-heading { font-size: 20px; }

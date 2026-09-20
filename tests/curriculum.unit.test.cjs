@@ -49,18 +49,53 @@ test('P1-P3 print packet renders term and annual results without legacy score he
   const data = {
     school_info: { school_name: 'Test School', academic_year: '2568' },
     class_info: { level: 'ป.1', section: '1', class_label: 'ป.1/1' },
-    subject_info: { subject_name: 'Test Subject', hours_per_year: 80 },
+    subject_info: { subject_name: 'Test Subject', hours_per_year: 80, curriculum_ability_type: 'พื้นฐาน', curriculum_ability_name: 'การอ่าน' },
     students: [student], total_students: 1,
     ability_dist: [{ label: 'เชี่ยวชาญ', count: 1, pct: 100 }],
     curriculum_data: { students: [student], outcomes: {
-      '1': [{ outcome_id: 'first', code: '1', description: 'Term one', max_score: 40 }],
-      '2': [{ outcome_id: 'second', code: '2', description: 'Term two', max_score: 60 }],
+      '1': [{ outcome_id: 'first', display_order: 1, code: 'old-code', description: 'Term one', max_score: 40 }],
+      '2': [{ outcome_id: 'second', display_order: 1, code: 'old-code', description: 'Term two', max_score: 60 }],
     } },
   };
   const book = reportContext.buildReportBookHtml(data);
-  assert.match(book, /สรุปผลการประเมินประจำปี/);
+  assert.match(book, /บันทึกเวลาเรียน/);
+  assert.match(book, /ความสามารถพื้นฐาน การอ่าน/);
+  assert.match(book, /ผลลัพธ์การเรียนรู้รายวิชา/);
+  assert.match(book, /สรุปผลการประเมิน ภาคเรียนที่ 1/);
+  assert.match(book, /สรุปผลการประเมิน/);
   assert.match(book, /78/);
-  assert.doesNotMatch(book, /สอบกลางภาค|__REPORT_TOTAL_PAGES__/);
+  assert.doesNotMatch(book, /สอบกลางภาค|__REPORT_TOTAL_PAGES__|ภาคผนวกและรายการตรวจสอบ|คำชี้แจง|old-code/);
+  assert.equal((book.match(/<section class="a4-page /g) || []).length, 12);
+});
+
+test('saving an outcome uses its order as the stored code and rejects a duplicate order', () => {
+  const writes = [];
+  const api = vm.createContext({ Math, Number, String, isFinite });
+  vm.runInContext(fs.readFileSync(path.join(root, 'curriculum.gs'), 'utf8'), api);
+  api.requireCurriculumAccess_ = () => ({ session: { user_id: 'teacher' } });
+  api.dbFind = () => [];
+  api.generateId = () => 'outcome_1';
+  api.dbInsert = (_tab, row) => writes.push(row);
+  api.appendAuditLog = () => {};
+  api.serverSaveLearningOutcome('token', 'class', 'subject', { term: 1, display_order: 2, description: 'อ่านได้', max_score: 10 });
+  assert.equal(writes[0].code, '2');
+  api.dbFind = () => [{ outcome_id: 'existing', term: 1, display_order: 2 }];
+  assert.throws(() => api.serverSaveLearningOutcome('token', 'class', 'subject', { term: 1, display_order: 2, description: 'ซ้ำ', max_score: 10 }), /ลำดับผลลัพธ์การเรียนรู้ซ้ำ/);
+});
+
+test('capability wording is saved on the subject for the P1-P3 report', () => {
+  const writes = [];
+  const api = vm.createContext({ Math, Number, String, isFinite });
+  vm.runInContext(fs.readFileSync(path.join(root, 'curriculum.gs'), 'utf8'), api);
+  api.requireCurriculumAccess_ = () => ({ session: { user_id: 'teacher' } });
+  api.ensureColumns = () => {};
+  api.dbFindOne = () => ({ subject_id: 'subject' });
+  api.dbUpdate = (_tab, _field, _id, updates) => writes.push(updates);
+  api.appendAuditLog = () => {};
+  api.serverSaveCurriculumReportProfile('token', 'class', 'subject', 'การประยุกต์ใช้ในชีวิตประจำวัน', 'ด้านภาษา');
+  assert.equal(writes[0].curriculum_ability_type, 'การประยุกต์ใช้ในชีวิตประจำวัน');
+  assert.equal(writes[0].curriculum_ability_name, 'ด้านภาษา');
+  assert.throws(() => api.serverSaveCurriculumReportProfile('token', 'class', 'subject', 'อื่น', 'ด้านภาษา'), /ประเภทความสามารถ/);
 });
 
 test('report data derives year grade from new tabs only', () => {

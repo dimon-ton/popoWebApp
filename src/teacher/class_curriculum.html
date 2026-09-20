@@ -28,20 +28,27 @@
   <h2 class="page-title" id="pageHeading">ผลลัพธ์การเรียนรู้ ป.1–ป.3</h2>
   <p>ภาคเรียนละ 50 คะแนน: ผลลัพธ์การเรียนรู้ 35 คะแนน และประเมินปลายภาค 15 คะแนน</p>
   <div class="card">
+    <h3>ข้อมูลความสามารถสำหรับรายงาน</h3>
+    <div class="curriculum-toolbar">
+      <div><label for="abilityType">ประเภทความสามารถ</label><select id="abilityType"><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select></div>
+      <div><label for="abilityName">ชื่อความสามารถ</label><input id="abilityName" style="min-width:280px" placeholder="เช่น ด้านวิทยาศาสตร์ สิ่งแวดล้อมและเทคโนโลยี"></div>
+      <button class="btn-primary" id="saveReportProfileBtn" onclick="saveReportProfile()">บันทึกข้อมูลรายงาน</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="curriculum-toolbar">
       <div><label for="termSelect">ภาคเรียน</label><select id="termSelect" onchange="render()"><option value="1">ภาคเรียนที่ 1</option><option value="2">ภาคเรียนที่ 2</option></select></div>
     </div>
     <h3>กำหนดผลลัพธ์การเรียนรู้</h3>
     <p class="curriculum-summary">กำหนดคะแนนเต็มตามรายวิชา ระบบจะแปลงผลรวมเป็น 35 คะแนน คะแนนต่ำกว่าครึ่งของคะแนนเต็มจะแสดงคำเตือน</p>
     <div class="curriculum-toolbar">
-      <div><label for="outcomeCode">รหัส</label><input id="outcomeCode" placeholder="เช่น 1"></div>
+      <div><label for="outcomeOrder">ลำดับ</label><input id="outcomeOrder" type="number" min="1" step="1" value="1"></div>
       <div><label for="outcomeDescription">คำอธิบาย</label><input id="outcomeDescription" style="min-width:280px" placeholder="ผลลัพธ์การเรียนรู้"></div>
       <div><label for="outcomeMax">คะแนนเต็ม</label><input id="outcomeMax" type="number" min="0.5" step="0.5" value="10"></div>
-      <div><label for="outcomeOrder">ลำดับ</label><input id="outcomeOrder" type="number" min="0" step="1" value="1"></div>
       <button class="btn-primary" id="saveOutcomeBtn" onclick="saveOutcome()">เพิ่มผลลัพธ์</button>
       <button class="btn-secondary" id="cancelOutcomeBtn" onclick="clearOutcomeForm()" style="display:none">ยกเลิกแก้ไข</button>
     </div>
-    <div class="curriculum-table-wrap"><table class="curriculum-table"><thead><tr><th>ลำดับ</th><th>รหัส</th><th>คำอธิบาย</th><th>คะแนนเต็ม</th><th></th></tr></thead><tbody id="outcomeBody"></tbody></table></div>
+    <div class="curriculum-table-wrap"><table class="curriculum-table"><thead><tr><th>ลำดับ</th><th>คำอธิบาย</th><th>คะแนนเต็ม</th><th></th></tr></thead><tbody id="outcomeBody"></tbody></table></div>
   </div>
   <div class="card">
     <h3>บันทึกคะแนนรายภาคเรียน</h3>
@@ -105,12 +112,12 @@ function grade(total) {
   return n>=80?4:n>=75?3.5:n>=70?3:n>=65?2.5:n>=60?2:n>=55?1.5:n>=50?1:0;
 }
 function ability(value){return value===''?'':value>=3.5?'เชี่ยวชาญ':value>=2.5?'ชำนาญ':value>=1.5?'พัฒนา':'เริ่มต้น';}
-function clearOutcomeForm(){editingOutcomeId='';document.getElementById('outcomeCode').value='';document.getElementById('outcomeDescription').value='';document.getElementById('outcomeMax').value='10';document.getElementById('saveOutcomeBtn').textContent='เพิ่มผลลัพธ์';document.getElementById('cancelOutcomeBtn').style.display='none';}
+function nextOutcomeOrder(){var items=currentData&&currentData.outcomes[String(selectedTerm())]||[];return items.reduce(function(max,item){return Math.max(max,Number(item.display_order)||0);},0)+1;}
+function clearOutcomeForm(){editingOutcomeId='';document.getElementById('outcomeOrder').value=nextOutcomeOrder();document.getElementById('outcomeDescription').value='';document.getElementById('outcomeMax').value='10';document.getElementById('saveOutcomeBtn').textContent='เพิ่มผลลัพธ์';document.getElementById('cancelOutcomeBtn').style.display='none';}
 function editOutcome(id){
   var item=(currentData.outcomes[String(selectedTerm())]||[]).filter(function(row){return row.outcome_id===id;})[0];
   if(!item)return;
   editingOutcomeId=id;
-  document.getElementById('outcomeCode').value=item.code;
   document.getElementById('outcomeDescription').value=item.description;
   document.getElementById('outcomeMax').value=item.max_score;
   document.getElementById('outcomeOrder').value=item.display_order;
@@ -121,7 +128,7 @@ function saveOutcome(){
   var button=document.getElementById('saveOutcomeBtn');
   if(!startCurriculumAction(button, 'กำลังบันทึกผลลัพธ์การเรียนรู้...')) return;
   if(dirty){toast('กรุณาบันทึกคะแนนก่อนแก้ไขผลลัพธ์','error');return;}
-  var item={outcome_id:editingOutcomeId,term:selectedTerm(),code:document.getElementById('outcomeCode').value,description:document.getElementById('outcomeDescription').value,max_score:document.getElementById('outcomeMax').value,display_order:document.getElementById('outcomeOrder').value};
+  var item={outcome_id:editingOutcomeId,term:selectedTerm(),description:document.getElementById('outcomeDescription').value,max_score:document.getElementById('outcomeMax').value,display_order:document.getElementById('outcomeOrder').value};
   google.script.run.withSuccessHandler(function(){clearOutcomeForm();load();toast('บันทึกผลลัพธ์แล้ว');})
     .withFailureHandler(function(err){toast(err.message,'error');})
     .serverSaveLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,item);
@@ -134,6 +141,17 @@ function deleteOutcome(id){
     .withFailureHandler(function(err){toast(err.message,'error');})
     .serverDeleteLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,id);
 }
+function saveReportProfile(){
+  if(dirty){toast('กรุณาบันทึกคะแนนก่อนแก้ไขข้อมูลรายงาน','error');return;}
+  var button=document.getElementById('saveReportProfileBtn');
+  var type=document.getElementById('abilityType').value;
+  var name=document.getElementById('abilityName').value.trim();
+  if(!name){toast('กรุณาระบุชื่อความสามารถ','error');return;}
+  if(!startCurriculumAction(button,'กำลังบันทึกข้อมูลรายงาน...'))return;
+  google.script.run.withSuccessHandler(function(){load();toast('บันทึกข้อมูลรายงานแล้ว');})
+    .withFailureHandler(function(err){toast(err.message,'error');finishCurriculumAction(button);})
+    .serverSaveCurriculumReportProfile(TOKEN,CLASS_ID,SUBJECT_ID,type,name);
+}
 function render(){
   if(!currentData)return;
   if(dirty && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการเปลี่ยนภาคเรียนหรือไม่?')){document.getElementById('termSelect').value=String(currentData.activeTerm||1);return;}
@@ -142,13 +160,14 @@ function render(){
   var items=currentData.outcomes[String(term)]||[];
   var cls=currentData.class_info||{},subject=currentData.subject_info||{};
   document.getElementById('pageHeading').textContent='ผลลัพธ์การเรียนรู้ — '+(cls.class_label||cls.level||'')+' — '+(subject.subject_name||'');
-  document.getElementById('outcomeBody').innerHTML=items.map(function(item){return '<tr><td>'+esc(item.display_order)+'</td><td>'+esc(item.code)+'</td><td class="outcome-description">'+esc(item.description)+'</td><td>'+esc(item.max_score)+'</td><td><button class="btn-secondary" onclick="editOutcome(\''+esc(item.outcome_id)+'\')">แก้ไข</button> <button class="btn-secondary" onclick="deleteOutcome(\''+esc(item.outcome_id)+'\')">ลบ</button></td></tr>';}).join('')||'<tr><td colspan="5">ยังไม่มีผลลัพธ์การเรียนรู้</td></tr>';
-  document.getElementById('outcomeOrder').value=items.length+1;
+  document.getElementById('abilityType').value=subject.curriculum_ability_type||'พื้นฐาน';
+  document.getElementById('abilityName').value=subject.curriculum_ability_name||'';
+  document.getElementById('outcomeBody').innerHTML=items.map(function(item){return '<tr><td>'+esc(item.display_order)+'</td><td class="outcome-description">'+esc(item.description)+'</td><td>'+esc(item.max_score)+'</td><td><button class="btn-secondary" onclick="editOutcome(\''+esc(item.outcome_id)+'\')">แก้ไข</button> <button class="btn-secondary" onclick="deleteOutcome(\''+esc(item.outcome_id)+'\')">ลบ</button></td></tr>';}).join('')||'<tr><td colspan="4">ยังไม่มีผลลัพธ์การเรียนรู้</td></tr>';
   document.getElementById('loadingMsg').style.display='none';
   document.getElementById('scoreTable').style.display=items.length?'table':'none';
   document.getElementById('saveScoresBtn').style.display=items.length?'inline-block':'none';
   document.getElementById('scoreNote').textContent=items.length?'เกรดจะแสดงเมื่อกรอกคะแนนผลลัพธ์ทุกข้อและคะแนนปลายภาคครบ':'เพิ่มผลลัพธ์การเรียนรู้ก่อนบันทึกคะแนน';
-  document.getElementById('scoreHead').innerHTML='<tr><th>ที่</th><th class="student-name-col">ชื่อ-สกุล</th>'+items.map(function(item){return '<th title="'+esc(item.description)+'">'+esc(item.code)+'<br>/'+esc(item.max_score)+'</th>';}).join('')+'<th>ปลายภาค<br>/15</th><th>ผลลัพธ์<br>/35</th><th>รวม<br>/50</th><th>เกรด</th><th>ระดับ</th></tr>';
+  document.getElementById('scoreHead').innerHTML='<tr><th>ที่</th><th class="student-name-col">ชื่อ-สกุล</th>'+items.map(function(item){return '<th title="'+esc(item.description)+'">'+esc(item.display_order)+'<br>/'+esc(item.max_score)+'</th>';}).join('')+'<th>ปลายภาค<br>/15</th><th>ผลลัพธ์<br>/35</th><th>รวม<br>/50</th><th>เกรด</th><th>ระดับ</th></tr>';
   document.getElementById('scoreBody').innerHTML=(currentData.students||[]).map(function(student){
     var result=student['term'+term]||{};
     return '<tr data-student="'+esc(student.student_id)+'"><td>'+esc(student.seq_no)+'</td><td class="student-name-col">'+esc(student.full_name)+'</td>'+items.map(function(item){var value=student.scores[item.outcome_id];return '<td><input class="outcome-score" type="number" min="0" max="'+esc(item.max_score)+'" step="0.5" data-outcome="'+esc(item.outcome_id)+'" value="'+esc(value===undefined?'':value)+'" oninput="updateRow(this)"></td>';}).join('')+'<td><input class="assessment-score" type="number" min="0" max="15" step="0.5" value="'+esc(student.assessments[String(term)])+'" oninput="updateRow(this)"></td><td class="scaled">'+esc(result.scaled)+'</td><td class="term-total">'+esc(result.total)+'</td><td class="term-grade">'+esc(result.grade)+'</td><td class="term-ability">'+esc(result.ability)+'</td></tr>';
