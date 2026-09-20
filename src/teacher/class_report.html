@@ -494,7 +494,16 @@ function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
-  var body = '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
+  var heading = '';
+  if (d.curriculum_data && startIndex === 0) {
+    var m = meta(d);
+    var gradeNumber = (String(m.cls.level || '').match(/\d+/) || [''])[0];
+    heading = '<div class="form-title">บันทึกการมาเรียน</div>' +
+      '<div class="form-subtitle">รายวิชา ' + blank(m.subj.subject_name) +
+      '<br>ชั้นประถมศึกษาปีที่ ' + blank(gradeNumber) +
+      ' ปีการศึกษา ' + blank(reportYear(d)) + '</div>';
+  }
+  var body = heading + '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
   return referenceShell(n, body, 'landscape-table');
 }
 
