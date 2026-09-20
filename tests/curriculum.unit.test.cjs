@@ -49,7 +49,7 @@ test('P1-P3 print packet renders term and annual results without legacy score he
   const data = {
     school_info: { school_name: 'Test School', academic_year: '2568' },
     class_info: { level: 'ป.1', section: '1', class_label: 'ป.1/1' },
-    subject_info: { subject_name: 'Test Subject', hours_per_year: 80, curriculum_ability_type: 'พื้นฐาน', curriculum_ability_name: 'การอ่าน' },
+    subject_info: { subject_name: 'Test Subject', hours_per_year: 80, curriculum_ability_type: 'พื้นฐาน' },
     students: [student], total_students: 1,
     ability_dist: [{ label: 'เชี่ยวชาญ', count: 1, pct: 100 }],
     curriculum_data: { students: [student], outcomes: {
@@ -59,7 +59,7 @@ test('P1-P3 print packet renders term and annual results without legacy score he
   };
   const book = reportContext.buildReportBookHtml(data);
   assert.match(book, /บันทึกเวลาเรียน/);
-  assert.match(book, /ความสามารถพื้นฐาน การอ่าน/);
+  assert.match(book, /ความสามารถพื้นฐาน/);
   assert.match(book, /ผลลัพธ์การเรียนรู้รายวิชา/);
   assert.match(book, /สรุปผลการประเมิน ภาคเรียนที่ 1/);
   assert.match(book, /สรุปผลการประเมิน/);
@@ -105,20 +105,21 @@ test('only admins can set required P1-P3 subject capability on create and edit',
   api.DEFAULT_WEIGHTS = { '1': {} };
   api.appendAuditLog = () => {};
 
-  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', '', ''), /ประเภทความสามารถ/);
-  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', ''), /ชื่อความสามารถ/);
-  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'อื่น', 'ภาษา'), /ประเภทความสามารถ/);
-  api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', 'ด้านภาษา');
-  assert.equal(inserts[0].curriculum_ability_name, 'ด้านภาษา');
-  api.serverAddSubject('token', '', 'วิทยาศาสตร์', 'SCI', 80, 1, 'p4', '', '', '');
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', ''), /ประเภทความสามารถ/);
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'อื่น'), /ประเภทความสามารถ/);
+  api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน');
+  assert.equal(inserts[0].curriculum_ability_type, 'พื้นฐาน');
+  assert.equal(inserts[0].curriculum_ability_name, undefined);
+  api.serverAddSubject('token', '', 'วิทยาศาสตร์', 'SCI', 80, 1, 'p4', '', '');
   assert.equal(inserts[1].curriculum_ability_type, undefined);
 
-  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', '', ''), /ประเภทความสามารถ/);
-  api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'การประยุกต์ใช้ในชีวิตประจำวัน', 'ด้านภาษา');
+  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', ''), /ประเภทความสามารถ/);
+  api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'การประยุกต์ใช้ในชีวิตประจำวัน');
   assert.equal(updates[0].curriculum_ability_type, 'การประยุกต์ใช้ในชีวิตประจำวัน');
+  assert.equal(updates[0].curriculum_ability_name, undefined);
   role = 'teacher';
-  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน', 'ด้านภาษา'), /ไม่มีสิทธิ์/);
-  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'พื้นฐาน', 'ด้านภาษา'), /ไม่มีสิทธิ์/);
+  assert.throws(() => api.serverAddSubject('token', '', 'ภาษาไทย', 'TH', 80, 1, 'p1', '', 'พื้นฐาน'), /ไม่มีสิทธิ์/);
+  assert.throws(() => api.serverUpdateSubject('token', 'existing', 'ภาษาไทย', 'TH', 80, 1, '', 'พื้นฐาน'), /ไม่มีสิทธิ์/);
   assert.equal(api.serverSaveCurriculumReportProfile, undefined);
 });
 
@@ -152,7 +153,7 @@ test('subject CSV requires capability for new P1-P3 rows and preserves it on leg
     { subject_id: 'existing', class_id: 'p1', subject_name: 'ภาษาไทยใหม่', subject_code: 'TH', hours: '80', weight_group: '1' },
     { class_id: 'p1', subject_name: 'ไม่ครบ', subject_code: 'BAD', hours: '80', weight_group: '1' },
     { class_level: 'ป.2', class_section: '1', subject_name: 'ไม่ครบอีก', subject_code: 'BAD2', hours: '80', weight_group: '1' },
-    { class_id: 'p1', subject_name: 'อังกฤษ', subject_code: 'EN', hours: '80', weight_group: '1', curriculum_ability_type: 'พื้นฐาน', curriculum_ability_name: 'ด้านภาษา' },
+    { class_id: 'p1', subject_name: 'อังกฤษ', subject_code: 'EN', hours: '80', weight_group: '1', curriculum_ability_type: 'พื้นฐาน', curriculum_ability_name: 'ค่าเก่าจาก CSV' },
     { class_id: 'p4', subject_name: 'วิทยาศาสตร์', subject_code: 'SCI', hours: '80', weight_group: '1' },
   ]);
   assert.equal(result.created_count, 2);
@@ -160,7 +161,8 @@ test('subject CSV requires capability for new P1-P3 rows and preserves it on leg
   assert.match(result.warnings.join(' '), /ประเภทความสามารถ/);
   assert.equal(subjects.rows[1][7], 'พื้นฐาน');
   assert.equal(subjects.rows[1][8], 'เดิม');
-  assert.equal(subjects.rows.find((row) => row[3] === 'EN')[8], 'ด้านภาษา');
+  assert.equal(subjects.rows.find((row) => row[3] === 'EN')[7], 'พื้นฐาน');
+  assert.equal(subjects.rows.find((row) => row[3] === 'EN')[8], '');
   assert.equal(subjects.rows.find((row) => row[3] === 'BAD'), undefined);
 });
 

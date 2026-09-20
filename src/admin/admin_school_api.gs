@@ -414,14 +414,12 @@ function ensureSubjectsSchema() {
   removeColumns('Subjects', ['description']);
 }
 
-function validateSubjectAbility_(type, name) {
+function validateSubjectAbility_(type) {
   var abilityType = String(type || '').trim();
-  var abilityName = String(name || '').trim();
   if (abilityType !== 'พื้นฐาน' && abilityType !== 'การประยุกต์ใช้ในชีวิตประจำวัน') {
     throw new Error('กรุณาเลือกประเภทความสามารถสำหรับรายวิชา ป.1–ป.3');
   }
-  if (!abilityName) throw new Error('กรุณาระบุชื่อความสามารถสำหรับรายวิชา ป.1–ป.3');
-  return { curriculum_ability_type: abilityType, curriculum_ability_name: abilityName };
+  return { curriculum_ability_type: abilityType };
 }
 
 function getSubjectsList(token) {
@@ -511,7 +509,7 @@ function insertSubjectWeightsIfMissing(subject_id, group) {
   });
 }
 
-function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, class_ids, subject_group, ability_type, ability_name) {
+function serverAddSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, class_ids, subject_group, ability_type) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSubjectsSchema();
@@ -527,7 +525,7 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
   classIdList.forEach(function(classId) {
     var cls = classesById[classId];
     if (!cls) throw new Error('ไม่พบชั้นเรียนที่เลือก');
-    if (isCurriculumLevel_(cls.level)) abilityByClass[classId] = validateSubjectAbility_(ability_type, ability_name);
+    if (isCurriculumLevel_(cls.level)) abilityByClass[classId] = validateSubjectAbility_(ability_type);
   });
 
   if (classIdList.length === 0) {
@@ -554,7 +552,6 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
     };
     if (abilityByClass[classId]) {
       newSubject.curriculum_ability_type = abilityByClass[classId].curriculum_ability_type;
-      newSubject.curriculum_ability_name = abilityByClass[classId].curriculum_ability_name;
     }
     dbInsert('Subjects', newSubject);
     insertSubjectWeightsIfMissing(newSubjectId, grp);
@@ -564,7 +561,7 @@ function serverAddSubject(token, subject_id, subject_name, subject_code, hours_p
   return { ok: true, subject_id: createdIds[0], subject_ids: createdIds };
 }
 
-function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, subject_group, ability_type, ability_name) {
+function serverUpdateSubject(token, subject_id, subject_name, subject_code, hours_per_year, weight_group, subject_group, ability_type) {
   var session = getSession(token);
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSubjectsSchema();
@@ -573,7 +570,7 @@ function serverUpdateSubject(token, subject_id, subject_name, subject_code, hour
   if (!oldSubject) throw new Error('ไม่พบรายวิชา');
   var oldGroup = oldSubject ? oldSubject.weight_group : null;
   var cls = dbFindOne('Classes', 'class_id', oldSubject.class_id);
-  var ability = cls && isCurriculumLevel_(cls.level) ? validateSubjectAbility_(ability_type, ability_name) : null;
+  var ability = cls && isCurriculumLevel_(cls.level) ? validateSubjectAbility_(ability_type) : null;
   
   var newGroup = parseInt(weight_group) || 1;
   var subjectUpdates = {
@@ -585,7 +582,6 @@ function serverUpdateSubject(token, subject_id, subject_name, subject_code, hour
   };
   if (ability) {
     subjectUpdates.curriculum_ability_type = ability.curriculum_ability_type;
-    subjectUpdates.curriculum_ability_name = ability.curriculum_ability_name;
   }
   dbUpdate('Subjects', 'subject_id', subject_id, subjectUpdates);
   
@@ -824,7 +820,6 @@ function serverImportSubjectsCSV(token, rows) {
     var groupCol = subjectHeaders.indexOf('weight_group');
     var subjectGroupCol = subjectHeaders.indexOf('subject_group');
     var abilityTypeCol = subjectHeaders.indexOf('curriculum_ability_type');
-    var abilityNameCol = subjectHeaders.indexOf('curriculum_ability_name');
 
     var weightsSheet = getSheet('SubjectWeights');
     var weightsData = weightsSheet.getDataRange().getValues();
@@ -871,7 +866,6 @@ function serverImportSubjectsCSV(token, rows) {
       if (subjectGroupCol !== -1) row[subjectGroupCol] = subjectGroup;
       if (ability) {
         row[abilityTypeCol] = ability.curriculum_ability_type;
-        row[abilityNameCol] = ability.curriculum_ability_name;
       }
       return row;
     }
@@ -972,7 +966,6 @@ function serverImportSubjectsCSV(token, rows) {
       var group = parseInt(row.weight_group, 10) || 1;
       var importWeights = getImportWeights(row, group, lineNum);
       var abilityType = String(row.curriculum_ability_type || '').trim();
-      var abilityName = String(row.curriculum_ability_name || '').trim();
 
       if (!name) {
         warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุชื่อวิชา');
@@ -985,9 +978,9 @@ function serverImportSubjectsCSV(token, rows) {
         (classId || (classLevel && classSection ? generateClassId(classLevel, classSection) : ''));
       var priorSubject = subjectId && subjectsById[subjectId];
       if (!priorSubject && code && targetClassId) priorSubject = subjectsByCodeAndClass[code + '|' + targetClassId];
-      if (isCurriculumLevel_(targetLevel) && (!priorSubject || abilityType || abilityName)) {
+      if (isCurriculumLevel_(targetLevel) && (!priorSubject || abilityType)) {
         try {
-          validateSubjectAbility_(abilityType, abilityName);
+          validateSubjectAbility_(abilityType);
         } catch (err) {
           warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะ' + err.message);
           return;
@@ -1020,9 +1013,9 @@ function serverImportSubjectsCSV(token, rows) {
 
       var cls = classesById[classId];
       var ability = null;
-      if (cls && isCurriculumLevel_(cls.level) && (!existing || abilityType || abilityName)) {
+      if (cls && isCurriculumLevel_(cls.level) && (!existing || abilityType)) {
         try {
-          ability = validateSubjectAbility_(abilityType, abilityName);
+          ability = validateSubjectAbility_(abilityType);
         } catch (err) {
           warningMessages.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะ' + err.message);
           return;
@@ -1046,7 +1039,6 @@ function serverImportSubjectsCSV(token, rows) {
         if (subjectGroupCol !== -1) subjectSheet.getRange(existing.rowIndex, subjectGroupCol + 1).setValue(subjectGroup);
         if (ability) {
           subjectSheet.getRange(existing.rowIndex, abilityTypeCol + 1).setValue(ability.curriculum_ability_type);
-          subjectSheet.getRange(existing.rowIndex, abilityNameCol + 1).setValue(ability.curriculum_ability_name);
         }
         if (classIdCol !== -1) existing.row[classIdCol] = classId;
         existing.row[subjectNameCol] = name;
@@ -1056,7 +1048,6 @@ function serverImportSubjectsCSV(token, rows) {
         if (subjectGroupCol !== -1) existing.row[subjectGroupCol] = subjectGroup;
         if (ability) {
           existing.row[abilityTypeCol] = ability.curriculum_ability_type;
-          existing.row[abilityNameCol] = ability.curriculum_ability_name;
         }
         ensureSubjectWeights(subjectId, group, importWeights);
         updatedCount++;

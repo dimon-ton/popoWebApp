@@ -62,10 +62,6 @@
         <label for="newAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
         <select id="newAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
       </div>
-      <div class="form-group" id="newAbilityNameGroup" style="display:none">
-        <label for="newAbilityName">ชื่อความสามารถ (ป.1–ป.3)</label>
-        <input type="text" id="newAbilityName" placeholder="เช่น ด้านภาษา">
-      </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
       </div>
@@ -75,7 +71,7 @@
   <div class="card">
     <h3>นำเข้ารายวิชาด้วย CSV</h3>
     <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง รายวิชาใหม่ ป.1–ป.3 ต้องกรอกประเภทและชื่อความสามารถ ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
+      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง รายวิชาใหม่ ป.1–ป.3 ต้องเลือกประเภทความสามารถ ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
       <div style="margin-top: 8px;">
         <strong>ลำดับคอลัมน์:</strong>
         <code>class_id</code>,
@@ -86,7 +82,6 @@
         <code>ชื่อวิชา*</code>,
         <code>กลุ่มสาระฯ</code>,
         <code>ประเภทความสามารถ</code>,
-        <code>ชื่อความสามารถ</code>,
         <code>จำนวนชั่วโมง</code>,
         <code>กลุ่มน้ำหนัก</code>,
         <code>ก่อนกลางภาค</code>,
@@ -166,10 +161,6 @@
       <label for="editAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
       <select id="editAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
     </div>
-    <div class="form-group" id="editAbilityNameGroup" style="display:none">
-      <label for="editAbilityName">ชื่อความสามารถ (ป.1–ป.3)</label>
-      <input type="text" id="editAbilityName" placeholder="เช่น ด้านภาษา">
-    </div>
     <div class="modal-actions">
       <button class="btn-primary" id="saveEditBtn" onclick="saveSubjectEdit()">บันทึก</button>
       <button class="btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
@@ -240,15 +231,12 @@ function selectedNewClassIsP1P3() {
 function toggleNewSubjectAbility() {
   var visible = selectedNewClassIsP1P3();
   document.getElementById('newAbilityTypeGroup').style.display = visible ? '' : 'none';
-  document.getElementById('newAbilityNameGroup').style.display = visible ? '' : 'none';
 }
 
 function subjectAbilityValues(prefix) {
   var type = document.getElementById(prefix + 'AbilityType').value;
-  var name = document.getElementById(prefix + 'AbilityName').value.trim();
   if (!type) { showToast('กรุณาเลือกประเภทความสามารถ', 'error'); return null; }
-  if (!name) { showToast('กรุณาระบุชื่อความสามารถ', 'error'); return null; }
-  return { type: type, name: name };
+  return { type: type };
 }
 
 function loadClassesForSubjects() {
@@ -311,7 +299,7 @@ function addSubject() {
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
   if (!classId) { showToast('กรุณาเลือกชั้นเรียน', 'error'); return; }
-  var ability = selectedNewClassIsP1P3() ? subjectAbilityValues('new') : { type: '', name: '' };
+  var ability = selectedNewClassIsP1P3() ? subjectAbilityValues('new') : { type: '' };
   if (!ability) return;
 
   var btn = document.getElementById('addSubjectBtn');
@@ -328,7 +316,6 @@ function addSubject() {
       document.getElementById('newHours').value = '';
       document.getElementById('newClassIds').value = '';
       document.getElementById('newAbilityType').value = '';
-      document.getElementById('newAbilityName').value = '';
       toggleNewSubjectAbility();
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
@@ -338,7 +325,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group, ability.type, ability.name);
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group, ability.type);
 }
 
 function openEditModal(subject_id) {
@@ -352,9 +339,7 @@ function openEditModal(subject_id) {
   document.getElementById('editHours').value = s.hours_per_year || '';
   var isP1P3 = isP1P3Level(s.class_level);
   document.getElementById('editAbilityTypeGroup').style.display = isP1P3 ? '' : 'none';
-  document.getElementById('editAbilityNameGroup').style.display = isP1P3 ? '' : 'none';
   document.getElementById('editAbilityType').value = s.curriculum_ability_type || '';
-  document.getElementById('editAbilityName').value = s.curriculum_ability_name || '';
   
   document.getElementById('editModalOverlay').classList.add('open');
 }
@@ -372,7 +357,7 @@ function saveSubjectEdit() {
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
   var currentSubject = allSubjects.find(function(item) { return item.subject_id === subject_id; });
-  var ability = currentSubject && isP1P3Level(currentSubject.class_level) ? subjectAbilityValues('edit') : { type: '', name: '' };
+  var ability = currentSubject && isP1P3Level(currentSubject.class_level) ? subjectAbilityValues('edit') : { type: '' };
   if (!ability) return;
 
   var btn = document.getElementById('saveEditBtn');
@@ -390,7 +375,7 @@ function saveSubjectEdit() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group, ability.type, ability.name);
+    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group, ability.type);
 }
 
 function parseCSV(text) {
@@ -439,10 +424,10 @@ function normalizeCSVHeader(header) {
 }
 
 function downloadCSVTemplate() {
-  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'ประเภทความสามารถ', 'ชื่อความสามารถ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
+  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'ประเภทความสามารถ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
   var rows = [
-    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', 'ด้านภาษา', '200', '1', '30', '20', '20', '30'],
-    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', 'ด้านภาษา', '200', '1', '30', '20', '20', '30']
+    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', '200', '1', '30', '20', '20', '30'],
+    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', '200', '1', '30', '20', '20', '30']
   ];
   var csv = [headers].concat(rows).map(function(row) {
     return row.map(csvEscape).join(',');
@@ -492,7 +477,6 @@ function importCSVFile() {
       var nameIdx = headers.indexOf('ชื่อวิชา');
       var subjectGroupIdx = headers.indexOf('กลุ่มสาระฯ');
       var abilityTypeIdx = headers.indexOf('ประเภทความสามารถ');
-      var abilityNameIdx = headers.indexOf('ชื่อความสามารถ');
       var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
       var groupIdx = headers.indexOf('กลุ่มน้ำหนัก');
       var preMidIdx = headers.indexOf('ก่อนกลางภาค');
@@ -531,7 +515,6 @@ function importCSVFile() {
           subject_name: name,
           subject_group: subjectGroup,
           curriculum_ability_type: abilityTypeIdx !== -1 && row[abilityTypeIdx] ? row[abilityTypeIdx].trim() : '',
-          curriculum_ability_name: abilityNameIdx !== -1 && row[abilityNameIdx] ? row[abilityNameIdx].trim() : '',
           hours: hours,
           weight_group: group,
           pre_mid_max: preMidIdx !== -1 && row[preMidIdx] ? row[preMidIdx].trim() : '',
