@@ -1104,6 +1104,12 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .nav-loading .skeleton-block { width: 260px; }
 .nav-loading .skeleton-menu { display: grid; grid-template-columns: repeat(3, 140px); gap: 10px; margin-top: 18px; }
 .nav-loading .skeleton-menu-item { height: 44px; background: #e2e5e9; border-radius: var(--radius-sm); animation: skeleton-pulse 1.5s ease-in-out infinite; border: 1px solid var(--border); }
+.app-action-loading { position: fixed; inset: 0; z-index: 30000; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, .48); backdrop-filter: blur(3px); cursor: progress; }
+.app-action-loading__panel { display: flex; align-items: center; gap: 16px; width: min(100%, 380px); padding: 22px 24px; border-radius: 14px; background: var(--bg-card); box-shadow: 0 24px 60px rgba(12, 36, 74, .22); color: var(--text); font-weight: 600; }
+.app-action-loading__spinner { flex: none; width: 34px; height: 34px; border: 4px solid var(--brand-light); border-top-color: var(--brand); border-radius: 50%; animation: app-action-spin .75s linear infinite; }
+.app-action-loading__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes app-action-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-action-loading__spinner { animation-duration: 1.8s; } }
 
 .readonly-notice {
   font-size: 13px;
@@ -3498,6 +3504,109 @@ function hideNavLoading() {
   var el = document.getElementById('navOverlay');
   if (el) el.remove();
 }
+
+// Keep the page inactive while a button-triggered Apps Script request is running.
+// Calls made during page initialization stay in their existing inline loading states.
+(function() {
+  var actionUntil = 0;
+  var actionText = '';
+  var pending = 0;
+  var continuation = false;
+  var previousFocus = null;
+  var previousOverflow = '';
+
+  function rememberAction(target) {
+    var control = target && target.closest && target.closest('button, [role="button"], a[onclick], input[type="submit"], input[type="button"]');
+    if (!control || control.disabled || control.closest('#appActionLoading')) return;
+    actionUntil = Date.now() + 2000;
+    actionText = (control.getAttribute('data-loading-label') || control.getAttribute('aria-label') || control.textContent || control.value || '').trim();
+  }
+  document.addEventListener('click', function(event) { rememberAction(event.target); }, true);
+  document.addEventListener('submit', function(event) { rememberAction(event.submitter || event.target); }, true);
+  document.addEventListener('change', function(event) {
+    if (event.target && event.target.matches && event.target.matches('input[type="file"]')) {
+      actionUntil = Date.now() + 3000;
+      actionText = 'กำลังประมวลผลไฟล์';
+    }
+  }, true);
+  document.addEventListener('keydown', function(event) {
+    if (!pending || ['Tab', 'Enter', ' ', 'Spacebar'].indexOf(event.key) === -1) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  function beginAction() {
+    pending++;
+    if (pending !== 1) return;
+    previousFocus = document.activeElement;
+    previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.setAttribute('aria-busy', 'true');
+    var overlay = document.createElement('div');
+    overlay.id = 'appActionLoading';
+    overlay.className = 'app-action-loading';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'กำลังดำเนินการ');
+    overlay.tabIndex = -1;
+    overlay.innerHTML = '<div class="app-action-loading__panel"><span class="app-action-loading__spinner" aria-hidden="true"></span><span class="app-action-loading__text"></span></div>';
+    overlay.querySelector('.app-action-loading__text').textContent = actionText ? 'กำลังดำเนินการ: ' + actionText : 'กำลังดำเนินการ...';
+    document.body.appendChild(overlay);
+    overlay.focus({ preventScroll: true });
+  }
+  function endAction() {
+    pending = Math.max(0, pending - 1);
+    if (pending) return;
+    var overlay = document.getElementById('appActionLoading');
+    if (overlay) overlay.remove();
+    document.body.style.overflow = previousOverflow;
+    document.body.removeAttribute('aria-busy');
+    if (previousFocus && previousFocus.isConnected && !previousFocus.disabled) previousFocus.focus({ preventScroll: true });
+    previousFocus = null;
+  }
+  function shouldBlock() {
+    return (continuation || Date.now() < actionUntil) &&
+      !document.body.classList.contains('page-login') &&
+      !document.body.classList.contains('page-setup-wizard') &&
+      !document.getElementById('navOverlay');
+  }
+  function wrapRunner(runner, success, failure) {
+    return new Proxy(runner, {
+      get: function(target, name) {
+        if (name === '__popoBusyRunner') return true;
+        var method = target[name];
+        if (typeof method !== 'function') return method;
+        if (name === 'withSuccessHandler') return function(handler) { return wrapRunner(method.call(target, handler), handler, failure); };
+        if (name === 'withFailureHandler') return function(handler) { return wrapRunner(method.call(target, handler), success, handler); };
+        if (name === 'withUserObject' || name === 'withLogger') return function(value) { return wrapRunner(method.call(target, value), success, failure); };
+        return function() {
+          if (!shouldBlock()) return method.apply(target, arguments);
+          beginAction();
+          var finished = false;
+          function finish() { if (!finished) { finished = true; endAction(); } }
+          var active = target.withSuccessHandler(function() {
+            var wasContinuation = continuation;
+            continuation = true;
+            try { if (success) return success.apply(this, arguments); }
+            finally { continuation = wasContinuation; finish(); }
+          }).withFailureHandler(function(error) {
+            try { if (failure) return failure.apply(this, arguments); console.error(error); }
+            finally { finish(); }
+          });
+          try { return active[name].apply(active, arguments); }
+          catch (error) { finish(); throw error; }
+        };
+      }
+    });
+  }
+  function installBusyRunner() {
+    if (!window.google || !google.script || !google.script.run || google.script.run.__popoBusyRunner) return;
+    google.script.run = wrapRunner(google.script.run, null, null);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installBusyRunner);
+  else installBusyRunner();
+  window.addEventListener('load', installBusyRunner);
+})();
 function btnLoading(btn, text) {
   if (!btn) return;
   btn.dataset.origText = btn.textContent;
