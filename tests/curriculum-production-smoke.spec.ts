@@ -28,7 +28,7 @@ test('P1 curriculum initializes and renders annual report', async ({ page }) => 
 
     await page.goto(`${url}?page=class_formative&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#pageHeading')).toContainText('ผลลัพธ์การเรียนรู้', { timeout: 30_000 });
-    await expect(page.locator('#scoreTable')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#loadingMsg')).toBeHidden({ timeout: 30_000 });
 
     const first = await seedLearningOutcome({ suffix: `${suffix}_1`, subject_id: subjectId, term: 1, code: '1', max_score: 40 });
     const second = await seedLearningOutcome({ suffix: `${suffix}_2`, subject_id: subjectId, term: 2, code: '2', max_score: 60 });

@@ -114,30 +114,23 @@ immediately after first login.
 
 ## Run Apps Script functions from the terminal
 
-`clasp run` uses the Apps Script API, which needs an API executable deployment and OAuth
-credentials from the same **standard Google Cloud project** as this script. The web app
-deployment alone does not enable it.
+`clasp run` uses the Apps Script API. This script is linked to the standard Google Cloud
+project `app-script-run-function` (project number `458875230672`), which has the Apps
+Script API enabled. The HEAD deployment has an API executable entry point.
 
-1. In the Apps Script editor, open **Project Settings > Google Cloud Project**. If it is
-   a default project, move to a standard project only after planning for existing web app
-   users to reauthorize. Record that standard project's **Project ID**.
-2. In that Cloud project, enable the **Google Apps Script API** and create an OAuth client
-   of type **Desktop app**. Download its JSON credentials outside this repository.
-3. Add `"projectId": "<STANDARD_CLOUD_PROJECT_ID>"` to the local, ignored `.clasp.json`.
-   Leave `scriptId` and `rootDir` intact.
-4. Authorize a separate named clasp profile with the script's manifest scopes:
+For a new workstation, copy `.clasp.json.example` and set its `scriptId`. Get Desktop
+OAuth client JSON from the same Cloud project and save it outside this repository. Then
+authorize a separate named clasp profile with the script's manifest scopes:
 
    ```sh
    npx clasp login --user run --creds <PATH_TO_OAUTH_CLIENT_JSON> --use-project-scopes --include-clasp-scopes
    ```
 
-5. Push `src/appsscript.json`, then in the Apps Script editor choose **Deploy > New
-   deployment > API executable** and set access to **Only myself**. This is separate from
-   the existing production web app deployment.
-6. Verify with a read-only function:
+Verify with a read-only function:
 
    ```sh
    npx clasp --user run run isFirstRun
    ```
 
-Do not commit OAuth credentials or `.clasprc.json`.
+The default `clasp run` executes HEAD code. `--nondev` needs a separate versioned API
+executable deployment. Do not commit OAuth credentials or `.clasprc.json`.

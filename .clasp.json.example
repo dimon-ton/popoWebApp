@@ -1,4 +1,5 @@
 {
   "scriptId": "YOUR_APPS_SCRIPT_PROJECT_ID",
-  "rootDir": "src"
+  "rootDir": "src",
+  "projectId": "app-script-run-function"
 }

@@ -100,10 +100,17 @@ Use this same URL as `WEB_APP_URL` when running production smoke tests.
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `288`
+- Stable production version: `314`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Copy read think write data from another subject`
+- Latest verified production release: `P1-P3 two-term curriculum grading and report`
+
+The script uses standard Google Cloud project `app-script-run-function` (project number
+`458875230672`). The Apps Script API is enabled, and the HEAD deployment has an API
+executable entry point. For CLI execution, use a named clasp profile authorized with
+Desktop OAuth credentials from that project and the manifest scopes, then run
+`npx clasp --user run run <functionName>`. The local `.clasp.json` must include
+`"projectId": "app-script-run-function"`.
 
 ---
 
