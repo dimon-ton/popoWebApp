@@ -438,9 +438,16 @@ test.describe('US-013: Cover report aggregates', () => {
     await expect(page.locator('#pageHeading')).toContainText('ป.พ.5', { timeout: 15_000 });
     await expect(page.locator('#reportContent')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('.a4-report-book')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.a4-page')).toHaveCount(13, { timeout: 15_000 });
+    await expect(page.locator('.a4-page')).toHaveCount(9, { timeout: 15_000 });
     await expect(page.locator('.form-summary-table')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('.form-grid-table')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.a4-page[data-page="4"] .form-title')).toHaveText('บันทึกผลการประเมิน');
+    await expect(page.locator('.a4-page[data-page="5"] .form-title')).toHaveText('สรุปผลการประเมิน');
+    await expect(page.locator('.a4-page[data-page="7"] .form-title')).toHaveText('รายงานผลการอ่าน วิเคราะห์และเขียน');
+    await expect(page.locator('.a4-page[data-page="8"] .form-title')).toHaveText('รายงานคุณลักษณะอันพึงประสงค์');
+    await expect(page.locator('.rubric-grid-table')).toHaveCount(2);
+    await expect(page.locator('#reportBook')).not.toContainText('คะแนนสรุปผลการประเมิน');
+    await expect(page.locator('#reportBook')).not.toContainText('ภาคผนวกและรายการตรวจสอบ');
     await expect(page.locator('#devActivityCard')).toHaveCount(0);
   });
 
