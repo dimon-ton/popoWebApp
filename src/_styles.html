@@ -3563,6 +3563,7 @@ function hideNavLoading() {
     document.body.removeAttribute('aria-busy');
     if (previousFocus && previousFocus.isConnected && !previousFocus.disabled) previousFocus.focus({ preventScroll: true });
     previousFocus = null;
+    if (typeof window.finishCurriculumAction === 'function') window.finishCurriculumAction();
   }
   function shouldBlock() {
     return (continuation || Date.now() < actionUntil) &&

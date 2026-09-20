@@ -59,6 +59,26 @@ var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 var currentData = null;
 var editingOutcomeId = '';
 var dirty = false;
+var curriculumBusy = false;
+function startCurriculumAction(button, message) {
+  if (curriculumBusy) return false;
+  if (button && button.id === 'saveOutcomeBtn' && dirty) return false;
+  curriculumBusy = true;
+  if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+  var overlay = document.createElement('div');
+  overlay.id = 'curriculumActionLoading'; overlay.className = 'app-action-loading';
+  overlay.setAttribute('role', 'status'); overlay.setAttribute('aria-live', 'polite');
+  overlay.innerHTML = '<div class="app-action-loading__panel"><span class="app-action-loading__spinner" aria-hidden="true"></span><span class="app-action-loading__text"></span></div>';
+  overlay.querySelector('.app-action-loading__text').textContent = message || 'กำลังดำเนินการ...';
+  document.body.appendChild(overlay); document.body.style.overflow = 'hidden'; document.body.setAttribute('aria-busy', 'true');
+  return true;
+}
+function finishCurriculumAction(button) {
+  curriculumBusy = false;
+  if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
+  var overlay = document.getElementById('curriculumActionLoading'); if (overlay) overlay.remove();
+  document.body.style.overflow = ''; document.body.removeAttribute('aria-busy');
+}
 function esc(value) { return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function toast(message, kind) { var el=document.getElementById('toast'); el.textContent=message; el.className='toast '+(kind||'success'); el.style.display='block'; setTimeout(function(){el.style.display='none';},4000); }
 function navigate(page) {
@@ -74,9 +94,9 @@ function doLogout(){
 }
 window.addEventListener('beforeunload',function(event){if(dirty){event.preventDefault();event.returnValue='';}});
 function selectedTerm(){return Number(document.getElementById('termSelect').value);}
-function load() {
-  google.script.run.withSuccessHandler(function(data){currentData=data;dirty=false;render();})
-    .withFailureHandler(function(err){document.getElementById('loadingMsg').textContent=err.message;toast(err.message,'error');})
+function load(done) {
+  google.script.run.withSuccessHandler(function(data){currentData=data;dirty=false;render();if(done)done();if(curriculumBusy)finishCurriculumAction();})
+    .withFailureHandler(function(err){document.getElementById('loadingMsg').textContent=err.message;toast(err.message,'error');if(done)done();if(curriculumBusy)finishCurriculumAction();})
     .getCurriculumData(TOKEN,CLASS_ID,SUBJECT_ID);
 }
 function grade(total) {
@@ -98,6 +118,8 @@ function editOutcome(id){
   document.getElementById('cancelOutcomeBtn').style.display='inline-block';
 }
 function saveOutcome(){
+  var button=document.getElementById('saveOutcomeBtn');
+  if(!startCurriculumAction(button, 'กำลังบันทึกผลลัพธ์การเรียนรู้...')) return;
   if(dirty){toast('กรุณาบันทึกคะแนนก่อนแก้ไขผลลัพธ์','error');return;}
   var item={outcome_id:editingOutcomeId,term:selectedTerm(),code:document.getElementById('outcomeCode').value,description:document.getElementById('outcomeDescription').value,max_score:document.getElementById('outcomeMax').value,display_order:document.getElementById('outcomeOrder').value};
   google.script.run.withSuccessHandler(function(){clearOutcomeForm();load();toast('บันทึกผลลัพธ์แล้ว');})
@@ -107,7 +129,8 @@ function saveOutcome(){
 function deleteOutcome(id){
   if(dirty){toast('กรุณาบันทึกคะแนนก่อนลบผลลัพธ์','error');return;}
   if(!confirm('ลบผลลัพธ์การเรียนรู้นี้?'))return;
-  google.script.run.withSuccessHandler(function(){load();toast('ลบแล้ว');})
+  if(!startCurriculumAction(null, 'กำลังลบผลลัพธ์การเรียนรู้...')) return;
+  google.script.run.withSuccessHandler(function(){load(function(){finishCurriculumAction();});toast('ลบแล้ว');})
     .withFailureHandler(function(err){toast(err.message,'error');})
     .serverDeleteLearningOutcome(TOKEN,CLASS_ID,SUBJECT_ID,id);
 }
@@ -144,7 +167,8 @@ function updateRow(input){
 function saveScores(){
   var term=selectedTerm(),items=currentData.outcomes[String(term)]||[];
   var rows=Array.prototype.map.call(document.querySelectorAll('#scoreBody tr'),function(tr){var scores={};items.forEach(function(item){scores[item.outcome_id]=tr.querySelector('[data-outcome="'+item.outcome_id+'"]').value;});return {student_id:tr.getAttribute('data-student'),scores:scores,assessment:tr.querySelector('.assessment-score').value};});
-  var button=document.getElementById('saveScoresBtn');button.disabled=true;
+  var button=document.getElementById('saveScoresBtn');
+  if(!startCurriculumAction(button, 'กำลังบันทึกคะแนน...')) return;
   google.script.run.withSuccessHandler(function(){button.disabled=false;dirty=false;load();toast('บันทึกคะแนนแล้ว');})
     .withFailureHandler(function(err){button.disabled=false;toast(err.message,'error');})
     .serverSaveCurriculumScores(TOKEN,CLASS_ID,SUBJECT_ID,term,rows);
