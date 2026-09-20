@@ -83,6 +83,67 @@ test('saving an outcome uses its order as the stored code and rejects a duplicat
   assert.throws(() => api.serverSaveLearningOutcome('token', 'class', 'subject', { term: 1, display_order: 2, description: 'ซ้ำ', max_score: 10 }), /ลำดับผลลัพธ์การเรียนรู้ซ้ำ/);
 });
 
+test('adding an outcome restores its button after reload and after server failures', () => {
+  const html = fs.readFileSync(path.join(root, 'class_curriculum.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1].replace(/<\?[\s\S]*?\?>/g, 'x');
+  const requests = { read: [], save: [] };
+  const elements = new Map();
+  let overlay = null;
+  function element(id) {
+    if (!elements.has(id)) elements.set(id, {
+      id, value: id === 'termSelect' ? '1' : '', textContent: '', style: {}, disabled: false,
+      attributes: new Set(),
+      setAttribute(name) { this.attributes.add(name); },
+      removeAttribute(name) { this.attributes.delete(name); },
+    });
+    return elements.get(id);
+  }
+  const body = { style: {}, appendChild(node) { overlay = node; }, setAttribute() {}, removeAttribute() {} };
+  const document = {
+    body,
+    getElementById(id) { return id === 'curriculumActionLoading' ? overlay : element(id); },
+    createElement() { return {
+      setAttribute() {}, querySelector() { return { textContent: '' }; }, remove() { overlay = null; },
+    }; },
+  };
+  const runner = {
+    withSuccessHandler(callback) { this.success = callback; return this; },
+    withFailureHandler(callback) { this.failure = callback; return this; },
+    getCurriculumData() { requests.read.push({ success: this.success, failure: this.failure }); },
+    serverSaveLearningOutcome() { requests.save.push({ success: this.success, failure: this.failure }); },
+  };
+  const page = vm.createContext({ document, window: { addEventListener() {} }, google: { script: { run: runner } }, setTimeout() {}, Math, Number, String, isFinite });
+  vm.runInContext(script, page);
+  page.render = () => {};
+  const data = { outcomes: { '1': [] }, students: [] };
+  requests.read.shift().success(data);
+  element('outcomeOrder').value = '1';
+  element('outcomeDescription').value = 'อ่านได้';
+  element('outcomeMax').value = '10';
+  const button = element('saveOutcomeBtn');
+
+  page.saveOutcome();
+  assert.equal(button.disabled, true);
+  assert.ok(overlay);
+  requests.save.shift().success();
+  requests.read.shift().success(data);
+  assert.equal(button.disabled, false);
+  assert.equal(button.attributes.has('aria-busy'), false);
+  assert.equal(overlay, null);
+  assert.equal(page.curriculumBusy, false);
+
+  page.saveOutcome();
+  requests.save.shift().failure(new Error('save failed'));
+  assert.equal(button.disabled, false);
+  assert.equal(overlay, null);
+
+  page.saveOutcome();
+  requests.save.shift().success();
+  requests.read.shift().failure(new Error('reload failed'));
+  assert.equal(button.disabled, false);
+  assert.equal(overlay, null);
+});
+
 test('only admins can set required P1-P3 subject capability on create and edit', () => {
   const inserts = [];
   const updates = [];
