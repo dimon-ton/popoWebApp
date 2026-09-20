@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าระบบครั้งแรก — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-setup-wizard">
+  <div class="wizard-card">
+    <h1 class="wizard-title">PopoWebApp</h1>
+    <p class="wizard-subtitle" id="wizardHeading">ตัวช่วยติดตั้งระบบครั้งแรก</p>
+
+    <div class="progress">
+      <div class="progress-dot done" id="dot1"></div>
+      <div class="progress-dot" id="dot2"></div>
+      <div class="progress-dot" id="dot3"></div>
+    </div>
+
+    <!-- Step 1: Create DB -->
+    <div class="step active" id="step1">
+      <h2>ขั้นตอนที่ 1: สร้างฐานข้อมูล</h2>
+      <div class="info-box">
+        ระบบจะสร้าง Google Sheet ชื่อ <strong>PopoWebApp DB</strong> ใหม่ พร้อมตาราง 14 ชีต
+        และบันทึก Sheet ID ไว้ใน Script Properties
+      </div>
+      <div class="error" id="err1"></div>
+      <button class="btn" id="createDbBtn" onclick="createDatabase()">สร้างฐานข้อมูล</button>
+    </div>
+
+    <!-- Step 2: School info -->
+    <div class="step" id="step2">
+      <h2>ขั้นตอนที่ 2: ข้อมูลโรงเรียน</h2>
+      <div class="error" id="err2"></div>
+      <div class="form-group">
+        <label>ชื่อโรงเรียน</label>
+        <input type="text" id="schoolName" placeholder="เช่น โรงเรียนบ้านโพนแท่น">
+      </div>
+      <div class="form-group">
+        <label>อำเภอ</label>
+        <input type="text" id="district" placeholder="เช่น โพนทอง">
+      </div>
+      <div class="form-group">
+        <label>จังหวัด</label>
+        <input type="text" id="province" placeholder="เช่น ร้อยเอ็ด">
+      </div>
+      <div class="form-group">
+        <label>ปีการศึกษา</label>
+        <input type="text" id="academicYear" placeholder="เช่น 2568" value="2568">
+      </div>
+      <button class="btn" id="saveSchoolBtn" onclick="saveSchool()">บันทึกข้อมูลโรงเรียน</button>
+    </div>
+
+    <!-- Step 3: Admin user -->
+    <div class="step" id="step3">
+      <h2>ขั้นตอนที่ 3: สร้างบัญชีผู้ดูแลระบบ</h2>
+      <div class="info-box">
+        บัญชี <strong>admin</strong> ถูกสร้างโดยอัตโนมัติด้วยรหัสผ่านเริ่มต้น <strong>admin1234</strong><br>
+        กรุณาเปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก
+      </div>
+      <div class="success show" id="done3">
+        ระบบพร้อมใช้งาน! คลิก "ไปยังหน้าเข้าสู่ระบบ" เพื่อเริ่มต้น
+      </div>
+      <button class="btn" id="goLoginBtn" onclick="goToLogin()">ไปยังหน้าเข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <script>
+    function showError(elId, msg) {
+      var el = document.getElementById(elId);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function hideError(elId) {
+      var el = document.getElementById(elId);
+      el.textContent = '';
+      el.classList.remove('show');
+    }
+
+    function goStep(n) {
+      document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+      document.getElementById('step' + n).classList.add('active');
+      for (var i = 1; i <= 3; i++) {
+        document.getElementById('dot' + i).classList.toggle('done', i <= n);
+      }
+    }
+
+    function createDatabase() {
+      hideError('err1');
+      var btn = document.getElementById('createDbBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>กำลังสร้างฐานข้อมูล...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.error) {
+            showError('err1', result.error);
+            btn.disabled = false;
+            btn.textContent = 'สร้างฐานข้อมูล';
+            return;
+          }
+          goStep(2);
+        })
+        .withFailureHandler(function(err) {
+          showError('err1', 'เกิดข้อผิดพลาด: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = 'สร้างฐานข้อมูล';
+        })
+        .wizardCreateDatabase();
+    }
+
+    function saveSchool() {
+      hideError('err2');
+      var schoolName = document.getElementById('schoolName').value.trim();
+      var district = document.getElementById('district').value.trim();
+      var province = document.getElementById('province').value.trim();
+      var academicYear = document.getElementById('academicYear').value.trim();
+
+      if (!schoolName || !district || !province || !academicYear) {
+        showError('err2', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+      }
+
+      var btn = document.getElementById('saveSchoolBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>กำลังบันทึก...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.error) {
+            showError('err2', result.error);
+            btn.disabled = false;
+            btn.textContent = 'บันทึกข้อมูลโรงเรียน';
+            return;
+          }
+          goStep(3);
+        })
+        .withFailureHandler(function(err) {
+          showError('err2', 'เกิดข้อผิดพลาด: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = 'บันทึกข้อมูลโรงเรียน';
+        })
+        .wizardSaveSchoolInfo(schoolName, district, province, academicYear);
+    }
+
+    function goToLogin() {
+      google.script.run
+        .withSuccessHandler(function(html) {
+          document.open(); document.write(html); document.close();
+        })
+        .getLoginHtml();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+// FR-14: Test API — Bearer token gated endpoint for Playwright seed/cleanup
+// Token is set in Script Properties as TEST_API_TOKEN
+// Kill-switch: TEST_API_ENABLED=false
+
+function handleTestApi(e) {
+  var props = PropertiesService.getScriptProperties();
+
+  // Kill-switch
+  if (props.getProperty('TEST_API_ENABLED') === 'false') {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'Test API disabled' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Bearer token check
+  var authHeader = e.parameter.auth_token || '';
+  var expected = props.getProperty('TEST_API_TOKEN') || '';
+  if (!expected || authHeader !== expected) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var api = e.parameter.api;
+  var params = e.parameter;
+
+  // Guard: all IDs must start with test_
+  function ensureTestPrefix(val) {
+    if (val && String(val).indexOf('test_') !== 0) {
+      throw new Error('Test API: ID must start with test_. Got: ' + val);
+    }
+  }
+
+  try {
+    switch (api) {
+      case 'seed_class':
+        ensureTestPrefix(params.class_id);
+        ensureColumns('Classes', ['homeroom_teacher_user_ids']);
+        dbDelete('Classes', 'class_id', params.class_id);
+        dbInsert('Classes', {
+          class_id: params.class_id,
+          level: params.level || 'ป.1',
+          section: params.section || '1',
+          homeroom_teacher_user_id: params.homeroom || '',
+          homeroom_teacher_user_ids: params.homeroom ? JSON.stringify([params.homeroom]) : '[]'
+        });
+        return jsonOk({ class_id: params.class_id });
+
+      case 'seed_subject':
+        ensureTestPrefix(params.subject_id);
+        ensureSubjectsSchema();
+        dbDelete('Subjects', 'subject_id', params.subject_id);
+        dbInsert('Subjects', {
+          subject_id: params.subject_id,
+          class_id: params.class_id || '',
+          subject_name: params.name || params.subject_id,
+          subject_code: params.code || 'TST0000',
+          hours_per_year: params.hours || 40,
+          weight_group: params.group || 1,
+          subject_group: params.subject_group || ''
+        });
+        return jsonOk({ subject_id: params.subject_id });
+
+      case 'seed_student':
+        ensureTestPrefix(params.student_id);
+        dbDelete('Students', 'student_id', params.student_id);
+        dbInsert('Students', {
+          student_id: params.student_id,
+          class_id: params.class_id,
+          seq_no: params.seq || 99,
+          student_code: params.student_id,
+          citizen_id: '',
+          full_name: params.full_name || params.student_id,
+          dob: '',
+          note: 'test'
+        });
+        return jsonOk({ student_id: params.student_id });
+
+      case 'seed_user':
+        ensureTestPrefix(params.user_id);
+        dbDelete('Users', 'user_id', params.user_id);
+        dbDelete('Users', 'username', params.user_id);
+        var salt = Utilities.getUuid();
+        var hash = computeHash(params.password || 'test1234', salt);
+        dbInsert('Users', {
+          user_id: params.user_id,
+          username: params.user_id,
+          password_hash: hash,
+          salt: salt,
+          full_name: params.full_name || params.user_id,
+          role: params.role || 'teacher',
+          created_at: new Date().toISOString()
+        });
+        return jsonOk({ user_id: params.user_id });
+
+      case 'seed_enrollment':
+        ensureTestPrefix(params.enrollment_id);
+        dbDelete('Enrollments', 'enrollment_id', params.enrollment_id);
+        dbInsert('Enrollments', {
+          enrollment_id: params.enrollment_id,
+          class_id: params.class_id,
+          subject_id: params.subject_id,
+          teacher_user_id: params.teacher_user_id,
+          dev_activity_result: ''
+        });
+        return jsonOk({ enrollment_id: params.enrollment_id });
+
+      case 'seed_subject_weights':
+        ensureTestPrefix(params.subject_id);
+        // Upsert: delete existing then insert
+        dbDeleteWhere('SubjectWeights', 'subject_id', params.subject_id);
+        dbInsert('SubjectWeights', {
+          subject_id: params.subject_id,
+          coursework_max: parseInt(params.coursework_max) || 70,
+          final_max: parseInt(params.final_max) || 30,
+          pre_mid_max: parseInt(params.pre_mid_max) || 25,
+          mid_max: parseInt(params.mid_max) || 20,
+          post_mid_max: parseInt(params.post_mid_max) || 25,
+          final_exam_max: parseInt(params.final_exam_max) || 30
+        });
+        return jsonOk({ subject_id: params.subject_id });
+
+      case 'seed_indicator':
+        ensureTestPrefix(params.indicator_id);
+        dbDelete('Indicators', 'indicator_id', params.indicator_id);
+        dbInsert('Indicators', {
+          indicator_id: params.indicator_id,
+          subject_id: params.subject_id,
+          code: params.code || params.indicator_id,
+          description: params.description || '',
+          max_score: parseInt(params.max_score) || 3,
+          display_order: parseInt(params.display_order) || 1
+        });
+        return jsonOk({ indicator_id: params.indicator_id });
+
+      case 'seed_summative':
+        // Seed a SummativeScores row directly (for report aggregate tests)
+        // student_id must start with test_; id is auto-generated
+        ensureTestPrefix(params.student_id);
+        dbDeleteWhere('SummativeScores', 'student_id', params.student_id);
+        var sTotal = parseFloat(params.total) || 0;
+        var sGrade = computeGrade(sTotal);
+        var sMakeup = params.makeup_grade !== '' && params.makeup_grade !== undefined ? parseFloat(params.makeup_grade) : '';
+        var sFinalGrade = (sMakeup !== '' && !isNaN(sMakeup)) ? sMakeup : sGrade;
+        dbInsert('SummativeScores', {
+          id: generateId('ssum'),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          coursework: params.coursework || '',
+          midterm: params.midterm || '',
+          final: params.final || '',
+          total: sTotal,
+          computed_grade: sGrade,
+          makeup_grade: sMakeup,
+          final_grade: sFinalGrade,
+          updated_by: 'test_api',
+          updated_at: new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, final_grade: sFinalGrade });
+
+      case 'seed_characteristics':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var existingCharacteristics = dbGetAll('Characteristics').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id);
+        });
+        existingCharacteristics.forEach(function(row) {
+          if (row.id) dbDelete('Characteristics', 'id', row.id);
+        });
+        var characteristicValues = [];
+        for (var characteristicIndex = 1; characteristicIndex <= 8; characteristicIndex++) {
+          characteristicValues.push(params['t' + characteristicIndex] === '' ? '' : Number(params['t' + characteristicIndex]));
+        }
+        var characteristicTotal = characteristicValues.every(function(value) { return value === ''; })
+          ? ''
+          : characteristicValues.reduce(function(total, value) { return total + (value === '' ? 0 : value); }, 0);
+        dbInsert('Characteristics', {
+          id: 'test_char_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          t1: characteristicValues[0], t2: characteristicValues[1],
+          t3: characteristicValues[2], t4: characteristicValues[3],
+          t5: characteristicValues[4], t6: characteristicValues[5],
+          t7: characteristicValues[6], t8: characteristicValues[7],
+          total: characteristicTotal,
+          label: characteristicTotal === '' ? '' : computeCharacteristicsLabel(characteristicTotal),
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id });
+
+      case 'seed_readthinkwrite':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var existingReadThinkWrite = dbGetAll('ReadThinkWrite').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id);
+        });
+        existingReadThinkWrite.forEach(function(row) {
+          if (row.id) dbDelete('ReadThinkWrite', 'id', row.id);
+        });
+        var readThinkWriteFields = ['r1','r2','r3','t1','t2','t3','t4','w1','w2','w3'];
+        var readThinkWriteValues = {};
+        var readThinkWriteTotal = 0;
+        var readThinkWriteEmpty = true;
+        readThinkWriteFields.forEach(function(field) {
+          var value = params[field] === '' ? '' : Number(params[field]);
+          readThinkWriteValues[field] = value;
+          if (value !== '') { readThinkWriteTotal += value; readThinkWriteEmpty = false; }
+        });
+        dbInsert('ReadThinkWrite', {
+          id: 'test_rtw_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          r1: readThinkWriteValues.r1, r2: readThinkWriteValues.r2, r3: readThinkWriteValues.r3,
+          t1: readThinkWriteValues.t1, t2: readThinkWriteValues.t2,
+          t3: readThinkWriteValues.t3, t4: readThinkWriteValues.t4,
+          w1: readThinkWriteValues.w1, w2: readThinkWriteValues.w2, w3: readThinkWriteValues.w3,
+          total: readThinkWriteEmpty ? '' : readThinkWriteTotal,
+          label: readThinkWriteEmpty ? '' : computeReadThinkWriteLabel(readThinkWriteTotal),
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id });
+
+      case 'seed_attendance':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var attendanceDate = normalizeISODate(params.date);
+        if (!attendanceDate) throw new Error('Test API: invalid attendance date');
+        if (ATTENDANCE_STATUSES.indexOf(String(params.status || '')) === -1) {
+          throw new Error('Test API: invalid attendance status');
+        }
+        var existingAttendance = dbGetAll('Attendance').filter(function(row) {
+          return String(row.student_id) === String(params.student_id) &&
+            String(row.subject_id) === String(params.subject_id) &&
+            formatDateISO(new Date(row.date)) === attendanceDate;
+        });
+        existingAttendance.forEach(function(row) {
+          if (row.attendance_id) dbDelete('Attendance', 'attendance_id', row.attendance_id);
+        });
+        dbInsert('Attendance', {
+          attendance_id: 'test_att_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          date: attendanceDate,
+          period: '',
+          status: params.status,
+          updated_by: params.updated_by,
+          updated_at: params.updated_at || new Date().toISOString()
+        });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id, date: attendanceDate });
+
+      case 'seed_complete_attendance':
+        ensureTestPrefix(params.class_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.updated_by);
+        var completeStudents = dbFind('Students', 'class_id', params.class_id);
+        if (!completeStudents.length) throw new Error('Test API: no students in class');
+        var completeConfig = getAttendanceConfig();
+        var completeDates = buildAttendanceDates(completeConfig.start_date, completeConfig.required_days);
+        var completeStatus = String(params.status || '/');
+        if (ATTENDANCE_STATUSES.indexOf(completeStatus) === -1) {
+          throw new Error('Test API: invalid attendance status');
+        }
+        var attendanceSheet = getSheet('Attendance');
+        var attendanceData = attendanceSheet.getDataRange().getValues();
+        var attendanceHeaders = attendanceData[0];
+        var attendanceSubjectCol = attendanceHeaders.indexOf('subject_id');
+        var attendanceIdCol = attendanceHeaders.indexOf('attendance_id');
+        var attendanceStudentCol = attendanceHeaders.indexOf('student_id');
+        var attendanceDateCol = attendanceHeaders.indexOf('date');
+        var attendancePeriodCol = attendanceHeaders.indexOf('period');
+        var attendanceStatusCol = attendanceHeaders.indexOf('status');
+        var attendanceUpdatedByCol = attendanceHeaders.indexOf('updated_by');
+        var attendanceUpdatedAtCol = attendanceHeaders.indexOf('updated_at');
+        var attendanceLock = LockService.getDocumentLock();
+        if (!attendanceLock.tryLock(30000)) throw new Error('Test API: could not acquire attendance lock');
+        try {
+          for (var attendanceRowIndex = attendanceData.length - 1; attendanceRowIndex >= 1; attendanceRowIndex--) {
+            if (String(attendanceData[attendanceRowIndex][attendanceSubjectCol]) === String(params.subject_id)) {
+              attendanceSheet.deleteRow(attendanceRowIndex + 1);
+            }
+          }
+          var seededAt = params.updated_at || new Date().toISOString();
+          var completeRows = [];
+          completeStudents.forEach(function(student, studentIndex) {
+            completeDates.forEach(function(date, dateIndex) {
+              var row = attendanceHeaders.map(function() { return ''; });
+              row[attendanceIdCol] = 'test_att_' + studentIndex + '_' + dateIndex + '_' + Utilities.getUuid().substring(0, 8);
+              row[attendanceStudentCol] = student.student_id;
+              row[attendanceSubjectCol] = params.subject_id;
+              row[attendanceDateCol] = formatDateISO(date);
+              if (attendancePeriodCol !== -1) row[attendancePeriodCol] = '';
+              row[attendanceStatusCol] = completeStatus;
+              row[attendanceUpdatedByCol] = params.updated_by;
+              row[attendanceUpdatedAtCol] = seededAt;
+              completeRows.push(row);
+            });
+          });
+          if (completeRows.length) {
+            attendanceSheet.getRange(attendanceSheet.getLastRow() + 1, 1, completeRows.length, attendanceHeaders.length).setValues(completeRows);
+          }
+        } finally {
+          attendanceLock.releaseLock();
+        }
+        return jsonOk({
+          class_id: params.class_id,
+          subject_id: params.subject_id,
+          students: completeStudents.length,
+          days: completeDates.length,
+          records: completeStudents.length * completeDates.length
+        });
+
+      case 'cleanup':
+        var count = 0;
+        var tabIdFields = {
+          'Classes': 'class_id',
+          'Subjects': 'subject_id',
+          'SubjectWeights': 'subject_id',
+          'Students': 'student_id',
+          'Users': 'user_id',
+          'Enrollments': 'enrollment_id',
+          'Indicators': 'indicator_id',
+          'Attendance': 'attendance_id',
+          'IndicatorScores': 'id',
+          'SummativeScores': 'id',
+          'Characteristics': 'id',
+          'ReadThinkWrite': 'id',
+          'AuditLog': 'user_id',
+          'DevActivity': 'id',
+          'Holidays': 'holiday_id'
+        };
+        Object.keys(tabIdFields).forEach(function(tab) {
+          if (tab === 'Enrollments' || tab === 'AuditLog') return;
+          try {
+            count += dbDeleteWhere(tab, tabIdFields[tab], 'test_');
+            if (tab === 'Classes') {
+              count += dbDeleteWhere(tab, tabIdFields[tab], 'class_test_');
+            }
+          } catch (err) {
+            // Ignore missing tabs during cleanup
+          }
+        });
+        // Also clean Users by username prefix (catches UI-created test accounts)
+        try { count += dbDeleteWhere('Users', 'username', 'test_'); } catch (err) {}
+        // Also clean score tables by student_id prefix (IDs are auto-generated, not test_-prefixed)
+        var scoreTabs = ['IndicatorScores', 'SummativeScores', 'Characteristics', 'ReadThinkWrite', 'Attendance', 'DevActivity'];
+        scoreTabs.forEach(function(tab) {
+          try { count += dbDeleteWhere(tab, 'student_id', 'test_'); } catch (err) {}
+        });
+
+        // Clean Enrollments where class_id, subject_id, teacher_user_id, or enrollment_id starts with 'test_'
+        try {
+          var enrSheet = getSheet('Enrollments');
+          var enrData = enrSheet.getDataRange().getValues();
+          var enrHeaders = enrData[0];
+          var classCol = enrHeaders.indexOf('class_id');
+          var subjCol = enrHeaders.indexOf('subject_id');
+          var teachCol = enrHeaders.indexOf('teacher_user_id');
+          var enrIdCol = enrHeaders.indexOf('enrollment_id');
+          
+          var lock = LockService.getDocumentLock();
+          if (lock.tryLock(30000)) {
+            try {
+              for (var i = enrData.length - 1; i >= 1; i--) {
+                var isTest = String(enrData[i][classCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][classCol]).indexOf('class_test_') === 0 ||
+                             String(enrData[i][subjCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][teachCol]).indexOf('test_') === 0 ||
+                             String(enrData[i][enrIdCol]).indexOf('test_') === 0;
+                if (isTest) {
+                  enrSheet.deleteRow(i + 1);
+                  count++;
+                }
+              }
+            } finally {
+              lock.releaseLock();
+            }
+          }
+        } catch (err) {
+          // Ignore
+        }
+
+        // Clean AuditLog where user_id starts with test_ OR entity_id starts with test_ OR old_value/new_value contains 'test_'
+        try {
+          var auditSheet = getSheet('AuditLog');
+          var auditData = auditSheet.getDataRange().getValues();
+          var auditHeaders = auditData[0];
+          var uCol = auditHeaders.indexOf('user_id');
+          var eCol = auditHeaders.indexOf('entity_id');
+          var oCol = auditHeaders.indexOf('old_value');
+          var nCol = auditHeaders.indexOf('new_value');
+          
+          var lock = LockService.getDocumentLock();
+          if (lock.tryLock(30000)) {
+            try {
+              for (var i = auditData.length - 1; i >= 1; i--) {
+                var isTest = String(auditData[i][uCol]).indexOf('test_') === 0 ||
+                             String(auditData[i][eCol]).indexOf('test_') === 0 ||
+                             String(auditData[i][oCol]).indexOf('test_') !== -1 ||
+                             String(auditData[i][nCol]).indexOf('test_') !== -1;
+                if (isTest) {
+                  auditSheet.deleteRow(i + 1);
+                  count++;
+                }
+              }
+            } finally {
+              lock.releaseLock();
+            }
+          }
+        } catch (err) {
+          // Ignore
+        }
+
+        return jsonOk({ deleted: count });
+
+      case 'query_rows':
+        // Returns all rows from a tab matching prefix (for assertions)
+        var tab = params.tab;
+        var field = params.field;
+        var prefix = params.prefix || 'test_';
+        var allRows = dbGetAll(tab);
+        var matching = allRows.filter(function(r) { return String(r[field]).indexOf(prefix) === 0; });
+        return jsonOk({ rows: matching, count: matching.length });
+
+      default:
+        return ContentService.createTextOutput(JSON.stringify({ error: 'Unknown api: ' + api }))
+          .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function jsonOk(data) {
+  data.ok = true;
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}

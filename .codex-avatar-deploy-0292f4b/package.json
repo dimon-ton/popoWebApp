@@ -1,0 +1,13 @@
+{
+  "name": "popo-webapp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/auth.spec.ts tests/admin.spec.ts -g 'US-002|US-018' --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "typescript": "^5.4.5"
+  }
+}
