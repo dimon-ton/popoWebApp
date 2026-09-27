@@ -477,14 +477,25 @@ test.describe('US-018: Teacher enrollment management', () => {
   let classYId: string;
   let subjectZXId: string;
   let subjectZYId: string;
+  let teacherNoCodeId: string;
+  let classNoCodeId: string;
+  let subjectNoCodeId: string;
 
   test.beforeAll(async () => {
     teacherAId = await seedTestUser({ suffix: 'us018_ta', role: 'teacher', full_name: 'ครูทดสอบ A' });
     teacherBId = await seedTestUser({ suffix: 'us018_tb', role: 'teacher', full_name: 'ครูทดสอบ B' });
+    teacherNoCodeId = await seedTestUser({ suffix: 'us018_nocode_teacher', role: 'teacher', full_name: 'ครูหลักสูตรใหม่' });
     classXId = await seedTestClass({ suffix: 'us018_cx', level: 'ป.1', section: '1' });
     classYId = await seedTestClass({ suffix: 'us018_cy', level: 'ป.1', section: '2' });
+    classNoCodeId = await seedTestClass({ suffix: 'us018_nocode_class', level: 'ป.1', section: '3' });
     subjectZXId = await seedTestSubject({ suffix: 'us018_sz_x', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classXId });
     subjectZYId = await seedTestSubject({ suffix: 'us018_sz_y', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classYId });
+    subjectNoCodeId = await seedTestSubject({
+      suffix: 'us018_nocode_subject',
+      name: 'การอ่านและการเขียนเพื่อการสื่อสารภาษาไทย',
+      code: '',
+      class_id: classNoCodeId,
+    });
   });
 
   test.afterAll(async () => {
@@ -516,6 +527,34 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator('#allPairsTab #enrollmentCsvInput')).toBeVisible();
     await expect(page.locator('#allPairsTab #importEnrollmentCsvBtn')).toBeVisible();
     await expect(page.locator('#tab-bulk')).toHaveCount(0);
+  });
+
+  test('US-018: CSV import matches a code-less subject by class + subject name', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.click('#tab-allpairs');
+
+    const csv = [
+      'teacher_username,teacher_full_name,class_id,grade_level*,section,subject_name*',
+      [teacherNoCodeId, 'ครูหลักสูตรใหม่', classNoCodeId, 'ป.1', '3', 'การอ่านและการเขียนเพื่อการสื่อสารภาษาไทย'].join(','),
+    ].join('\r\n');
+
+    await page.locator('#enrollmentCsvInput').setInputFiles({
+      name: 'teaching_assignments_no_subject_code.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('\uFEFF' + csv, 'utf8'),
+    });
+    await page.click('#importEnrollmentCsvBtn');
+
+    await expect(page.locator('#importEnrollmentResult')).toContainText('นำเข้าสำเร็จ', { timeout: 20_000 });
+
+    const enrollments = await queryTestRows('Enrollments', 'subject_id');
+    const imported = enrollments.find((row) =>
+      (row as Record<string, string>).class_id === classNoCodeId &&
+      (row as Record<string, string>).subject_id === subjectNoCodeId
+    );
+    expect(imported).toBeTruthy();
+    expect((imported as Record<string, string>).teacher_user_id).toBe(teacherNoCodeId);
   });
 
   test('US-018: teacher search filters the teacher list', async ({ page }) => {

@@ -106,7 +106,33 @@
   </div>
 
   <div class="card">
-    <h3>รายการวิชาทั้งหมด</h3>
+    <div class="subject-list-heading">
+      <div>
+        <h3>รายการวิชาทั้งหมด</h3>
+        <p id="subjectListSummary" aria-live="polite">กำลังโหลดรายวิชา...</p>
+      </div>
+    </div>
+
+    <div class="subject-list-toolbar" role="search" aria-label="ค้นหาและกรองรายวิชา">
+      <div class="subject-search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <label class="sr-only" for="subjectSearch">ค้นหารหัสหรือชื่อวิชา</label>
+        <input type="search" id="subjectSearch" placeholder="ค้นหารหัส ชื่อวิชา หรือกลุ่มสาระฯ" oninput="applySubjectFilters()">
+      </div>
+      <div class="subject-filter-field">
+        <label for="subjectClassFilter">ชั้นเรียน</label>
+        <select id="subjectClassFilter" onchange="applySubjectFilters()">
+          <option value="all">ทั้งหมด</option>
+        </select>
+      </div>
+      <div class="subject-filter-field">
+        <label for="subjectGroupFilter">กลุ่มสาระฯ</label>
+        <select id="subjectGroupFilter" onchange="applySubjectFilters()">
+          <option value="all">ทั้งหมด</option>
+        </select>
+      </div>
+      <button type="button" class="btn-secondary subject-filter-clear" id="clearSubjectFiltersBtn" onclick="clearSubjectFilters()" hidden>ล้างตัวกรอง</button>
+    </div>
 
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
@@ -115,19 +141,33 @@
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:13%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
       </div>
     </div>
+    <div class="bulk-action-bar" id="subjectsBulkActions" aria-live="polite">
+      <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+      <div class="bulk-action-buttons">
+        <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+        <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+      </div>
+    </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
+          <th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกวิชาทั้งหมดที่แสดง"></th>
           <th>ชั้นเรียน</th>
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
           <th>กลุ่มสาระฯ</th>
           <th>เวลาเรียน</th>
-          <th style="width: 200px">จัดการ</th>
+          <th class="table-action-heading">จัดการ</th>
         </tr>
       </thead>
       <tbody id="subjectsBody"></tbody>
     </table>
+    <div class="bulk-pagination" id="subjectsPagination" aria-label="แบ่งหน้ารายการวิชา"></div>
+    <div class="subject-empty-state" id="subjectsEmpty" hidden>
+      <strong>ไม่พบวิชาที่ตรงกับตัวกรอง</strong>
+      <span>ลองเปลี่ยนคำค้นหา ชั้นเรียน หรือกลุ่มสาระฯ</span>
+      <button class="btn-secondary" type="button" onclick="clearSubjectFilters()">ล้างตัวกรอง</button>
+    </div>
   </div>
 </div>
 
@@ -228,34 +268,119 @@ function loadSubjects() {
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
       allSubjects = (result && result.subjects) ? result.subjects : [];
-      renderSubjects(allSubjects);
+      populateSubjectFilters();
+      applySubjectFilters();
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSubjectsList(TOKEN);
 }
 
+function normalizeSubjectFilterValue(value) {
+  return String(value == null ? '' : value).trim().toLocaleLowerCase('th');
+}
+
+function populateSubjectFilters() {
+  var classSelect = document.getElementById('subjectClassFilter');
+  var groupSelect = document.getElementById('subjectGroupFilter');
+  var selectedClass = classSelect ? classSelect.value : 'all';
+  var selectedGroup = groupSelect ? groupSelect.value : 'all';
+  var classes = {};
+  var groups = {};
+
+  allSubjects.forEach(function(subject) {
+    var classId = String(subject.class_id || '');
+    var classLabel = String(subject.class_label || (classId ? classId : 'Legacy'));
+    var group = String(subject.subject_group || '').trim();
+    classes[classId] = classLabel;
+    if (group) groups[group] = true;
+  });
+
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="all">ทั้งหมด</option>' + Object.keys(classes).sort(function(a, b) {
+      return classes[a].localeCompare(classes[b], 'th', { numeric: true });
+    }).map(function(classId) {
+      return '<option value="' + escHtml(classId) + '">' + escHtml(classes[classId]) + '</option>';
+    }).join('');
+    if (selectedClass === 'all' || Object.prototype.hasOwnProperty.call(classes, selectedClass)) classSelect.value = selectedClass;
+  }
+
+  if (groupSelect) {
+    groupSelect.innerHTML = '<option value="all">ทั้งหมด</option>' + Object.keys(groups).sort(function(a, b) {
+      return a.localeCompare(b, 'th');
+    }).map(function(group) {
+      return '<option value="' + escHtml(group) + '">' + escHtml(group) + '</option>';
+    }).join('');
+    if (selectedGroup === 'all' || groups[selectedGroup]) groupSelect.value = selectedGroup;
+  }
+}
+
+function applySubjectFilters() {
+  var search = document.getElementById('subjectSearch');
+  var classSelect = document.getElementById('subjectClassFilter');
+  var groupSelect = document.getElementById('subjectGroupFilter');
+  var query = normalizeSubjectFilterValue(search ? search.value : '');
+  var classId = classSelect ? classSelect.value : 'all';
+  var group = groupSelect ? groupSelect.value : 'all';
+  var filtered = allSubjects.filter(function(subject) {
+    var haystack = normalizeSubjectFilterValue([
+      subject.subject_code,
+      subject.subject_name,
+      subject.subject_group,
+      subject.class_label,
+      subject.class_id
+    ].join(' '));
+    return (!query || haystack.indexOf(query) !== -1) &&
+      (classId === 'all' || String(subject.class_id || '') === classId) &&
+      (group === 'all' || String(subject.subject_group || '').trim() === group);
+  });
+
+  renderSubjects(filtered);
+  var hasFilters = !!query || classId !== 'all' || group !== 'all';
+  var summary = document.getElementById('subjectListSummary');
+  var clearButton = document.getElementById('clearSubjectFiltersBtn');
+  if (summary) {
+    summary.textContent = hasFilters
+      ? 'พบ ' + filtered.length + ' จาก ' + allSubjects.length + ' วิชา'
+      : 'ทั้งหมด ' + allSubjects.length + ' วิชา';
+  }
+  if (clearButton) clearButton.hidden = !hasFilters;
+}
+
+function clearSubjectFilters() {
+  document.getElementById('subjectSearch').value = '';
+  document.getElementById('subjectClassFilter').value = 'all';
+  document.getElementById('subjectGroupFilter').value = 'all';
+  applySubjectFilters();
+  document.getElementById('subjectSearch').focus();
+}
+
 function renderSubjects(subjects) {
   document.getElementById('subjectsLoading').style.display = 'none';
   var tbody = document.getElementById('subjectsBody');
+  var table = document.getElementById('subjectsTable');
+  var empty = document.getElementById('subjectsEmpty');
   tbody.innerHTML = '';
   subjects.forEach(function(s) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-subject-id', s.subject_id);
 
     tr.innerHTML =
+      '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(s.subject_id) + '" aria-label="เลือกวิชา ' + escHtml(s.subject_name) + '"></td>' +
       '<td>' + escHtml(s.class_label || (s.class_id ? s.class_id : 'Legacy')) + '</td>' +
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
       '<td>' + escHtml(s.subject_group || '') + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
-      '<td>' +
+      '<td class="table-action-cell"><div class="table-row-actions">' +
         '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
         '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px;background:#f59e0b" onclick="openEditModal(\'' + escHtml(s.subject_id) + '\')">แก้ไข</button>' +
         '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
-      '</td>';
+      '</div></td>';
     tbody.appendChild(tr);
   });
-  document.getElementById('subjectsTable').style.display = 'table';
+  table.style.display = subjects.length ? 'table' : 'none';
+  empty.hidden = subjects.length !== 0;
+  if (subjectsBulkController) subjectsBulkController.refresh();
 }
 
 function addSubject() {
@@ -572,6 +697,15 @@ function deleteSubject(subject_id) {
     .serverDeleteSubject(TOKEN, subject_id);
 }
 
+var subjectsBulkController = initBulkCrudTable({
+  tableId: 'subjectsTable',
+  toolbarId: 'subjectsBulkActions',
+  paginationId: 'subjectsPagination',
+  pageSize: 20,
+  actionType: 'subject',
+  actionLabel: 'ลบ',
+  onComplete: loadSubjects
+});
 loadClassesForSubjects();
 loadSubjects();
 </script>

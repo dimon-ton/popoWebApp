@@ -97,17 +97,26 @@
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:25%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:35%"></div><div class="skeleton-table-cell" style="width:25%"></div></div>
       </div>
     </div>
+    <div class="bulk-action-bar" id="classesBulkActions" aria-live="polite">
+      <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+      <div class="bulk-action-buttons">
+        <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+        <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+      </div>
+    </div>
     <table id="classesTable" style="display:none">
       <thead>
         <tr>
+          <th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกชั้นเรียนทั้งหมดที่แสดง"></th>
           <th>ระดับชั้น</th>
           <th>ห้อง</th>
           <th>ครูประจำชั้น</th>
-          <th></th>
+          <th class="table-action-heading"></th>
         </tr>
       </thead>
       <tbody id="classesBody"></tbody>
     </table>
+    <div class="bulk-pagination" id="classesPagination" aria-label="แบ่งหน้ารายการชั้นเรียน"></div>
   </div>
 </div>
 
@@ -458,17 +467,19 @@ function renderClasses(classes) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-class-id', c.class_id);
     tr.innerHTML =
+      '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(c.class_id) + '" aria-label="เลือกชั้นเรียน ' + escHtml(c.level + '/' + c.section) + '"></td>' +
       '<td>' + escHtml(c.level) + '</td>' +
       '<td>' + escHtml(c.section) + '</td>' +
       '<td>' + escHtml(teacherName) + '</td>' +
-      '<td>' +
+      '<td class="table-action-cell"><div class="table-row-actions">' +
       '<button class="btn-secondary" onclick="viewStudents(\'' + escHtml(c.class_id) + '\')" style="margin-right:6px;background:#1a56a0;color:white;font-size:12px;padding:5px 12px">นักเรียน</button>' +
       '<button class="btn-secondary" onclick="openEditModal(\'' + escHtml(c.class_id) + '\', \'' + escHtml(c.level) + '\', \'' + escHtml(c.section) + '\', \'' + encodedTeacherIds + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
       '<button class="btn-danger" onclick="deleteClass(\'' + escHtml(c.class_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
-      '</td>';
+      '</div></td>';
     tbody.appendChild(tr);
   });
   document.getElementById('classesTable').style.display = 'table';
+  if (classesBulkController) classesBulkController.refresh();
 }
 
 function addClass() {
@@ -587,6 +598,15 @@ function viewStudents(class_id) {
     .getClassStudentsPageHtml(TOKEN, class_id);
 }
 
+var classesBulkController = initBulkCrudTable({
+  tableId: 'classesTable',
+  toolbarId: 'classesBulkActions',
+  paginationId: 'classesPagination',
+  pageSize: 20,
+  actionType: 'class',
+  actionLabel: 'ลบ',
+  onComplete: loadClasses
+});
 loadTeachers();
 
 document.addEventListener('click', function(event) {

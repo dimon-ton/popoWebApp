@@ -85,7 +85,10 @@
         <div class="bulk-result" id="importEnrollmentResult"></div>
       </div>
       <div class="pair-filters">
-        <input type="search" id="pairSearch" placeholder="ค้นหาวิชา หรือชื่อครู..." oninput="applyPairFilters()">
+        <div class="pair-search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="pairSearch" aria-label="ค้นหาวิชาหรือชื่อครู" placeholder="ค้นหาวิชา หรือชื่อครู..." autocomplete="off" oninput="applyPairFilters()">
+        </div>
         <select id="pairClassFilter" onchange="applyPairFilters()"><option value="">ทุกชั้นเรียน</option></select>
         <select id="pairStatusFilter" onchange="applyPairFilters()">
           <option value="">ทุกสถานะ</option>
@@ -170,6 +173,7 @@ var allData = null;
 var selectedTeacherId = null;
 var pendingReassign = null;
 var pendingRemove = null;
+var enrollmentBulkController = null;
 var allPairsRows = [];
 var availableSubjectChoices = [];
 var activeSubjectChoiceIndex = -1;
@@ -375,36 +379,57 @@ function renderDetailPanel(teacher, enrollments) {
               '<p>ดูชั้นเรียนและรายวิชาที่มอบหมายให้ครูคนนี้</p>' +
             '</div>' +
           '</div>' +
+          '<div class="bulk-action-bar" id="enrollmentBulkActions" aria-live="polite">' +
+            '<div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>' +
+            '<div class="bulk-action-buttons">' +
+              '<button type="button" class="btn btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>' +
+              '<button type="button" class="btn btn-danger" data-bulk-run disabled>นำออกที่เลือก (0)</button>' +
+            '</div>' +
+          '</div>' +
           '<div class="teaching-table-wrap">' +
             '<table id="enrollmentTable">' +
-              '<thead><tr><th>ชั้น</th><th>วิชา</th><th class="action-col">จัดการ</th></tr></thead>' +
+              '<thead><tr><th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกรายการสอนทั้งหมดที่แสดง"></th><th>ชั้น</th><th>วิชา</th><th class="action-col table-action-heading">จัดการ</th></tr></thead>' +
               '<tbody id="enrollmentBody">' + renderEnrollmentRows(enrollments) + '</tbody>' +
             '</table>' +
           '</div>' +
+          '<div class="bulk-pagination" id="enrollmentPagination" aria-label="แบ่งหน้ารายการสอน"></div>' +
         '</div>' +
       '</div>' +
     '</div>';
 
   renderSubjectChoices('');
+  enrollmentBulkController = initBulkCrudTable({
+    tableId: 'enrollmentTable',
+    toolbarId: 'enrollmentBulkActions',
+    paginationId: 'enrollmentPagination',
+    pageSize: 20,
+    actionType: 'enrollment',
+    actionLabel: 'นำออก',
+    onComplete: function() {
+      if (selectedTeacherId) renderTeacherDetail(selectedTeacherId);
+      loadData();
+    }
+  });
 }
 
 function renderEnrollmentRows(enrollments) {
   if (!enrollments || enrollments.length === 0) {
-    return '<tr><td colspan="3" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>';
+    return '<tr><td colspan="4" class="no-data">ยังไม่มีรายการสอนที่กำหนด</td></tr>';
   }
   return enrollments.map(function(en) {
     var classLabel = en.class_label || '';
     var subjectText = subjectLabel(en);
     var assignmentLabel = classLabel + ' — ' + subjectText;
-    return '<tr>' +
+    return '<tr data-enrollment-id="' + escAttr(en.enrollment_id) + '">' +
+      '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escAttr(en.enrollment_id) + '" aria-label="เลือกรายการสอน ' + escAttr(assignmentLabel) + '"></td>' +
       '<td class="class-cell">' + escHtml(classLabel) + '</td>' +
       '<td class="subject-cell">' + escHtml(subjectText) + '</td>' +
-      '<td class="action-cell">' +
+      '<td class="action-cell table-action-cell"><div class="table-row-actions">' +
         '<button type="button" class="btn remove-teaching-btn" data-enrollment-id="' + escAttr(en.enrollment_id) + '" data-assignment-label="' + escAttr(assignmentLabel) + '" onclick="requestRemoveEnrollment(this)" aria-label="นำ ' + escAttr(assignmentLabel) + ' ออกจากรายการสอน">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
           '<span>นำออก</span>' +
         '</button>' +
-      '</td>' +
+      '</div></td>' +
     '</tr>';
   }).join('');
 }
@@ -816,8 +841,9 @@ function csvEscape(value) {
 
 function downloadEnrollmentCSVTemplate() {
   var rows = [
-    ['teacher_username', 'teacher_full_name', 'class_id', 'grade_level*', 'section', 'subject_code*', 'subject_name*'],
-    ['teacher01', 'ครูสมชาย ใจดี', '', 'ป.4', '1', 'ศ14101', 'ศิลปะ']
+    ['teacher_username', 'teacher_full_name', 'class_id', 'grade_level*', 'section', 'subject_code', 'subject_name*'],
+    ['teacher01', 'ครูสมชาย ใจดี', '', 'ป.4', '1', 'ศ14101', 'ศิลปะ'],
+    ['teacher02', 'ครูสมหญิง ใจดี', '', 'ป.1', '1', '', 'การอ่านและการเขียนเพื่อการสื่อสารภาษาไทย']
   ];
   var csv = rows.map(function(row) { return row.map(csvEscape).join(','); }).join('\r\n');
   var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -848,7 +874,7 @@ function importEnrollmentCSV() {
     try {
       var csvRows = parseCSV(e.target.result);
       var headers = (csvRows[0] || []).map(normalizeCSVHeader);
-      var required = ['teacher_username', 'teacher_full_name', 'grade_level', 'subject_code', 'subject_name'];
+      var required = ['teacher_username', 'teacher_full_name', 'grade_level', 'subject_name'];
       var missing = required.filter(function(h) { return headers.indexOf(h) === -1; });
       if (missing.length) throw new Error('หัวตารางไม่ครบ: ' + missing.join(', '));
       var rows = [];

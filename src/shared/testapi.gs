@@ -52,7 +52,7 @@ function handleTestApi(e) {
           subject_id: params.subject_id,
           class_id: params.class_id || '',
           subject_name: params.name || params.subject_id,
-          subject_code: params.code || 'TST0000',
+          subject_code: Object.prototype.hasOwnProperty.call(params, 'code') ? String(params.code) : 'TST0000',
           hours_per_year: params.hours || 40,
           weight_group: params.group || 1,
           subject_group: params.subject_group || ''

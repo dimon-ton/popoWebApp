@@ -84,18 +84,27 @@
           <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:10%"></div><div class="skeleton-table-cell" style="width:20%"></div><div class="skeleton-table-cell" style="width:45%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
         </div>
       </div>
+      <div class="bulk-action-bar" id="indicatorsBulkActions" aria-live="polite">
+        <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+        <div class="bulk-action-buttons">
+          <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+          <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+        </div>
+      </div>
       <table id="indicatorsTable" style="display:none">
         <thead>
           <tr>
+            <th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกตัวชี้วัดทั้งหมดที่แสดง"></th>
             <th>ลำดับ</th>
             <th>รหัสตัวชี้วัด</th>
             <th>คำอธิบาย</th>
             <th>คะแนนสูงสุด</th>
-            <th></th>
+            <th class="table-action-heading"></th>
           </tr>
         </thead>
         <tbody id="indicatorsBody"></tbody>
       </table>
+      <div class="bulk-pagination" id="indicatorsPagination" aria-label="แบ่งหน้ารายการตัวชี้วัด"></div>
     </div>
   </div>
 </div>
@@ -280,21 +289,23 @@ function renderIndicators(indicators) {
   var tbody = document.getElementById('indicatorsBody');
   tbody.innerHTML = '';
   if (indicators.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:#aaa;text-align:center">ยังไม่มีตัวชี้วัด</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center">ยังไม่มีตัวชี้วัด</td></tr>';
   } else {
     indicators.forEach(function(ind) {
       var tr = document.createElement('tr');
       tr.setAttribute('data-indicator-id', ind.indicator_id);
       tr.innerHTML =
+        '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(ind.indicator_id) + '" aria-label="เลือกตัวชี้วัด ' + escHtml(ind.code) + '"></td>' +
         '<td>' + escHtml(ind.display_order) + '</td>' +
         '<td>' + escHtml(ind.code) + '</td>' +
         '<td>' + escHtml(ind.description) + '</td>' +
         '<td>' + escHtml(ind.max_score) + '</td>' +
-        '<td><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></td>';
+        '<td class="table-action-cell"><div class="table-row-actions"><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></div></td>';
       tbody.appendChild(tr);
     });
   }
   document.getElementById('indicatorsTable').style.display = 'table';
+  if (indicatorsBulkController) indicatorsBulkController.refresh();
 }
 
 function addIndicator() {
@@ -399,6 +410,15 @@ function onSubjectChange() {
   }
 }
 
+var indicatorsBulkController = initBulkCrudTable({
+  tableId: 'indicatorsTable',
+  toolbarId: 'indicatorsBulkActions',
+  paginationId: 'indicatorsPagination',
+  pageSize: 20,
+  actionType: 'indicator',
+  actionLabel: 'ลบ',
+  onComplete: loadIndicators
+});
 loadSubjects();
 updateIndicatorTitles();
 if (SUBJECT_ID) {

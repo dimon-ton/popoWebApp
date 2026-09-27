@@ -645,7 +645,12 @@ function getCachedSchoolName() {
 
 // ── Shared bulk record actions ────────────────────────────────────────────────
 function serverBulkRecordAction(token, actionType, ids) {
-  ids = Array.isArray(ids) ? ids.map(function(id) { return String(id || '').trim(); }).filter(Boolean) : [];
+  var seenIds = {};
+  ids = Array.isArray(ids) ? ids.map(function(id) { return String(id || '').trim(); }).filter(function(id) {
+    if (!id || seenIds[id]) return false;
+    seenIds[id] = true;
+    return true;
+  }) : [];
   if (!ids.length) return { ok: true, succeeded: [], failed: [] };
 
   var succeeded = [];

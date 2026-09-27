@@ -325,6 +325,10 @@ function clientImportEnrollmentsCSV(token, rows) {
       subjectsByClass[s.class_id].push(s);
     });
 
+    function normalizeEnrollmentSubjectName_(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
     var enrollments = dbGetAll('Enrollments');
     var enrollmentMap = {};
     enrollments.forEach(function(e) { enrollmentMap[e.class_id + '|' + e.subject_id] = e; });
@@ -359,18 +363,26 @@ function clientImportEnrollmentsCSV(token, rows) {
 
       var subjectCode = String(row.subject_code || '').trim();
       var subjectName = String(row.subject_name || '').trim();
-      if (!subjectCode || !subjectName || !level) {
-        errors.push('แถวที่ ' + line + ': ต้องระบุ subject_code, subject_name และ grade_level');
+      if (!subjectName || !level) {
+        errors.push('แถวที่ ' + line + ': ต้องระบุ subject_name และ grade_level');
         return;
       }
 
+      var normalizedSubjectName = normalizeEnrollmentSubjectName_(subjectName);
       var candidates = subjectsByClass[cls.class_id] || [];
       var matched = candidates.filter(function(s) {
-        return String(s.subject_code || '').trim() === subjectCode &&
-          String(s.subject_name || '').trim() === subjectName;
+        if (normalizeEnrollmentSubjectName_(s.subject_name) !== normalizedSubjectName) return false;
+        if (!subjectCode) return true;
+        return String(s.subject_code || '').trim() === subjectCode;
       });
+      var classLabel = level + (section ? '/' + section : '');
+      var subjectLabel = subjectCode ? subjectCode + ' - ' + subjectName : subjectName;
       if (matched.length === 0) {
-        errors.push('แถวที่ ' + line + ': ไม่พบวิชา ' + subjectCode + ' - ' + subjectName + ' ใน ' + level);
+        errors.push('แถวที่ ' + line + ': ไม่พบวิชา ' + subjectLabel + ' ใน ' + classLabel);
+        return;
+      }
+      if (matched.length > 1) {
+        errors.push('แถวที่ ' + line + ': พบวิชา ' + subjectLabel + ' ซ้ำมากกว่า 1 รายการใน ' + classLabel + ' กรุณาระบุข้อมูลให้ไม่กำกวม');
         return;
       }
 
