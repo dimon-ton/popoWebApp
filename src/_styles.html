@@ -1104,6 +1104,12 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .nav-loading .skeleton-block { width: 260px; }
 .nav-loading .skeleton-menu { display: grid; grid-template-columns: repeat(3, 140px); gap: 10px; margin-top: 18px; }
 .nav-loading .skeleton-menu-item { height: 44px; background: #e2e5e9; border-radius: var(--radius-sm); animation: skeleton-pulse 1.5s ease-in-out infinite; border: 1px solid var(--border); }
+.app-action-loading { position: fixed; inset: 0; z-index: 30000; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, .48); backdrop-filter: blur(3px); cursor: progress; }
+.app-action-loading__panel { display: flex; align-items: center; gap: 16px; width: min(100%, 380px); padding: 22px 24px; border-radius: 14px; background: var(--bg-card); box-shadow: 0 24px 60px rgba(12, 36, 74, .22); color: var(--text); font-weight: 600; }
+.app-action-loading__spinner { flex: none; width: 34px; height: 34px; border: 4px solid var(--brand-light); border-top-color: var(--brand); border-radius: 50%; animation: app-action-spin .75s linear infinite; }
+.app-action-loading__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes app-action-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-action-loading__spinner { animation-duration: 1.8s; } }
 
 .readonly-notice {
   font-size: 13px;
@@ -2678,6 +2684,72 @@ body.page-class-report {
     .page-class-report .form-page .report-page-title,
 .page-class-report .form-page .report-page-subtitle,
 .page-class-report .form-page .page-number { display: none; }
+.page-class-report .form-page.curriculum-page .page-number { display: block; }
+    .page-class-report .curriculum-page { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .page-class-report .curriculum-page-heading {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.32;
+      margin: 0 auto 5mm;
+    }
+    .page-class-report .curriculum-page-heading-title { font-size: 20px; font-weight: 700; }
+    .page-class-report .curriculum-cover-logo { margin: 0 auto 3mm; width: 25mm; height: 25mm; }
+    .page-class-report .curriculum-cover { text-align: center; }
+    .page-class-report .curriculum-cover-school { font-size: 19px; font-weight: 700; margin: 2mm 0; }
+    .page-class-report .curriculum-cover-location { font-size: 15px; line-height: 1.35; }
+    .page-class-report .curriculum-cover-ability { font-size: 16px; font-weight: 700; margin: 7mm 0 3mm; }
+    .page-class-report .curriculum-cover-subject { font-size: 17px; font-weight: 700; margin-bottom: 5mm; }
+    .page-class-report .curriculum-cover-facts {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 2mm 8mm;
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 auto 3mm;
+    }
+    .page-class-report .curriculum-cover-people {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      width: 170mm;
+      max-width: 100%;
+      margin: 0 auto 6mm;
+      text-align: left;
+      font-size: 15px;
+    }
+    .page-class-report .curriculum-cover-person { display: grid; grid-template-columns: 27mm 1fr; line-height: 1.5; }
+    .page-class-report .curriculum-cover-summary { width: 170mm; max-width: 100%; margin: 2mm auto 6mm; font-size: 14px; }
+    .page-class-report .curriculum-cover-summary th,
+    .page-class-report .curriculum-cover-summary td { padding: 1.2mm .8mm; }
+    .page-class-report .curriculum-cover-approval { width: 125mm; margin: 3mm auto 0; font-size: 14px; }
+    .page-class-report .curriculum-signature { margin: 6mm 0; display: grid; grid-template-columns: 14mm 1fr 36mm; align-items: end; gap: 1mm; }
+    .page-class-report .curriculum-signature-rule { border-bottom: 1px solid var(--report-line); height: 5mm; }
+    .page-class-report .curriculum-signature > div { grid-column: 2; text-align: center; font-size: 13px; }
+    .page-class-report .curriculum-approval-choice { margin: 4mm 0; }
+    .page-class-report .curriculum-outcome-list { width: 176mm; margin: 0 auto; font-size: 15px; table-layout: fixed; }
+    .page-class-report .curriculum-outcome-list th:first-child { width: 21mm; }
+    .page-class-report .curriculum-outcome-list th:nth-child(2) { width: 11mm; }
+    .page-class-report .curriculum-outcome-list td { height: 11mm; padding: 1mm 1.5mm; line-height: 1.3; vertical-align: middle; }
+    .page-class-report .curriculum-outcome-list td:last-child { text-align: left; }
+    .page-class-report .curriculum-outcome-blank td { height: 8mm; }
+    .page-class-report .curriculum-score-table,
+    .page-class-report .curriculum-summary-table { table-layout: fixed; font-size: 11px; }
+    .page-class-report .curriculum-score-table th,
+    .page-class-report .curriculum-summary-table th { line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+    .page-class-report .curriculum-score-table th:first-child,
+    .page-class-report .curriculum-summary-table th:first-child { width: 8mm; }
+    .page-class-report .curriculum-score-table .student-name-head,
+    .page-class-report .curriculum-summary-table .student-name-head { width: 48mm; }
+    .page-class-report .curriculum-score-table tbody td,
+    .page-class-report .curriculum-summary-table tbody td { height: 5.5mm; padding: .4mm .5mm; }
+    .page-class-report .curriculum-score-table tbody td:nth-child(-n+2),
+    .page-class-report .curriculum-summary-table tbody td:nth-child(-n+2) { background: #eaf8fc; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(3) { background: #fff4ed; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(4) { background: #ecf9e9; }
+    .page-class-report .curriculum-summary-table thead tr:first-child th:nth-child(5) { background: #faeffc; }
+    .page-class-report .curriculum-score-stats { display: flex; justify-content: center; gap: 15mm; margin-top: 2mm; font-size: 12px; }
     .page-class-report .form-title {
       text-align: center;
       font-weight: 700;
@@ -2854,6 +2926,7 @@ body.page-class-report {
       background: #fff;
     }
     .page-class-report .cover-page .form-title { font-size: 17px; }
+    .page-class-report .curriculum-cover .form-title { font-size: 20px; }
     .page-class-report .cover-page .form-meta { font-size: 13px; }
     .page-class-report .cover-page .form-summary-table { font-size: 12px; }
     .page-class-report .cover-page .approval-heading { font-size: 20px; }
@@ -3564,6 +3637,110 @@ function hideNavLoading() {
   var el = document.getElementById('navOverlay');
   if (el) el.remove();
 }
+
+// Keep the page inactive while a button-triggered Apps Script request is running.
+// Calls made during page initialization stay in their existing inline loading states.
+(function() {
+  var actionUntil = 0;
+  var actionText = '';
+  var pending = 0;
+  var continuation = false;
+  var previousFocus = null;
+  var previousOverflow = '';
+
+  function rememberAction(target) {
+    var control = target && target.closest && target.closest('button, [role="button"], a[onclick], input[type="submit"], input[type="button"]');
+    if (!control || control.disabled || control.closest('#appActionLoading')) return;
+    actionUntil = Date.now() + 2000;
+    actionText = (control.getAttribute('data-loading-label') || control.getAttribute('aria-label') || control.textContent || control.value || '').trim();
+  }
+  document.addEventListener('click', function(event) { rememberAction(event.target); }, true);
+  document.addEventListener('submit', function(event) { rememberAction(event.submitter || event.target); }, true);
+  document.addEventListener('change', function(event) {
+    if (event.target && event.target.matches && event.target.matches('input[type="file"]')) {
+      actionUntil = Date.now() + 3000;
+      actionText = 'กำลังประมวลผลไฟล์';
+    }
+  }, true);
+  document.addEventListener('keydown', function(event) {
+    if (!pending || ['Tab', 'Enter', ' ', 'Spacebar'].indexOf(event.key) === -1) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  function beginAction() {
+    pending++;
+    if (pending !== 1) return;
+    previousFocus = document.activeElement;
+    previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.setAttribute('aria-busy', 'true');
+    var overlay = document.createElement('div');
+    overlay.id = 'appActionLoading';
+    overlay.className = 'app-action-loading';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'กำลังดำเนินการ');
+    overlay.tabIndex = -1;
+    overlay.innerHTML = '<div class="app-action-loading__panel"><span class="app-action-loading__spinner" aria-hidden="true"></span><span class="app-action-loading__text"></span></div>';
+    overlay.querySelector('.app-action-loading__text').textContent = actionText ? 'กำลังดำเนินการ: ' + actionText : 'กำลังดำเนินการ...';
+    document.body.appendChild(overlay);
+    overlay.focus({ preventScroll: true });
+  }
+  function endAction() {
+    pending = Math.max(0, pending - 1);
+    if (pending) return;
+    var overlay = document.getElementById('appActionLoading');
+    if (overlay) overlay.remove();
+    document.body.style.overflow = previousOverflow;
+    document.body.removeAttribute('aria-busy');
+    if (previousFocus && previousFocus.isConnected && !previousFocus.disabled) previousFocus.focus({ preventScroll: true });
+    previousFocus = null;
+    if (typeof window.finishCurriculumAction === 'function') window.finishCurriculumAction();
+  }
+  function shouldBlock() {
+    return (continuation || Date.now() < actionUntil) &&
+      !document.body.classList.contains('page-login') &&
+      !document.body.classList.contains('page-setup-wizard') &&
+      !document.getElementById('navOverlay');
+  }
+  function wrapRunner(runner, success, failure) {
+    return new Proxy(runner, {
+      get: function(target, name) {
+        if (name === '__popoBusyRunner') return true;
+        var method = target[name];
+        if (typeof method !== 'function') return method;
+        if (name === 'withSuccessHandler') return function(handler) { return wrapRunner(method.call(target, handler), handler, failure); };
+        if (name === 'withFailureHandler') return function(handler) { return wrapRunner(method.call(target, handler), success, handler); };
+        if (name === 'withUserObject' || name === 'withLogger') return function(value) { return wrapRunner(method.call(target, value), success, failure); };
+        return function() {
+          if (!shouldBlock()) return method.apply(target, arguments);
+          beginAction();
+          var finished = false;
+          function finish() { if (!finished) { finished = true; endAction(); } }
+          var active = target.withSuccessHandler(function() {
+            var wasContinuation = continuation;
+            continuation = true;
+            try { if (success) return success.apply(this, arguments); }
+            finally { continuation = wasContinuation; finish(); }
+          }).withFailureHandler(function(error) {
+            try { if (failure) return failure.apply(this, arguments); console.error(error); }
+            finally { finish(); }
+          });
+          try { return active[name].apply(active, arguments); }
+          catch (error) { finish(); throw error; }
+        };
+      }
+    });
+  }
+  function installBusyRunner() {
+    if (!window.google || !google.script || !google.script.run || google.script.run.__popoBusyRunner) return;
+    google.script.run = wrapRunner(google.script.run, null, null);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installBusyRunner);
+  else installBusyRunner();
+  window.addEventListener('load', installBusyRunner);
+})();
 function btnLoading(btn, text) {
   if (!btn) return;
   btn.dataset.origText = btn.textContent;

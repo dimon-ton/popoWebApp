@@ -56,6 +56,19 @@ OpenCode users may copy `opencode.json.example` to `opencode.json` and provide
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` through environment variables. The live file
 is also ignored.
 
+## P1–P3 curriculum grading and reports
+
+The P1–P3 score screens use two 50-point terms. Each term has configurable learning
+outcomes scaled to 35 points and a 15-point final assessment. The new score tabs are
+`LearningOutcomes`, `LearningOutcomeScores`, and `TermAssessments`. Existing indicator
+and summative records remain stored but are excluded from P1–P3 grades and reports.
+
+The first P1–P3 score or report request creates the three tabs under the database lock.
+`setupDatabase_()` also creates them and remains safe to rerun. Configure outcomes for
+each subject and term before entering scores.
+
+Run local curriculum checks with `node --test tests/curriculum.unit.test.cjs`.
+
 ## Playwright tests
 
 The suite uses one worker because Google Sheet mutations are lock-serialized. It traverses
@@ -98,3 +111,26 @@ versions before retrying.
 
 The initial admin credentials are `admin` / `admin1234`. Change the temporary password
 immediately after first login.
+
+## Run Apps Script functions from the terminal
+
+`clasp run` uses the Apps Script API. This script is linked to the standard Google Cloud
+project `app-script-run-function` (project number `458875230672`), which has the Apps
+Script API enabled. The HEAD deployment has an API executable entry point.
+
+For a new workstation, copy `.clasp.json.example` and set its `scriptId`. Get Desktop
+OAuth client JSON from the same Cloud project and save it outside this repository. Then
+authorize a separate named clasp profile with the script's manifest scopes:
+
+   ```sh
+   npx clasp login --user run --creds <PATH_TO_OAUTH_CLIENT_JSON> --use-project-scopes --include-clasp-scopes
+   ```
+
+Verify with a read-only function:
+
+   ```sh
+   npx clasp --user run run isFirstRun
+   ```
+
+The default `clasp run` executes HEAD code. `--nondev` needs a separate versioned API
+executable deployment. Do not commit OAuth credentials or `.clasprc.json`.

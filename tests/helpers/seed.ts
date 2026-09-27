@@ -292,6 +292,20 @@ export async function cleanupTestData(): Promise<void> {
   await apiCall({ api: 'cleanup' });
 }
 
+export async function seedLearningOutcome(opts: { suffix: string; subject_id: string; term: 1 | 2; code: string; max_score: number; description?: string; display_order?: number }): Promise<string> {
+  const outcomeId = `test_outcome_${opts.suffix}`;
+  await apiCall({ api: 'seed_learning_outcome', outcome_id: outcomeId, subject_id: opts.subject_id, term: opts.term, code: opts.code, max_score: opts.max_score, description: opts.description ?? opts.code, display_order: opts.display_order ?? 1 });
+  return outcomeId;
+}
+
+export async function seedLearningOutcomeScore(studentId: string, subjectId: string, outcomeId: string, score: number | ''): Promise<void> {
+  await apiCall({ api: 'seed_learning_outcome_score', student_id: studentId, subject_id: subjectId, outcome_id: outcomeId, score });
+}
+
+export async function seedTermAssessment(studentId: string, subjectId: string, term: 1 | 2, score: number | ''): Promise<void> {
+  await apiCall({ api: 'seed_term_assessment', student_id: studentId, subject_id: subjectId, term, score });
+}
+
 export async function queryTestRows(tab: string, field: string): Promise<Record<string, unknown>[]> {
   const result = await apiCall({ api: 'query_rows', tab, field, prefix: 'test_' });
   return (result.rows as Record<string, unknown>[]) ?? [];

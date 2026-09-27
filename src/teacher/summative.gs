@@ -55,6 +55,7 @@ function getSummativeData(token, class_id, subject_id) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
   var cls = access.class_info;
+  if (isCurriculumLevel_(cls.level)) throw new Error('ชั้น ป.1–ป.3 ใช้คะแนนรายภาคเรียน');
   var subj = access.subject_info;
   var can_edit = true;
 
@@ -101,7 +102,8 @@ function getSummativeData(token, class_id, subject_id) {
 // Uses upsert pattern inside one LockService acquisition.
 function serverSaveSummative(token, class_id, subject_id, rows) {
   var session = requireSession_(token);
-  requireSubjectAccess_(session, class_id, subject_id);
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  if (isCurriculumLevel_(access.class_info.level)) throw new Error('ชั้น ป.1–ป.3 ใช้คะแนนรายภาคเรียน');
 
   if (!rows || rows.length === 0) return { ok: true };
   validateRowsBelongToClass_(rows, class_id);
