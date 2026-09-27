@@ -641,3 +641,51 @@ function getCachedSchoolName() {
     return 'PopoWebApp';
   }
 }
+
+
+// ── Shared bulk record actions ────────────────────────────────────────────────
+function serverBulkRecordAction(token, actionType, ids) {
+  ids = Array.isArray(ids) ? ids.map(function(id) { return String(id || '').trim(); }).filter(Boolean) : [];
+  if (!ids.length) return { ok: true, succeeded: [], failed: [] };
+
+  var succeeded = [];
+  var failed = [];
+
+  ids.forEach(function(id) {
+    try {
+      var result;
+      switch (actionType) {
+        case 'class':
+          result = serverDeleteClass(token, id);
+          break;
+        case 'subject':
+          result = serverDeleteSubject(token, id);
+          break;
+        case 'indicator':
+          result = serverDeleteIndicator(token, id);
+          break;
+        case 'holiday':
+          result = serverDeleteHoliday(token, id);
+          break;
+        case 'user':
+          result = serverDeleteUser(token, id);
+          break;
+        case 'student':
+          result = serverDeleteStudent(token, id);
+          break;
+        case 'enrollment':
+          result = clientRemoveEnrollment(token, id, '');
+          if (result && result.error) throw new Error(result.error);
+          break;
+        default:
+          throw new Error('Unsupported bulk action: ' + actionType);
+      }
+      if (result && result.error) throw new Error(result.error);
+      succeeded.push(id);
+    } catch (err) {
+      failed.push({ id: id, error: err && err.message ? err.message : String(err) });
+    }
+  });
+
+  return { ok: failed.length === 0, succeeded: succeeded, failed: failed };
+}

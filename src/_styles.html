@@ -3933,3 +3933,284 @@ function sendFeedback() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFeedbackFooter); else initFeedbackFooter();
 </script>
+
+<style>
+.bulk-row-select-col { width: 42px; text-align: center !important; }
+.bulk-row-select, .bulk-select-all { width: 17px; height: 17px; cursor: pointer; accent-color: var(--brand, #2456a6); }
+tr.bulk-row-selected > td, tr.bulk-row-selected > th { background: #eef5ff !important; }
+.bulk-action-bar { display:none; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 12px; padding:10px 12px; border:1px solid #cbdcf7; border-radius:10px; background:#f7faff; }
+.bulk-action-bar.is-visible { display:flex; }
+.bulk-action-summary { font-size:13px; font-weight:600; color:var(--text-main, #1f2937); }
+.bulk-action-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+@media (max-width:640px) { .bulk-action-bar { align-items:stretch; } .bulk-action-buttons { width:100%; } .bulk-action-buttons button { flex:1 1 auto; } }
+</style>
+<script>
+(function() {
+  if (window.__popoBulkRowsInitialized) return;
+  window.__popoBulkRowsInitialized = true;
+
+  var tableStates = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+  function inferAction(row) {
+    if (!row || !row.querySelector) return null;
+    var enrollmentBtn = row.querySelector('[data-enrollment-id][onclick*="requestRemoveEnrollment"]');
+    if (enrollmentBtn) {
+      return { type: 'enrollment', id: enrollmentBtn.getAttribute('data-enrollment-id') || '', label: 'นำออก' };
+    }
+
+    var configs = [
+      { selector: '[onclick*="deleteClass("]', type: 'class', label: 'ลบ' },
+      { selector: '[onclick*="deleteSubject("]', type: 'subject', label: 'ลบ' },
+      { selector: '[onclick*="deleteIndicator("]', type: 'indicator', label: 'ลบ' },
+      { selector: '[onclick*="deleteUser("]', type: 'user', label: 'ลบ' },
+      { selector: '[onclick*="deleteStudent("]', type: 'student', label: 'ลบ' }
+    ];
+    for (var i = 0; i < configs.length; i++) {
+      var btn = row.querySelector(configs[i].selector);
+      if (!btn) continue;
+      var onclick = btn.getAttribute('onclick') || '';
+      var match = onclick.match(/\(\s*['"]([^'"]+)['"]/);
+      if (match && match[1]) return { type: configs[i].type, id: match[1], label: configs[i].label };
+    }
+
+    var holidayBtn = row.querySelector('[onclick*="deleteHolidayByIndex("]');
+    if (holidayBtn) {
+      var holidayMatch = (holidayBtn.getAttribute('onclick') || '').match(/deleteHolidayByIndex\(\s*(\d+)\s*\)/);
+      if (holidayMatch && typeof window.holidays !== 'undefined') {
+        var holiday = window.holidays[Number(holidayMatch[1])];
+        if (holiday && holiday.holiday_id) return { type: 'holiday', id: String(holiday.holiday_id), label: 'ลบ' };
+      }
+    }
+    return null;
+  }
+
+  function visibleActionRows(table) {
+    if (!table || !table.tBodies || !table.tBodies.length) return [];
+    return Array.prototype.filter.call(table.tBodies[0].rows, function(row) {
+      if (row.hidden || getComputedStyle(row).display === 'none') return false;
+      return !!inferAction(row);
+    });
+  }
+
+  function getState(table) {
+    var state = tableStates ? tableStates.get(table) : table.__bulkState;
+    if (!state) {
+      state = { selected: {}, type: '', label: 'ลบ', toolbar: null };
+      if (tableStates) tableStates.set(table, state);
+      else table.__bulkState = state;
+    }
+    return state;
+  }
+
+  function selectedIds(state) {
+    return Object.keys(state.selected).filter(function(id) { return !!state.selected[id]; });
+  }
+
+  function updateToolbar(table) {
+    var state = getState(table);
+    var ids = selectedIds(state);
+    if (!state.toolbar) return;
+    state.toolbar.classList.toggle('is-visible', ids.length > 0);
+    var summary = state.toolbar.querySelector('.bulk-action-summary');
+    if (summary) { var summaryText = 'เลือกแล้ว ' + ids.length + ' รายการ'; if (summary.textContent !== summaryText) summary.textContent = summaryText; }
+    var actionBtn = state.toolbar.querySelector('[data-bulk-run]');
+    if (actionBtn) {
+      actionBtn.disabled = ids.length === 0;
+      var actionText = (state.label === 'นำออก' ? 'นำออกที่เลือก' : 'ลบที่เลือก') + ' (' + ids.length + ')'; if (actionBtn.textContent !== actionText) actionBtn.textContent = actionText;
+    }
+    var rows = visibleActionRows(table);
+    var visibleIds = rows.map(function(row) { var action = inferAction(row); return action ? action.id : ''; }).filter(Boolean);
+    var checkedVisible = visibleIds.filter(function(id) { return !!state.selected[id]; }).length;
+    var selectAll = table.querySelector('thead .bulk-select-all');
+    if (selectAll) {
+      selectAll.checked = visibleIds.length > 0 && checkedVisible === visibleIds.length;
+      selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visibleIds.length;
+    }
+  }
+
+  function pruneSelection(table) {
+    var state = getState(table);
+    var existing = {};
+    visibleActionRows(table).forEach(function(row) { var action = inferAction(row); if (action) existing[action.id] = true; });
+    Object.keys(state.selected).forEach(function(id) { if (!existing[id]) delete state.selected[id]; });
+  }
+
+  function ensureToolbar(table, action) {
+    var state = getState(table);
+    state.type = action.type;
+    state.label = action.label;
+    if (state.toolbar && state.toolbar.parentNode) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'bulk-action-bar';
+
+    var summary = document.createElement('div');
+    summary.className = 'bulk-action-summary';
+    summary.textContent = 'เลือกแล้ว 0 รายการ';
+
+    var buttons = document.createElement('div');
+    buttons.className = 'bulk-action-buttons';
+
+    var clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'btn-secondary';
+    clearBtn.textContent = 'ยกเลิกการเลือก';
+    clearBtn.addEventListener('click', function() {
+      state.selected = {};
+      table.querySelectorAll('.bulk-row-select').forEach(function(cb) {
+        cb.checked = false;
+        var row = cb.closest('tr');
+        if (row) row.classList.remove('bulk-row-selected');
+      });
+      updateToolbar(table);
+    });
+
+    var runBtn = document.createElement('button');
+    runBtn.type = 'button';
+    runBtn.className = 'btn-danger';
+    runBtn.setAttribute('data-bulk-run', '1');
+    runBtn.addEventListener('click', function() { runBulkAction(table); });
+
+    buttons.appendChild(clearBtn);
+    buttons.appendChild(runBtn);
+    bar.appendChild(summary);
+    bar.appendChild(buttons);
+
+    var anchor = table.closest('.table-wrap, .teaching-table-wrap') || table;
+    if (anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor);
+    state.toolbar = bar;
+  }
+
+  function ensureHeader(table) {
+    if (!table.tHead || !table.tHead.rows.length) return;
+    var row = table.tHead.rows[0];
+    if (row.querySelector('.bulk-select-all')) return;
+    var th = document.createElement('th');
+    th.className = 'bulk-row-select-col';
+    th.setAttribute('aria-label', 'เลือกหลายรายการ');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'bulk-select-all';
+    cb.setAttribute('aria-label', 'เลือกทั้งหมดที่แสดง');
+    cb.addEventListener('change', function() {
+      var state = getState(table);
+      visibleActionRows(table).forEach(function(bodyRow) {
+        var action = inferAction(bodyRow);
+        if (!action) return;
+        state.selected[action.id] = cb.checked;
+        var rowCb = bodyRow.querySelector('.bulk-row-select');
+        if (rowCb) rowCb.checked = cb.checked;
+        bodyRow.classList.toggle('bulk-row-selected', cb.checked);
+      });
+      updateToolbar(table);
+    });
+    th.appendChild(cb);
+    row.insertBefore(th, row.firstChild);
+  }
+
+  function enhanceRows(table) {
+    var state = getState(table);
+    var rows = visibleActionRows(table);
+    if (!rows.length) return;
+    var firstAction = inferAction(rows[0]);
+    if (!firstAction) return;
+    ensureToolbar(table, firstAction);
+    ensureHeader(table);
+
+    rows.forEach(function(row) {
+      var action = inferAction(row);
+      if (!action) return;
+      state.type = action.type;
+      state.label = action.label;
+      var existing = row.querySelector('.bulk-row-select');
+      if (!existing) {
+        var td = document.createElement('td');
+        td.className = 'bulk-row-select-col';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'bulk-row-select';
+        cb.setAttribute('data-record-id', action.id);
+        cb.setAttribute('aria-label', 'เลือกแถวนี้');
+        cb.addEventListener('change', function() {
+          state.selected[action.id] = cb.checked;
+          row.classList.toggle('bulk-row-selected', cb.checked);
+          updateToolbar(table);
+        });
+        td.appendChild(cb);
+        row.insertBefore(td, row.firstChild);
+        existing = cb;
+      } else {
+        existing.setAttribute('data-record-id', action.id);
+      }
+      existing.checked = !!state.selected[action.id];
+      row.classList.toggle('bulk-row-selected', existing.checked);
+    });
+
+    pruneSelection(table);
+    updateToolbar(table);
+  }
+
+  function enhanceAllBulkTables(root) {
+    root = root || document;
+    var tables = [];
+    if (root.matches && root.matches('table')) tables.push(root);
+    if (root.querySelectorAll) Array.prototype.forEach.call(root.querySelectorAll('table'), function(table) { tables.push(table); });
+    tables.forEach(function(table) { enhanceRows(table); });
+  }
+
+  function refreshAfterBulk(type) {
+    var refreshers = { 'class':'loadClasses', 'subject':'loadSubjects', 'indicator':'loadIndicators', 'holiday':'loadHolidays', 'user':'loadUsers', 'student':'loadStudents', 'enrollment':'loadData' };
+    var fnName = refreshers[type];
+    if (fnName && typeof window[fnName] === 'function') window[fnName]();
+  }
+
+  function runBulkAction(table) {
+    var state = getState(table);
+    var ids = selectedIds(state);
+    if (!ids.length || typeof google === 'undefined' || !google.script || typeof TOKEN === 'undefined') return;
+    var verb = state.label === 'นำออก' ? 'นำออก' : 'ลบ';
+    if (!confirm('ยืนยันการ' + verb + ' ' + ids.length + ' รายการที่เลือก?')) return;
+
+    var btn = state.toolbar ? state.toolbar.querySelector('[data-bulk-run]') : null;
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังดำเนินการ...'; }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        result = result || {};
+        var successCount = (result.succeeded || []).length;
+        var failed = result.failed || [];
+        state.selected = {};
+        if (failed.length) {
+          var firstError = failed[0] && failed[0].error ? ': ' + failed[0].error : '';
+          if (typeof showToast === 'function') showToast('สำเร็จ ' + successCount + ' รายการ, ไม่สำเร็จ ' + failed.length + ' รายการ' + firstError, 'error');
+        } else if (typeof showToast === 'function') {
+          showToast((verb === 'นำออก' ? 'นำออก' : 'ลบ') + 'สำเร็จ ' + successCount + ' รายการ', 'success');
+        }
+        updateToolbar(table);
+        refreshAfterBulk(state.type);
+      })
+      .withFailureHandler(function(err) {
+        if (btn) btn.disabled = false;
+        if (typeof showToast === 'function') showToast('ดำเนินการไม่สำเร็จ: ' + err.message, 'error');
+      })
+      .serverBulkRecordAction(TOKEN, state.type, ids);
+  }
+
+  function bootBulkRows() {
+    enhanceAllBulkTables(document);
+    if (typeof MutationObserver === 'undefined' || !document.body) return;
+    var queued = false;
+    var observer = new MutationObserver(function(mutations) {
+      if (queued) return;
+      var relevant = mutations.some(function(mutation) { return mutation.type === 'childList' && mutation.addedNodes && mutation.addedNodes.length; });
+      if (!relevant) return;
+      queued = true;
+      setTimeout(function() { queued = false; enhanceAllBulkTables(document); }, 0);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootBulkRows);
+  else bootBulkRows();
+})();
+</script>
