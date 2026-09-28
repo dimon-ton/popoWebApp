@@ -11,6 +11,7 @@ import {
   seedTestUser,
   seedTestEnrollment,
   seedTestIndicator,
+  seedTestIndicatorScore,
   seedTestSubjectWeights,
   seedTestSummative,
   seedTestCharacteristics,
@@ -102,6 +103,8 @@ test.describe('US-009: Summative scoring and grade computation', () => {
   let subjectId: string;
   let studentId: string;
   let teacherId: string;
+  let firstIndicatorId: string;
+  let secondIndicatorId: string;
   const url = process.env.WEB_APP_URL!;
 
   test.beforeAll(async () => {
@@ -121,6 +124,15 @@ test.describe('US-009: Summative scoring and grade computation', () => {
       subject_id: subjectId,
       teacher_user_id: teacherId,
     });
+    firstIndicatorId = await seedTestIndicator({
+      suffix: 'us009_ind1', subject_id: subjectId, code: 'TST009-1', max_score: 5, display_order: 1,
+    });
+    secondIndicatorId = await seedTestIndicator({
+      suffix: 'us009_ind2', subject_id: subjectId, code: 'TST009-2', max_score: 10, display_order: 2,
+    });
+    await seedTestIndicatorScore({ student_id: studentId, subject_id: subjectId, indicator_id: firstIndicatorId, score: 4 });
+    await seedTestIndicatorScore({ student_id: studentId, subject_id: subjectId, indicator_id: secondIndicatorId, score: 8.6 });
+    await seedTestSummative({ student_id: studentId, subject_id: subjectId, coursework: 42, total: 42 });
   });
 
   test.afterAll(async () => {
@@ -143,7 +155,7 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     await expect(page.locator('#saveBar')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('US-009: coursework=42, midterm=18, final=22 → total=82, grade=4', async ({ page }) => {
+  test('US-009: derived coursework=42, midterm=18, final=22 → total=82, grade=4', async ({ page }) => {
     await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
@@ -152,8 +164,8 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     const midInput = page.locator('input[data-col="midterm"]').first();
     const finInput = page.locator('input[data-col="final"]').first();
 
-    await cwInput.fill('42');
-    await cwInput.dispatchEvent('input');
+    await expect(cwInput).toHaveValue('42');
+    await expect(cwInput).toBeEditable();
     await midInput.fill('18');
     await midInput.dispatchEvent('input');
     await finInput.fill('22');
@@ -165,7 +177,34 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     await expect(gradeCell).toHaveText('4', { timeout: 5_000 });
   });
 
-  test('US-009: coursework=37, midterm=15, final=23 → total=75, grade=3.5', async ({ page }) => {
+  test('US-009: manual coursework auto-sizes, persists, and blank resumes derivation', async ({ page }) => {
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
+
+    const cwInput = page.locator('input[data-col="coursework"]').first();
+    const initialBox = await cwInput.boundingBox();
+    await cwInput.fill('46.15');
+    await cwInput.dispatchEvent('input');
+    const expandedBox = await cwInput.boundingBox();
+    expect(initialBox).not.toBeNull();
+    expect(expandedBox).not.toBeNull();
+    expect(expandedBox!.width).toBeGreaterThan(initialBox!.width);
+
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกคะแนนสำเร็จ', { timeout: 20_000 });
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('input[data-col="coursework"]').first()).toHaveValue('46.15', { timeout: 15_000 });
+
+    const restoredInput = page.locator('input[data-col="coursework"]').first();
+    await restoredInput.fill('');
+    await restoredInput.dispatchEvent('input');
+    await page.click('#saveBtn');
+    await expect(page.locator('#toast')).toContainText('บันทึกคะแนนสำเร็จ', { timeout: 20_000 });
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('input[data-col="coursework"]').first()).toHaveValue('42', { timeout: 15_000 });
+  });
+
+  test('US-009: incomplete midterm/final does not generate grade 0', async ({ page }) => {
     await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
 
     await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
@@ -174,17 +213,16 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     const midInput = page.locator('input[data-col="midterm"]').first();
     const finInput = page.locator('input[data-col="final"]').first();
 
-    await cwInput.fill('37');
-    await cwInput.dispatchEvent('input');
+    await expect(cwInput).toHaveValue('42');
     await midInput.fill('15');
     await midInput.dispatchEvent('input');
-    await finInput.fill('23');
+    await finInput.fill('');
     await finInput.dispatchEvent('input');
 
     const totalCell = page.locator('[id^="total-"]').first();
     const gradeCell = page.locator('[id^="grade-"]').first();
-    await expect(totalCell).toHaveText('75', { timeout: 5_000 });
-    await expect(gradeCell).toHaveText('3.5', { timeout: 5_000 });
+    await expect(totalCell).toHaveText('57', { timeout: 5_000 });
+    await expect(gradeCell).toHaveText('', { timeout: 5_000 });
   });
 
   test('US-009: makeup grade overrides final_grade; save and reload persists', async ({ page }) => {
@@ -197,8 +235,7 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     const finInput = page.locator('input[data-col="final"]').first();
     const makeupInput = page.locator('input[data-col="makeup_grade"]').first();
 
-    await cwInput.fill('42');
-    await cwInput.dispatchEvent('input');
+    await expect(cwInput).toHaveValue('42');
     await midInput.fill('18');
     await midInput.dispatchEvent('input');
     await finInput.fill('22');
@@ -232,6 +269,29 @@ test.describe('US-009: Summative scoring and grade computation', () => {
     await expect(reloadedTotal).toHaveText('82', { timeout: 10_000 });
     await expect(reloadedGrade).toHaveText('4', { timeout: 10_000 });
     await expect(reloadedFinalGrade).toHaveText('3', { timeout: 10_000 });
+  });
+
+  test('US-009: out-of-range coursework override is rejected by the server', async ({ page }) => {
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('#summativeTable')).toBeVisible({ timeout: 20_000 });
+
+    const result = await page.evaluate(
+      ({ classId, subjectId, studentId }) => new Promise<{ ok: boolean; error?: string }>((resolve) => {
+        (window as any).google.script.run
+          .withSuccessHandler(() => resolve({ ok: true }))
+          .withFailureHandler((error: { message?: string }) => resolve({ ok: false, error: error?.message || String(error) }))
+          .serverSaveSummative((window as any).TOKEN, classId, subjectId, [{
+            student_id: studentId, coursework: 999, midterm: 18, final: 22, makeup_grade: '',
+          }]);
+      }),
+      { classId, subjectId, studentId }
+    );
+    expect(result.ok).toBeFalsy();
+    expect(result.error).toContain('0 ถึง 50');
+
+    await page.goto(`${url}?page=class_summative&class_id=${classId}&subject_id=${subjectId}`);
+    await expect(page.locator('input[data-col="coursework"]').first()).toHaveValue('42', { timeout: 15_000 });
+    await expect(page.locator('[id^="total-"]').first()).toHaveText('82');
   });
 });
 
@@ -314,7 +374,7 @@ test.describe('US-012: Read-Think-Write scoring', () => {
     await expect(page.locator('#assessmentTooltipPortal')).toBeVisible();
   });
 
-  test('US-012: copy completed data from another subject in the same classroom', async ({ page }) => {
+  test('US-012: copy data from another subject into unsaved state', async ({ page }) => {
     await page.goto(`${url}?page=class_readthinkwrite&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#rtwTable')).toBeVisible({ timeout: 20_000 });
     await page.locator('input.score-input').first().fill('9');
@@ -605,7 +665,7 @@ test.describe('US-011: Characteristics scoring', () => {
     await expect(page.locator('#assessmentTooltipPortal')).toBeVisible();
   });
 
-  test('US-011: copy completed source by student ID and require explicit overwrite confirmation', async ({ page }) => {
+  test('US-011: copy source by student ID and require explicit overwrite confirmation', async ({ page }) => {
     await page.goto(`${url}?page=class_characteristics&class_id=${classId}&subject_id=${subjectId}`);
     await expect(page.locator('#charTable')).toBeVisible({ timeout: 20_000 });
     await page.locator('input.score-input').first().fill('9');
@@ -637,7 +697,7 @@ test.describe('US-011: Characteristics scoring', () => {
         .withFailureHandler((error: { message?: string }) => resolve({ error: error.message || String(error) }))
         .getCharacteristicsSourceValues((window as any).TOKEN, (window as any).CLASS_ID, (window as any).SUBJECT_ID, 'test_subject_not_eligible');
     }));
-    expect(result.error).toContain('ไม่มีสิทธิ์ใช้งาน');
+    expect(result.error).toContain('ไม่สามารถนำมาใช้');
   });
 
   test('US-011: enter 10,10,10,9,9,10,10,10 → total=78, label=ดีเยี่ยม', async ({ page }) => {

@@ -22,11 +22,19 @@ function characteristicSubjectBelongsToClass(subject, class_id, enrollments) {
   });
 }
 
-function requireCharacteristicsDestinationAccess(session, class_id, subject_id, enrollments) {
-  var cls = dbFindOne('Classes', 'class_id', class_id);
+function requireCharacteristicsDestinationAccess(session, class_id, subject_id, enrollments, classes, subjects) {
+  var cls = null;
+  (classes || dbGetAll('Classes')).some(function(item) {
+    if (String(item.class_id) === String(class_id)) { cls = item; return true; }
+    return false;
+  });
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
 
-  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  var subject = null;
+  (subjects || dbGetAll('Subjects')).some(function(item) {
+    if (String(item.subject_id) === String(subject_id)) { subject = item; return true; }
+    return false;
+  });
   if (!subject || !characteristicSubjectBelongsToClass(subject, class_id, enrollments)) {
     throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
   }
@@ -49,20 +57,39 @@ function isCompleteCharacteristicValue(value) {
   return !isNaN(numberValue) && numberValue >= 0 && numberValue <= 10;
 }
 
-function buildEligibleCharacteristicsSources(session, class_id, current_subject_id) {
+function buildCharacteristicsSourceContext_(session, class_id, current_subject_id) {
   var enrollments = dbGetAll('Enrollments');
-  requireCharacteristicsDestinationAccess(session, class_id, current_subject_id, enrollments);
-
-  var students = dbFind('Students', 'class_id', class_id);
-  if (students.length === 0) return [];
-
-  var studentIds = {};
-  students.forEach(function(student) { studentIds[String(student.student_id)] = true; });
-
+  var classes = dbGetAll('Classes');
   var subjects = dbGetAll('Subjects');
+  var access = requireCharacteristicsDestinationAccess(session, class_id, current_subject_id, enrollments, classes, subjects);
+  var destinationLevel = String(access.class_info.level);
+  var allStudents = dbGetAll('Students');
+  var destinationStudentIds = {};
+  allStudents.forEach(function(student) {
+    if (String(student.class_id) === String(class_id)) destinationStudentIds[String(student.student_id)] = true;
+  });
+  if (!Object.keys(destinationStudentIds).length) return { sources: [], values_by_subject: {} };
+
+  var classById = {};
+  classes.forEach(function(cls) { classById[String(cls.class_id)] = cls; });
   var users = dbGetAll('Users');
   var userNames = {};
   users.forEach(function(user) { userNames[String(user.user_id)] = user.full_name || ''; });
+
+  var classIdsBySubject = {};
+  var enrollmentsBySubject = {};
+  subjects.forEach(function(subject) {
+    var subjectId = String(subject.subject_id || '');
+    if (subjectId && subject.class_id) classIdsBySubject[subjectId] = [String(subject.class_id)];
+  });
+  enrollments.forEach(function(enrollment) {
+    var subjectId = String(enrollment.subject_id || '');
+    var sourceClassId = String(enrollment.class_id || '');
+    if (!enrollmentsBySubject[subjectId]) enrollmentsBySubject[subjectId] = [];
+    enrollmentsBySubject[subjectId].push(enrollment);
+    if (!classIdsBySubject[subjectId]) classIdsBySubject[subjectId] = [];
+    if (sourceClassId && classIdsBySubject[subjectId].indexOf(sourceClassId) === -1) classIdsBySubject[subjectId].push(sourceClassId);
+  });
 
   var rowsBySubject = {};
   dbGetAll('Characteristics').forEach(function(row) {
@@ -72,66 +99,83 @@ function buildEligibleCharacteristicsSources(session, class_id, current_subject_
   });
 
   var sources = [];
+  var valuesBySubject = {};
   subjects.forEach(function(subject) {
     var subjectId = String(subject.subject_id || '');
     if (!subjectId || subjectId === String(current_subject_id)) return;
-    if (!characteristicSubjectBelongsToClass(subject, class_id, enrollments)) return;
-
-    var sourceEnrollments = enrollments.filter(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === subjectId && enrollment.teacher_user_id !== '';
+    var eligibleClasses = (classIdsBySubject[subjectId] || []).map(function(sourceClassId) {
+      return classById[sourceClassId];
+    }).filter(function(sourceClass) {
+      return sourceClass && String(sourceClass.level) === destinationLevel;
     });
-    if (sourceEnrollments.length === 0) return;
-
-    var teacherIds = {};
-    sourceEnrollments.forEach(function(enrollment) {
-      var teacherId = String(enrollment.teacher_user_id || '');
-      teacherIds[teacherId] = true;
+    if (!eligibleClasses.length) return;
+    eligibleClasses.sort(function(a, b) {
+      var aSame = String(a.class_id) === String(class_id) ? 0 : 1;
+      var bSame = String(b.class_id) === String(class_id) ? 0 : 1;
+      if (aSame !== bSame) return aSame - bSame;
+      return String(a.section || '').localeCompare(String(b.section || ''), 'th', { numeric: true });
     });
-
-    var rowsForStudents = {};
-    var valid = true;
+    var sourceClass = eligibleClasses[0];
+    var valuesForStudents = {};
+    var matchingStudentIds = {};
+    var filledValueCount = 0;
+    var updatedAt = '';
     (rowsBySubject[subjectId] || []).forEach(function(row) {
       var studentId = String(row.student_id || '');
-      if (!studentIds[studentId]) return;
-      if (rowsForStudents[studentId]) { valid = false; return; }
-      if (!teacherIds[String(row.updated_by || '')]) { valid = false; return; }
-      for (var i = 0; i < CHARACTERISTIC_FIELDS.length; i++) {
-        if (!isCompleteCharacteristicValue(row[CHARACTERISTIC_FIELDS[i]])) {
-          valid = false;
-          return;
+      if (!destinationStudentIds[studentId]) return;
+      matchingStudentIds[studentId] = true;
+      var item = valuesForStudents[studentId] || { student_id: studentId };
+      CHARACTERISTIC_FIELDS.forEach(function(field) {
+        if (isCompleteCharacteristicValue(row[field])) {
+          if (item[field] === undefined) filledValueCount++;
+          item[field] = Number(row[field]);
         }
-      }
-      rowsForStudents[studentId] = row;
+      });
+      if (Object.keys(item).length > 1) valuesForStudents[studentId] = item;
+      var rowUpdatedAt = String(row.updated_at || '');
+      if (rowUpdatedAt > updatedAt) updatedAt = rowUpdatedAt;
     });
-    if (!valid) return;
+    var matchingStudents = Object.keys(matchingStudentIds).length;
+    var studentsWithData = Object.keys(valuesForStudents).length;
+    if (!matchingStudents || !studentsWithData || !filledValueCount) return;
 
-    for (var studentId in studentIds) {
-      if (!rowsForStudents[studentId]) return;
-    }
-
+    var teacherIds = {};
+    (enrollmentsBySubject[subjectId] || []).forEach(function(enrollment) {
+      if (String(enrollment.class_id) === String(sourceClass.class_id) && enrollment.teacher_user_id) {
+        teacherIds[String(enrollment.teacher_user_id)] = true;
+      }
+    });
     var teacherNames = Object.keys(teacherIds).map(function(teacherId) {
       return userNames[teacherId] || teacherId;
     });
-    var updatedAt = '';
-    Object.keys(rowsForStudents).forEach(function(studentId) {
-      var value = String(rowsForStudents[studentId].updated_at || '');
-      if (value > updatedAt) updatedAt = value;
-    });
-
+    valuesBySubject[subjectId] = Object.keys(valuesForStudents).map(function(studentId) { return valuesForStudents[studentId]; });
     sources.push({
       subject_id: subjectId,
       subject_name: subject.subject_name || subjectId,
+      class_id: String(sourceClass.class_id),
+      class_label: withClassLabel(sourceClass).class_label,
+      level: sourceClass.level,
       teacher_names: teacherNames,
-      status: 'complete',
+      matching_students: matchingStudents,
+      students_with_data: studentsWithData,
+      filled_value_count: filledValueCount,
+      status: 'partial',
       updated_at: updatedAt
     });
   });
 
   sources.sort(function(a, b) {
-    return String(a.subject_name).localeCompare(String(b.subject_name), 'th');
+    var aSame = String(a.class_id) === String(class_id) ? 0 : 1;
+    var bSame = String(b.class_id) === String(class_id) ? 0 : 1;
+    if (aSame !== bSame) return aSame - bSame;
+    if (a.updated_at !== b.updated_at) return String(b.updated_at).localeCompare(String(a.updated_at));
+    return String(a.subject_name).localeCompare(String(b.subject_name), 'th', { numeric: true });
   });
-  return sources;
+  return { sources: sources, values_by_subject: valuesBySubject };
+}
+
+function buildEligibleCharacteristicsSources(session, class_id, current_subject_id) {
+  return buildCharacteristicsSourceContext_(session, class_id, current_subject_id).sources;
 }
 
 function getEligibleCharacteristicsSources(token, class_id, current_subject_id) {
@@ -144,7 +188,8 @@ function getCharacteristicsSourceValues(token, class_id, current_subject_id, sou
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
 
-  var sources = buildEligibleCharacteristicsSources(session, class_id, current_subject_id);
+  var context = buildCharacteristicsSourceContext_(session, class_id, current_subject_id);
+  var sources = context.sources;
   var source = null;
   for (var i = 0; i < sources.length; i++) {
     if (String(sources[i].subject_id) === String(source_subject_id)) {
@@ -152,27 +197,17 @@ function getCharacteristicsSourceValues(token, class_id, current_subject_id, sou
       break;
     }
   }
-  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่มีสิทธิ์ใช้งานหรือข้อมูลยังไม่ครบถ้วน');
+  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่สามารถนำมาใช้กับวิชาปลายทางนี้');
 
-  var currentStudentIds = {};
-  dbFind('Students', 'class_id', class_id).forEach(function(student) {
-    currentStudentIds[String(student.student_id)] = true;
-  });
-
-  var values = dbGetAll('Characteristics').filter(function(row) {
-    return String(row.subject_id) === String(source_subject_id) &&
-      currentStudentIds[String(row.student_id)];
-  }).map(function(row) {
-    var item = { student_id: String(row.student_id) };
-    CHARACTERISTIC_FIELDS.forEach(function(field) { item[field] = Number(row[field]); });
-    return item;
-  });
+  var values = context.values_by_subject[String(source_subject_id)] || [];
 
   appendAuditLog(session.user_id, 'CharacteristicsCopy', current_subject_id, null, {
     class_id: class_id,
     source_subject_id: source_subject_id,
     destination_subject_id: current_subject_id,
-    rows_loaded: values.length
+    rows_loaded: values.length,
+    matched_student_count: source.matching_students,
+    copied_value_count: source.filled_value_count
   });
 
   return { source: source, values: values };

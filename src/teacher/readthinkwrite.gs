@@ -22,10 +22,18 @@ function readThinkWriteSubjectBelongsToClass(subject, class_id, enrollments) {
   });
 }
 
-function requireReadThinkWriteDestinationAccess(session, class_id, subject_id, enrollments) {
-  var cls = dbFindOne('Classes', 'class_id', class_id);
+function requireReadThinkWriteDestinationAccess(session, class_id, subject_id, enrollments, classes, subjects) {
+  var cls = null;
+  (classes || dbGetAll('Classes')).some(function(item) {
+    if (String(item.class_id) === String(class_id)) { cls = item; return true; }
+    return false;
+  });
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  var subject = null;
+  (subjects || dbGetAll('Subjects')).some(function(item) {
+    if (String(item.subject_id) === String(subject_id)) { subject = item; return true; }
+    return false;
+  });
   if (!subject || !readThinkWriteSubjectBelongsToClass(subject, class_id, enrollments)) {
     throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
   }
@@ -37,6 +45,7 @@ function requireReadThinkWriteDestinationAccess(session, class_id, subject_id, e
     });
     if (!assigned) throw new Error('ไม่มีสิทธิ์แก้ไขคะแนนของวิชานี้');
   }
+  return { class_info: cls, subject_info: subject };
 }
 
 function isCompleteReadThinkWriteValue(value) {
@@ -45,16 +54,36 @@ function isCompleteReadThinkWriteValue(value) {
   return !isNaN(numberValue) && numberValue >= 0 && numberValue <= 10;
 }
 
-function buildEligibleReadThinkWriteSources(session, class_id, current_subject_id) {
+function buildReadThinkWriteSourceContext_(session, class_id, current_subject_id) {
   var enrollments = dbGetAll('Enrollments');
-  requireReadThinkWriteDestinationAccess(session, class_id, current_subject_id, enrollments);
-  var students = dbFind('Students', 'class_id', class_id);
-  if (!students.length) return [];
+  var classes = dbGetAll('Classes');
+  var subjects = dbGetAll('Subjects');
+  var access = requireReadThinkWriteDestinationAccess(session, class_id, current_subject_id, enrollments, classes, subjects);
+  var destinationLevel = String(access.class_info.level);
+  var destinationStudentIds = {};
+  dbGetAll('Students').forEach(function(student) {
+    if (String(student.class_id) === String(class_id)) destinationStudentIds[String(student.student_id)] = true;
+  });
+  if (!Object.keys(destinationStudentIds).length) return { sources: [], values_by_subject: {} };
 
-  var studentIds = {};
-  students.forEach(function(student) { studentIds[String(student.student_id)] = true; });
+  var classById = {};
+  classes.forEach(function(cls) { classById[String(cls.class_id)] = cls; });
   var userNames = {};
   dbGetAll('Users').forEach(function(user) { userNames[String(user.user_id)] = user.full_name || ''; });
+  var classIdsBySubject = {};
+  var enrollmentsBySubject = {};
+  subjects.forEach(function(subject) {
+    var subjectId = String(subject.subject_id || '');
+    if (subjectId && subject.class_id) classIdsBySubject[subjectId] = [String(subject.class_id)];
+  });
+  enrollments.forEach(function(enrollment) {
+    var subjectId = String(enrollment.subject_id || '');
+    var sourceClassId = String(enrollment.class_id || '');
+    if (!enrollmentsBySubject[subjectId]) enrollmentsBySubject[subjectId] = [];
+    enrollmentsBySubject[subjectId].push(enrollment);
+    if (!classIdsBySubject[subjectId]) classIdsBySubject[subjectId] = [];
+    if (sourceClassId && classIdsBySubject[subjectId].indexOf(sourceClassId) === -1) classIdsBySubject[subjectId].push(sourceClassId);
+  });
   var rowsBySubject = {};
   dbGetAll('ReadThinkWrite').forEach(function(row) {
     var subjectId = String(row.subject_id || '');
@@ -63,51 +92,79 @@ function buildEligibleReadThinkWriteSources(session, class_id, current_subject_i
   });
 
   var sources = [];
-  dbGetAll('Subjects').forEach(function(subject) {
+  var valuesBySubject = {};
+  subjects.forEach(function(subject) {
     var subjectId = String(subject.subject_id || '');
     if (!subjectId || subjectId === String(current_subject_id)) return;
-    if (!readThinkWriteSubjectBelongsToClass(subject, class_id, enrollments)) return;
-    var sourceEnrollments = enrollments.filter(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === subjectId && enrollment.teacher_user_id !== '';
+    var eligibleClasses = (classIdsBySubject[subjectId] || []).map(function(sourceClassId) {
+      return classById[sourceClassId];
+    }).filter(function(sourceClass) {
+      return sourceClass && String(sourceClass.level) === destinationLevel;
     });
-    if (!sourceEnrollments.length) return;
-
-    var teacherIds = {};
-    sourceEnrollments.forEach(function(enrollment) {
-      var teacherId = String(enrollment.teacher_user_id || '');
-      teacherIds[teacherId] = true;
+    if (!eligibleClasses.length) return;
+    eligibleClasses.sort(function(a, b) {
+      var aSame = String(a.class_id) === String(class_id) ? 0 : 1;
+      var bSame = String(b.class_id) === String(class_id) ? 0 : 1;
+      if (aSame !== bSame) return aSame - bSame;
+      return String(a.section || '').localeCompare(String(b.section || ''), 'th', { numeric: true });
     });
-
-    var rowsForStudents = {};
-    var valid = true;
+    var sourceClass = eligibleClasses[0];
+    var valuesForStudents = {};
+    var matchingStudentIds = {};
+    var filledValueCount = 0;
+    var updatedAt = '';
     (rowsBySubject[subjectId] || []).forEach(function(row) {
       var studentId = String(row.student_id || '');
-      if (!studentIds[studentId]) return;
-      if (rowsForStudents[studentId] || !teacherIds[String(row.updated_by || '')]) { valid = false; return; }
-      for (var i = 0; i < READ_THINK_WRITE_FIELDS.length; i++) {
-        if (!isCompleteReadThinkWriteValue(row[READ_THINK_WRITE_FIELDS[i]])) { valid = false; return; }
-      }
-      rowsForStudents[studentId] = row;
+      if (!destinationStudentIds[studentId]) return;
+      matchingStudentIds[studentId] = true;
+      var item = valuesForStudents[studentId] || { student_id: studentId };
+      READ_THINK_WRITE_FIELDS.forEach(function(field) {
+        if (isCompleteReadThinkWriteValue(row[field])) {
+          if (item[field] === undefined) filledValueCount++;
+          item[field] = Number(row[field]);
+        }
+      });
+      if (Object.keys(item).length > 1) valuesForStudents[studentId] = item;
+      var rowUpdatedAt = String(row.updated_at || '');
+      if (rowUpdatedAt > updatedAt) updatedAt = rowUpdatedAt;
     });
-    if (!valid) return;
-    for (var studentId in studentIds) if (!rowsForStudents[studentId]) return;
+    var matchingStudents = Object.keys(matchingStudentIds).length;
+    var studentsWithData = Object.keys(valuesForStudents).length;
+    if (!matchingStudents || !studentsWithData || !filledValueCount) return;
 
-    var updatedAt = '';
-    Object.keys(rowsForStudents).forEach(function(studentId) {
-      var value = String(rowsForStudents[studentId].updated_at || '');
-      if (value > updatedAt) updatedAt = value;
+    var teacherIds = {};
+    (enrollmentsBySubject[subjectId] || []).forEach(function(enrollment) {
+      if (String(enrollment.class_id) === String(sourceClass.class_id) && enrollment.teacher_user_id) {
+        teacherIds[String(enrollment.teacher_user_id)] = true;
+      }
     });
+    valuesBySubject[subjectId] = Object.keys(valuesForStudents).map(function(studentId) { return valuesForStudents[studentId]; });
     sources.push({
       subject_id: subjectId,
       subject_name: subject.subject_name || subjectId,
+      class_id: String(sourceClass.class_id),
+      class_label: withClassLabel(sourceClass).class_label,
+      level: sourceClass.level,
       teacher_names: Object.keys(teacherIds).map(function(teacherId) { return userNames[teacherId] || teacherId; }),
-      status: 'complete',
+      matching_students: matchingStudents,
+      students_with_data: studentsWithData,
+      filled_value_count: filledValueCount,
+      status: 'partial',
       updated_at: updatedAt
     });
   });
-  sources.sort(function(a, b) { return String(a.subject_name).localeCompare(String(b.subject_name), 'th'); });
-  return sources;
+  sources.sort(function(a, b) {
+    var aSame = String(a.class_id) === String(class_id) ? 0 : 1;
+    var bSame = String(b.class_id) === String(class_id) ? 0 : 1;
+    if (aSame !== bSame) return aSame - bSame;
+    if (a.updated_at !== b.updated_at) return String(b.updated_at).localeCompare(String(a.updated_at));
+    return String(a.subject_name).localeCompare(String(b.subject_name), 'th', { numeric: true });
+  });
+  return { sources: sources, values_by_subject: valuesBySubject };
+}
+
+function buildEligibleReadThinkWriteSources(session, class_id, current_subject_id) {
+  return buildReadThinkWriteSourceContext_(session, class_id, current_subject_id).sources;
 }
 
 function getEligibleReadThinkWriteSources(token, class_id, current_subject_id) {
@@ -119,27 +176,22 @@ function getEligibleReadThinkWriteSources(token, class_id, current_subject_id) {
 function getReadThinkWriteSourceValues(token, class_id, current_subject_id, source_subject_id) {
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-  var sources = buildEligibleReadThinkWriteSources(session, class_id, current_subject_id);
+  var context = buildReadThinkWriteSourceContext_(session, class_id, current_subject_id);
+  var sources = context.sources;
   var source = null;
   for (var i = 0; i < sources.length; i++) {
     if (String(sources[i].subject_id) === String(source_subject_id)) { source = sources[i]; break; }
   }
-  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่มีสิทธิ์ใช้งานหรือข้อมูลยังไม่ครบถ้วน');
+  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่สามารถนำมาใช้กับวิชาปลายทางนี้');
 
-  var studentIds = {};
-  dbFind('Students', 'class_id', class_id).forEach(function(student) { studentIds[String(student.student_id)] = true; });
-  var values = dbGetAll('ReadThinkWrite').filter(function(row) {
-    return String(row.subject_id) === String(source_subject_id) && studentIds[String(row.student_id)];
-  }).map(function(row) {
-    var item = { student_id: String(row.student_id) };
-    READ_THINK_WRITE_FIELDS.forEach(function(field) { item[field] = Number(row[field]); });
-    return item;
-  });
+  var values = context.values_by_subject[String(source_subject_id)] || [];
   appendAuditLog(session.user_id, 'ReadThinkWriteCopy', current_subject_id, null, {
     class_id: class_id,
     source_subject_id: source_subject_id,
     destination_subject_id: current_subject_id,
-    rows_loaded: values.length
+    rows_loaded: values.length,
+    matched_student_count: source.matching_students,
+    copied_value_count: source.filled_value_count
   });
   return { source: source, values: values };
 }

@@ -797,6 +797,7 @@ input.score-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(26,86,160,0.12);
 }
+.page-class-summative input.coursework-input { min-width: 40px; }
 
 input.makeup-input {
   width: 52px;
@@ -1934,6 +1935,13 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .page-admin-indicators .subject-label { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
     .page-admin-indicators .indicator-form-row { align-items: flex-start; }
     .page-admin-indicators .indicator-submit-group { padding-top: 23px; }
+    .page-admin-indicators .table-row-actions { gap: 6px; }
+    .page-admin-indicators tr.indicator-editing { background: #f8fbff; }
+    .page-admin-indicators tr.indicator-editing input,
+    .page-admin-indicators tr.indicator-editing textarea { width: 100%; min-width: 76px; margin: 0; padding: 7px 8px; }
+    .page-admin-indicators tr.indicator-editing textarea { min-width: 220px; resize: vertical; }
+    .page-admin-indicators tr.indicator-editing .indicator-edit-order,
+    .page-admin-indicators tr.indicator-editing .indicator-edit-max { width: 78px; }
 
 
 /* ==========================================================================

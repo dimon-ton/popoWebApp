@@ -11,11 +11,19 @@ function attendanceSubjectBelongsToClass(subject, class_id, enrollments) {
   });
 }
 
-function requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments) {
-  var cls = dbFindOne('Classes', 'class_id', class_id);
+function requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments, classes, subjects) {
+  var cls = null;
+  (classes || dbGetAll('Classes')).some(function(item) {
+    if (String(item.class_id) === String(class_id)) { cls = item; return true; }
+    return false;
+  });
   if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
 
-  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
+  var subject = null;
+  (subjects || dbGetAll('Subjects')).some(function(item) {
+    if (String(item.subject_id) === String(subject_id)) { subject = item; return true; }
+    return false;
+  });
   if (!subject || !attendanceSubjectBelongsToClass(subject, class_id, enrollments)) {
     throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
   }
@@ -32,16 +40,19 @@ function requireAttendanceDestinationAccess(session, class_id, subject_id, enrol
   return { class_info: cls, subject_info: subject };
 }
 
-function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
+function buildAttendanceSourceContext_(session, class_id, current_subject_id) {
   var enrollments = dbGetAll('Enrollments');
-  requireAttendanceDestinationAccess(session, class_id, current_subject_id, enrollments);
+  var classes = dbGetAll('Classes');
+  var subjects = dbGetAll('Subjects');
+  var access = requireAttendanceDestinationAccess(session, class_id, current_subject_id, enrollments, classes, subjects);
+  var destinationClassLabel = withClassLabel(access.class_info).class_label;
 
-  var students = dbFind('Students', 'class_id', class_id);
-  if (!students.length) return { sources: [], has_destination_values: false };
+  var students = dbGetAll('Students').filter(function(student) { return String(student.class_id) === String(class_id); });
+  if (!students.length) return { sources: [], has_destination_values: false, values_by_subject: {} };
 
   var attendanceConfig = getAttendanceConfig();
   var dates = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days);
-  if (!dates.length) return { sources: [], has_destination_values: false };
+  if (!dates.length) return { sources: [], has_destination_values: false, values_by_subject: {} };
 
   var studentIds = {};
   students.forEach(function(student) { studentIds[String(student.student_id)] = true; });
@@ -65,26 +76,24 @@ function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
     rowsBySubject[subjectId].push(row);
   });
 
-  var requiredRecordCount = students.length * dates.length;
   var sources = [];
-  dbGetAll('Subjects').forEach(function(subject) {
+  var valuesBySubject = {};
+  subjects.forEach(function(subject) {
     var subjectId = String(subject.subject_id || '');
     if (!subjectId || subjectId === String(current_subject_id)) return;
     if (!attendanceSubjectBelongsToClass(subject, class_id, enrollments)) return;
 
     var sourceEnrollments = enrollments.filter(function(enrollment) {
       return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === subjectId && String(enrollment.teacher_user_id || '') !== '';
+        String(enrollment.subject_id) === subjectId;
     });
-    if (!sourceEnrollments.length) return;
 
     var teacherIds = {};
     sourceEnrollments.forEach(function(enrollment) {
-      teacherIds[String(enrollment.teacher_user_id)] = true;
+      if (enrollment.teacher_user_id) teacherIds[String(enrollment.teacher_user_id)] = true;
     });
 
     var rowsByKey = {};
-    var valid = true;
     var updatedAt = '';
     (rowsBySubject[subjectId] || []).forEach(function(row) {
       var studentId = String(row.student_id || '');
@@ -92,32 +101,59 @@ function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
       if (!studentIds[studentId] || !allowedDates[dateStr]) return;
       var key = studentId + '|' + dateStr;
       var status = String(row.status || '');
-      if (rowsByKey[key] || ATTENDANCE_STATUSES.indexOf(status) === -1 || !teacherIds[String(row.updated_by || '')]) {
-        valid = false;
-        return;
-      }
-      rowsByKey[key] = row;
+      if (ATTENDANCE_STATUSES.indexOf(status) === -1) return;
+      if (!rowsByKey[key] || String(row.updated_at || '') >= String(rowsByKey[key].updated_at || '')) rowsByKey[key] = row;
       var rowUpdatedAt = String(row.updated_at || '');
       if (rowUpdatedAt > updatedAt) updatedAt = rowUpdatedAt;
     });
-    if (!valid || Object.keys(rowsByKey).length !== requiredRecordCount) return;
+    var rowKeys = Object.keys(rowsByKey);
+    if (!rowKeys.length) return;
+    var sourceValues = rowKeys.map(function(key) {
+      var row = rowsByKey[key];
+      return {
+        student_id: String(row.student_id),
+        date: formatDateISO(new Date(row.date)),
+        status: String(row.status)
+      };
+    });
+    sourceValues.sort(function(a, b) {
+      return a.date === b.date
+        ? String(a.student_id).localeCompare(String(b.student_id))
+        : String(a.date).localeCompare(String(b.date));
+    });
+    var studentsWithData = {};
+    var datesWithData = {};
+    sourceValues.forEach(function(value) {
+      studentsWithData[value.student_id] = true;
+      datesWithData[value.date] = true;
+    });
+    valuesBySubject[subjectId] = sourceValues;
 
     sources.push({
       subject_id: subjectId,
       subject_name: subject.subject_name || subjectId,
       teacher_names: Object.keys(teacherIds).map(function(teacherId) { return users[teacherId] || teacherId; }),
-      status: 'complete',
-      student_count: students.length,
-      day_count: dates.length,
-      record_count: requiredRecordCount,
+      class_id: String(class_id),
+      class_label: destinationClassLabel,
+      status: 'partial',
+      student_count: Object.keys(studentsWithData).length,
+      students_with_data: Object.keys(studentsWithData).length,
+      day_count: Object.keys(datesWithData).length,
+      record_count: sourceValues.length,
       updated_at: updatedAt
     });
   });
 
   sources.sort(function(a, b) {
-    return String(a.subject_name).localeCompare(String(b.subject_name), 'th');
+    if (a.updated_at !== b.updated_at) return String(b.updated_at).localeCompare(String(a.updated_at));
+    return String(a.subject_name).localeCompare(String(b.subject_name), 'th', { numeric: true });
   });
-  return { sources: sources, has_destination_values: destinationHasValues };
+  return { sources: sources, has_destination_values: destinationHasValues, values_by_subject: valuesBySubject };
+}
+
+function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
+  var context = buildAttendanceSourceContext_(session, class_id, current_subject_id);
+  return { sources: context.sources, has_destination_values: context.has_destination_values };
 }
 
 function getEligibleAttendanceSources(token, class_id, current_subject_id) {
@@ -130,7 +166,7 @@ function getAttendanceSourceValues(token, class_id, current_subject_id, source_s
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
 
-  var eligibility = buildEligibleAttendanceSources(session, class_id, current_subject_id);
+  var eligibility = buildAttendanceSourceContext_(session, class_id, current_subject_id);
   var source = null;
   for (var i = 0; i < eligibility.sources.length; i++) {
     if (String(eligibility.sources[i].subject_id) === String(source_subject_id)) {
@@ -138,40 +174,17 @@ function getAttendanceSourceValues(token, class_id, current_subject_id, source_s
       break;
     }
   }
-  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่มีสิทธิ์ใช้งานหรือข้อมูลยังไม่ครบถ้วน');
+  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่สามารถนำมาใช้กับวิชาปลายทางนี้');
 
-  var studentIds = {};
-  dbFind('Students', 'class_id', class_id).forEach(function(student) {
-    studentIds[String(student.student_id)] = true;
-  });
-  var attendanceConfig = getAttendanceConfig();
-  var allowedDates = {};
-  buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days).forEach(function(date) {
-    allowedDates[formatDateISO(date)] = true;
-  });
-
-  var values = dbGetAll('Attendance').filter(function(row) {
-    var dateStr = formatDateISO(new Date(row.date));
-    return String(row.subject_id) === String(source_subject_id) &&
-      studentIds[String(row.student_id)] && allowedDates[dateStr];
-  }).map(function(row) {
-    return {
-      student_id: String(row.student_id),
-      date: formatDateISO(new Date(row.date)),
-      status: String(row.status || '')
-    };
-  });
-  values.sort(function(a, b) {
-    return a.date === b.date
-      ? String(a.student_id).localeCompare(String(b.student_id))
-      : String(a.date).localeCompare(String(b.date));
-  });
+  var values = eligibility.values_by_subject[String(source_subject_id)] || [];
 
   appendAuditLog(session.user_id, 'AttendanceCopy', current_subject_id, null, {
     class_id: class_id,
     source_subject_id: source_subject_id,
     destination_subject_id: current_subject_id,
-    rows_loaded: values.length
+    rows_loaded: values.length,
+    matched_student_count: source.students_with_data,
+    copied_value_count: values.length
   });
   return { source: source, values: values, has_destination_values: eligibility.has_destination_values };
 }

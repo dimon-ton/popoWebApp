@@ -164,6 +164,20 @@ function handleTestApi(e) {
         });
         return jsonOk({ indicator_id: params.indicator_id });
 
+      case 'seed_indicator_score':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.indicator_id);
+        dbBatchUpsertRows_('IndicatorScores', ['student_id', 'subject_id', 'indicator_id'], [{
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          indicator_id: params.indicator_id,
+          score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id,
+          updated_at: new Date().toISOString()
+        }], 'id', 'test_iscore');
+        return jsonOk({ student_id: params.student_id, indicator_id: params.indicator_id });
+
       case 'seed_summative':
         // Seed a SummativeScores row directly (for report aggregate tests)
         // student_id must start with test_; id is auto-generated
@@ -173,11 +187,14 @@ function handleTestApi(e) {
         var sGrade = computeGrade(sTotal);
         var sMakeup = params.makeup_grade !== '' && params.makeup_grade !== undefined ? parseFloat(params.makeup_grade) : '';
         var sFinalGrade = (sMakeup !== '' && !isNaN(sMakeup)) ? sMakeup : sGrade;
+        ensureColumns('SummativeScores', ['coursework_override']);
         dbInsert('SummativeScores', {
           id: generateId('ssum'),
           student_id: params.student_id,
           subject_id: params.subject_id,
           coursework: params.coursework || '',
+          coursework_override: params.coursework_override !== '' && params.coursework_override !== undefined
+            ? Number(params.coursework_override) : '',
           midterm: params.midterm || '',
           final: params.final || '',
           total: sTotal,

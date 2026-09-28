@@ -157,6 +157,21 @@ export async function seedTestIndicator(opts: SeedIndicatorOpts): Promise<string
   return indicatorId;
 }
 
+export async function seedTestIndicatorScore(opts: {
+  student_id: string;
+  subject_id: string;
+  indicator_id: string;
+  score: number | string;
+}): Promise<void> {
+  await apiCall({
+    api: 'seed_indicator_score',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    indicator_id: opts.indicator_id,
+    score: opts.score,
+  });
+}
+
 interface SeedSubjectWeightsOpts {
   subject_id: string;
   coursework_max?: number;
@@ -185,6 +200,7 @@ interface SeedSummativeOpts {
   subject_id: string;
   total: number;
   coursework?: number | string;
+  coursework_override?: number | string;
   midterm?: number | string;
   final?: number | string;
   makeup_grade?: number | string;
@@ -230,6 +246,7 @@ export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> 
     subject_id: opts.subject_id,
     total: opts.total,
     coursework: opts.coursework ?? '',
+    coursework_override: opts.coursework_override ?? '',
     midterm: opts.midterm ?? '',
     final: opts.final ?? '',
     makeup_grade: opts.makeup_grade ?? '',

@@ -286,6 +286,7 @@ function loadIndicators() {
 
 function renderIndicators(indicators) {
   document.getElementById('indicatorsLoading').style.display = 'none';
+  currentIndicators = indicators.slice();
   var tbody = document.getElementById('indicatorsBody');
   tbody.innerHTML = '';
   if (indicators.length === 0) {
@@ -300,12 +301,103 @@ function renderIndicators(indicators) {
         '<td>' + escHtml(ind.code) + '</td>' +
         '<td>' + escHtml(ind.description) + '</td>' +
         '<td>' + escHtml(ind.max_score) + '</td>' +
-        '<td class="table-action-cell"><div class="table-row-actions"><button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button></div></td>';
+        '<td class="table-action-cell"><div class="table-row-actions">' +
+        '<button class="btn-secondary btn-edit" onclick="editIndicator(this.closest(\'tr\').getAttribute(\'data-indicator-id\'))" style="font-size:12px;padding:5px 12px">แก้ไข</button>' +
+        '<button class="btn-danger" onclick="deleteIndicator(\'' + escHtml(ind.indicator_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
+        '</div></td>';
       tbody.appendChild(tr);
     });
   }
   document.getElementById('indicatorsTable').style.display = 'table';
   if (indicatorsBulkController) indicatorsBulkController.refresh();
+}
+
+var currentIndicators = [];
+
+function findIndicator(indicatorId) {
+  return currentIndicators.find(function(ind) {
+    return String(ind.indicator_id) === String(indicatorId);
+  });
+}
+
+function findIndicatorRow(indicatorId) {
+  var rows = document.querySelectorAll('#indicatorsBody tr[data-indicator-id]');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].getAttribute('data-indicator-id')) === String(indicatorId)) return rows[i];
+  }
+  return null;
+}
+
+function editIndicator(indicatorId) {
+  var ind = findIndicator(indicatorId);
+  var tr = findIndicatorRow(indicatorId);
+  if (!ind || !tr) return;
+
+  var activeRow = document.querySelector('#indicatorsBody tr.indicator-editing');
+  if (activeRow && activeRow !== tr) {
+    showToast('กรุณาบันทึกหรือยกเลิกรายการที่กำลังแก้ไขก่อน', 'error');
+    return;
+  }
+
+  tr.classList.add('indicator-editing');
+  tr.innerHTML =
+    '<td class="bulk-row-select-col"></td>' +
+    '<td><input class="indicator-edit-order" type="number" min="0" step="1" value="' + escHtml(ind.display_order) + '" aria-label="ลำดับ"></td>' +
+    '<td><input class="indicator-edit-code" type="text" value="' + escHtml(ind.code) + '" aria-label="รหัสตัวชี้วัด"></td>' +
+    '<td><textarea class="indicator-edit-description" rows="2" aria-label="คำอธิบาย">' + escHtml(ind.description) + '</textarea></td>' +
+    '<td><input class="indicator-edit-max" type="number" min="1" max="10" step="1" value="' + escHtml(ind.max_score) + '" aria-label="คะแนนสูงสุด"></td>' +
+    '<td class="table-action-cell"><div class="table-row-actions">' +
+    '<button class="btn-primary btn-save" onclick="saveIndicator(this.closest(\'tr\').getAttribute(\'data-indicator-id\'))" style="font-size:12px;padding:5px 12px">บันทึก</button>' +
+    '<button class="btn-secondary btn-cancel" onclick="cancelIndicatorEdit()" style="font-size:12px;padding:5px 12px">ยกเลิก</button>' +
+    '</div></td>';
+  tr.querySelector('.indicator-edit-code').focus();
+  tr.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') cancelIndicatorEdit();
+  });
+}
+
+function cancelIndicatorEdit() {
+  renderIndicators(currentIndicators);
+}
+
+function saveIndicator(indicatorId) {
+  var tr = findIndicatorRow(indicatorId);
+  if (!tr) return;
+  var code = tr.querySelector('.indicator-edit-code').value.trim();
+  var description = tr.querySelector('.indicator-edit-description').value.trim();
+  var maxScoreText = tr.querySelector('.indicator-edit-max').value.trim();
+  var displayOrderText = tr.querySelector('.indicator-edit-order').value.trim();
+  var maxScore = Number(maxScoreText);
+  var displayOrder = Number(displayOrderText);
+
+  if (!code) { showToast('กรุณากรอกรหัสตัวชี้วัด', 'error'); return; }
+  if (!maxScoreText || !Number.isInteger(maxScore) || maxScore < 1 || maxScore > 10) {
+    showToast('คะแนนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 10', 'error'); return;
+  }
+  if (displayOrderText === '' || !Number.isInteger(displayOrder) || displayOrder < 0) {
+    showToast('ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป', 'error'); return;
+  }
+
+  var saveBtn = tr.querySelector('.btn-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'กำลังบันทึก...';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'บันทึก';
+        showToast(result.error, 'error');
+        return;
+      }
+      showToast('แก้ไขตัวชี้วัดสำเร็จ', 'success');
+      loadIndicators();
+    })
+    .withFailureHandler(function(err) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'บันทึก';
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .serverUpdateIndicator(TOKEN, indicatorId, code, description, maxScore, displayOrder);
 }
 
 function addIndicator() {

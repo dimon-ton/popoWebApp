@@ -26,7 +26,8 @@ function getFormativeData(token, class_id, subject_id) {
   allScores.forEach(function(row) {
     if (row.subject_id !== subject_id) return;
     if (!scoreMap[row.student_id]) scoreMap[row.student_id] = {};
-    scoreMap[row.student_id][row.indicator_id] = Number(row.score) || 0;
+    scoreMap[row.student_id][row.indicator_id] =
+      row.score === '' || row.score === null || row.score === undefined ? '' : Number(row.score);
   });
 
   return {
@@ -62,6 +63,10 @@ function serverSaveFormative(token, class_id, subject_id, rows) {
     };
   });
   dbBatchUpsertRows_('IndicatorScores', ['student_id', 'subject_id', 'indicator_id'], upsertRows, 'id', 'iscore');
+
+  var affectedStudents = {};
+  rows.forEach(function(row) { affectedStudents[String(row.student_id)] = true; });
+  syncSummativeCoursework_(class_id, subject_id, Object.keys(affectedStudents), session.user_id);
 
   appendAuditLog(session.user_id, 'IndicatorScores', subject_id, null,
     { class_id: class_id, subject_id: subject_id, rows_saved: rows.length });

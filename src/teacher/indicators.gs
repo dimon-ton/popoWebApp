@@ -34,7 +34,63 @@ function serverAddIndicator(token, subject_id, code, description, max_score, dis
     max_score: parseInt(max_score) || 3,
     display_order: parseInt(display_order) || 0
   });
+  syncSummativeCourseworkForSubjectClasses_(subject_id, session.user_id);
   return { ok: true, indicator_id: indicator_id };
+}
+
+function serverUpdateIndicator(token, indicator_id, code, description, max_score, display_order) {
+  var session = getSession(token);
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+
+  var indicatorId = String(indicator_id || '').trim();
+  var cleanCode = String(code || '').trim();
+  var cleanDescription = String(description || '').trim();
+  var maxScore = Number(max_score);
+  var displayOrder = Number(display_order);
+
+  if (!indicatorId) throw new Error('indicator_id is required');
+  if (!cleanCode) throw new Error('กรุณากรอกรหัสตัวชี้วัด');
+  if (!isFinite(maxScore) || Math.floor(maxScore) !== maxScore || maxScore < 1 || maxScore > 10) {
+    throw new Error('คะแนนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 10');
+  }
+  if (!isFinite(displayOrder) || Math.floor(displayOrder) !== displayOrder || displayOrder < 0) {
+    throw new Error('ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป');
+  }
+
+  var indicator = dbFindOne('Indicators', 'indicator_id', indicatorId);
+  if (!indicator) throw new Error('ไม่พบตัวชี้วัด');
+  var previousMaxScore = Number(indicator.max_score);
+
+  if (session.role !== 'admin') {
+    var enrollment = dbGetAll('Enrollments').filter(function(e) {
+      return String(e.subject_id) === String(indicator.subject_id) &&
+        String(e.teacher_user_id) === String(session.user_id);
+    });
+    if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์แก้ไขตัวชี้วัดของวิชานี้');
+  }
+
+  var updates = {
+    code: cleanCode,
+    description: cleanDescription,
+    max_score: maxScore,
+    display_order: displayOrder
+  };
+  if (!dbUpdate('Indicators', 'indicator_id', indicatorId, updates)) {
+    throw new Error('ไม่สามารถแก้ไขตัวชี้วัดได้');
+  }
+  appendAuditLog(session.user_id, 'Indicators', indicatorId, indicator, {
+    indicator_id: indicatorId,
+    subject_id: indicator.subject_id,
+    code: cleanCode,
+    description: cleanDescription,
+    max_score: maxScore,
+    display_order: displayOrder,
+    action: 'update'
+  });
+  if (previousMaxScore !== maxScore) {
+    syncSummativeCourseworkForSubjectClasses_(indicator.subject_id, session.user_id);
+  }
+  return { ok: true };
 }
 
 function serverDeleteIndicator(token, indicator_id) {
@@ -50,6 +106,7 @@ function serverDeleteIndicator(token, indicator_id) {
     if (enrollment.length === 0) throw new Error('ไม่มีสิทธิ์ลบตัวชี้วัดของวิชานี้');
   }
   dbDelete('Indicators', 'indicator_id', indicator_id);
+  syncSummativeCourseworkForSubjectClasses_(subject_id, session.user_id);
   return { ok: true };
 }
 
@@ -133,6 +190,10 @@ function serverImportIndicatorsCSV(token, subject_id, rows) {
       created++;
     }
   });
+
+  if (created > 0 || updated > 0) {
+    syncSummativeCourseworkForSubjectClasses_(subject_id, session.user_id);
+  }
 
   return { ok: true, success_count: created + updated, created_count: created, updated_count: updated, warnings: warnings };
 }

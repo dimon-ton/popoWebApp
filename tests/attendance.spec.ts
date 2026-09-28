@@ -235,7 +235,7 @@ test.describe('Attendance copy from another subject', () => {
     expect(destinationAfterSave.every(row => row.status === '/')).toBe(true);
   });
 
-  test('backend rejects an incomplete source subject', async ({ page }) => {
+  test('backend rejects a source subject with no usable attendance', async ({ page }) => {
     await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${destinationSubjectId}&week=1`);
     await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
     const result = await page.evaluate((sourceId) => new Promise<{ error?: string }>((resolve) => {
@@ -245,6 +245,6 @@ test.describe('Attendance copy from another subject', () => {
         .withFailureHandler((error: { message?: string }) => resolve({ error: error.message || String(error) }))
         .getAttendanceSourceValues(app.TOKEN, app.CLASS_ID, app.SUBJECT_ID, sourceId);
     }), incompleteSubjectId);
-    expect(result.error).toContain('ข้อมูลยังไม่ครบถ้วน');
+    expect(result.error).toContain('ไม่สามารถนำมาใช้');
   });
 });
