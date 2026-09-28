@@ -53,6 +53,10 @@ test.describe('Scheduled attendance', () => {
     })).toBe(true);
     const friday = sessions.filter(item => new Date(`${item.date}T00:00:00`).getDay() === 5);
     expect(friday.map(item => item.period)).toEqual([1, 2]);
+    const fridayButtons = page.locator('.attendance-date-fill-link[data-period="1"], .attendance-date-fill-link[data-period="2"]');
+    await expect(fridayButtons).toHaveCount(2);
+    expect(await fridayButtons.evaluateAll(buttons =>
+      buttons.length === 2 && buttons[0].closest('th') === buttons[1].closest('th'))).toBe(true);
   });
 
   test('saves two periods on one date independently and counts both', async ({ page }) => {

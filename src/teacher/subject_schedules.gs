@@ -1,6 +1,23 @@
 // Weekly subject schedules are shared by every teacher assigned to a class/subject.
 var SUBJECT_SCHEDULE_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
+// Older databases may predate the subject schedule tab. Create it on first use
+// so opening attendance does not depend on an administrator rerunning setup.
+function ensureSubjectSchedulesSchema_() {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  var ss = SpreadsheetApp.openById(id);
+  if (ss.getSheetByName('SubjectSchedules')) return;
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    if (!ss.getSheetByName('SubjectSchedules')) {
+      ensureTab(ss, 'SubjectSchedules', TAB_SCHEMA.SubjectSchedules);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function subjectScheduleTerm_() {
   var school = getSchoolInfo() || {};
   return {
@@ -32,6 +49,7 @@ function normalizeScheduleEntries_(entries) {
 }
 
 function subjectScheduleRows_(classId, subjectId, term, rows) {
+  if (!rows) ensureSubjectSchedulesSchema_();
   return (rows || dbGetAll('SubjectSchedules')).filter(function(row) {
     return String(row.class_id) === String(classId) &&
       String(row.subject_id) === String(subjectId) &&
@@ -61,6 +79,7 @@ function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries,
   var session = requireSession_(token);
   var entries = normalizeScheduleEntries_(scheduleEntries);
   var term = subjectScheduleTerm_();
+  ensureSubjectSchedulesSchema_();
   return withDbLock_(function() {
     // Recheck authorization after acquiring the lock so a revoked assignment cannot save.
     requireSubjectAccess_(session, class_id, subject_id);

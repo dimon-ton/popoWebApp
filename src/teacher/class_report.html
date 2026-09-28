@@ -353,10 +353,27 @@ function attendanceHolidayNote(d) {
   return '<div class="form-note"><b>หมายเหตุ</b><br>' + lines + '</div>';
 }
 
+function attendanceDateGroups(dates) {
+  var groups = [];
+  (dates || []).forEach(function(value) {
+    var key = String(value.date || value || '');
+    var last = groups[groups.length - 1];
+    if (last && last.key === key) last.sessions.push(value);
+    else groups.push({ key: key, sessions: [value] });
+  });
+  return groups;
+}
+
 function attendanceDayHeaders(dates) {
-  return dates.map(function(value) {
-    var date = parseReportIsoDate(value.date || value);
-    return '<th style="width:5mm">' + (date ? date.getDate() : '') + '<br>คาบ ' + (value.period || '') + '</th>';
+  return attendanceDateGroups(dates).map(function(group) {
+    var date = parseReportIsoDate(group.key);
+    return '<th colspan="' + group.sessions.length + '">' + (date ? date.getDate() : '') + '</th>';
+  }).join('');
+}
+
+function attendancePeriodHeaders(dates) {
+  return (dates || []).map(function(value) {
+    return '<th style="width:5mm">' + escHtml(value.period || '') + '</th>';
   }).join('');
 }
 
@@ -517,14 +534,17 @@ function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
   var heading = d.curriculum_data
     ? curriculumPageHeading(d, 'บันทึกเวลาเรียน', true)
     : startIndex === 0 ? standardReportSectionHeading(d, 'บันทึกการมาเรียน') : '';
-  var body = heading + '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:23mm">เลขประจำตัว</th><th rowspan="3" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
+  var body = heading + '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="4" style="width:8mm">เลขที่</th><th rowspan="4" style="width:23mm">เลขประจำตัว</th><th rowspan="4" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr><tr>' + attendancePeriodHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
   return referenceShell(n, body, 'landscape-table');
 }
 
 function indicatorHeaders(d, count) {
   var inds = (d.indicators || []).slice(0, count);
+  var configuredCount = inds.length;
   while (inds.length < count) inds.push({ code: '' });
-  return inds.map(function(ind, i) { return rotatedTh('ต ' + (ind.code || (i + 1))); }).join('');
+  return inds.map(function(ind, i) {
+    return rotatedTh(i < configuredCount ? 'ต ' + (ind.code || (i + 1)) : '');
+  }).join('');
 }
 
 function rotatedTh(text, attrs) {

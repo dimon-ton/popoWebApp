@@ -227,6 +227,124 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   return { ok: true, saved: normalizedCells.length };
 }
 
+// Mark every blank scheduled period in the current semester as present.
+// Existing present, leave, and absent values are never overwritten.
+function serverMarkSemesterPresent(token, class_id, subject_id) {
+  var session = requireSession_(token);
+  requireSubjectAccess_(session, class_id, subject_id);
+  var attendanceConfig = getAttendanceConfig();
+  var holidaySet = getHolidayDateSet();
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
+
+  var result;
+  try {
+    requireSubjectAccess_(session, class_id, subject_id);
+    var term = subjectScheduleTerm_();
+    var schedule = subjectScheduleRows_(class_id, subject_id, term);
+    var sessions = [];
+    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule)
+      .forEach(function(weekSessions) {
+        weekSessions.forEach(function(item) { sessions.push(item); });
+      });
+    var students = dbFind('Students', 'class_id', class_id);
+    if (!sessions.length || !students.length) {
+      return { ok: true, saved: 0, sessions: sessions.length, students: students.length };
+    }
+
+    var sheet = getSheet('Attendance');
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var sidCol = headers.indexOf('student_id');
+    var subjCol = headers.indexOf('subject_id');
+    var dateCol = headers.indexOf('date');
+    var periodCol = headers.indexOf('period');
+    var statusCol = headers.indexOf('status');
+    var updByCol = headers.indexOf('updated_by');
+    var updAtCol = headers.indexOf('updated_at');
+    var idCol = headers.indexOf('attendance_id');
+    if ([sidCol, subjCol, dateCol, periodCol, statusCol, updByCol, updAtCol, idCol].some(function(col) { return col < 0; })) {
+      throw new Error('โครงสร้างตาราง Attendance ไม่ถูกต้อง');
+    }
+
+    var existingByKey = {};
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][subjCol]) !== String(subject_id)) continue;
+      var existingDate = formatDateISO(new Date(data[i][dateCol]));
+      existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
+    }
+
+    var now = new Date().toISOString();
+    var modifiedRows = {};
+    var appendedRows = [];
+    students.forEach(function(student) {
+      sessions.forEach(function(item) {
+        var key = String(student.student_id) + '|' + item.date + '|' + item.period;
+        var existingIndex = existingByKey[key];
+        if (existingIndex !== undefined) {
+          if (String(data[existingIndex][statusCol] || '').trim() !== '') return;
+          data[existingIndex][statusCol] = '/';
+          data[existingIndex][updByCol] = session.user_id;
+          data[existingIndex][updAtCol] = now;
+          modifiedRows[existingIndex] = data[existingIndex];
+          return;
+        }
+        var newRow = headers.map(function() { return ''; });
+        newRow[idCol] = generateId('att');
+        newRow[sidCol] = student.student_id;
+        newRow[subjCol] = subject_id;
+        newRow[dateCol] = item.date;
+        newRow[periodCol] = item.period;
+        newRow[statusCol] = '/';
+        newRow[updByCol] = session.user_id;
+        newRow[updAtCol] = now;
+        appendedRows.push(newRow);
+      });
+    });
+
+    var modifiedIndexes = Object.keys(modifiedRows).map(function(index) { return Number(index); })
+      .sort(function(a, b) { return a - b; });
+    var runStart = null;
+    var runRows = [];
+    function flushModifiedRun() {
+      if (runStart === null || !runRows.length) return;
+      sheet.getRange(runStart + 1, 1, runRows.length, headers.length).setValues(runRows);
+      runStart = null;
+      runRows = [];
+    }
+    modifiedIndexes.forEach(function(index) {
+      if (runStart === null) {
+        runStart = index;
+      } else if (index !== runStart + runRows.length) {
+        flushModifiedRun();
+        runStart = index;
+      }
+      runRows.push(modifiedRows[index]);
+    });
+    flushModifiedRun();
+
+    if (appendedRows.length) {
+      var appendStart = sheet.getLastRow() + 1;
+      sheet.getRange(appendStart, dateCol + 1, appendedRows.length, 1).setNumberFormat('@');
+      sheet.getRange(appendStart, 1, appendedRows.length, headers.length).setValues(appendedRows);
+    }
+    result = {
+      ok: true,
+      saved: modifiedIndexes.length + appendedRows.length,
+      sessions: sessions.length,
+      students: students.length
+    };
+  } finally {
+    lock.releaseLock();
+  }
+
+  appendAuditLog(session.user_id, 'Attendance', subject_id, null, {
+    action: 'mark_semester_present', class_id: class_id, subject_id: subject_id,
+    cells_saved: result.saved, sessions: result.sessions, students: result.students
+  });
+  return result;
+}
+
 // Returns the first Monday of the academic year based on SchoolInfo.academic_year
 // academic_year format: "2567" (Thai year) or "2024"
 // Thai academic year starts in mid-May; we use May 13 as the anchor

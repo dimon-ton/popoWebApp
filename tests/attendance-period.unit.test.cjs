@@ -16,6 +16,7 @@ function sheet(headers) {
     getRange: (row, col, count) => ({
       getValues: () => rows.slice(row - 1, row - 1 + count).map(value => [...value]),
       setValues: values => values.forEach((value, offset) => { rows[row - 1 + offset] = [...value]; }),
+      setNumberFormat: () => {},
     }),
     getLastRow: () => rows.length,
     getLastColumn: () => headers.length,
@@ -47,6 +48,7 @@ function harness(role = 'teacher', userId = 'teacher_a') {
   context.dbFind = (tab, key, value) => context.dbGetAll(tab).filter(row => String(row[key]) === String(value));
   context.dbFindOne = (tab, key, value) => context.dbFind(tab, key, value)[0] || null;
   context.getSheet = tab => sheets[tab];
+  context.ensureSubjectSchedulesSchema_ = () => {};
   context.withDbLock_ = fn => fn();
   context.LockService = { getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
   context.withClassLabel = cls => ({ ...cls, class_label: 'ป.4/1' });
@@ -159,6 +161,25 @@ test('editing a schedule requires confirmation with attendance and retains every
   assert.equal(sheets.Attendance.rows[1][attendanceHeaders.indexOf('period')], 3);
 });
 
+test('semester bulk attendance fills only blank scheduled cells and preserves existing statuses', () => {
+  const { context, sheets } = harness();
+  context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
+  sheets.Attendance.rows.push([
+    'existing_absent', 'student_a', 'math', '2026-09-28', 2, 'ข', 'teacher_a', '2026-09-28T00:00:00.000Z',
+  ]);
+  const result = context.serverMarkSemesterPresent('token', 'class_a', 'math');
+  assert.equal(result.saved, 3);
+  assert.equal(result.sessions, 4);
+  assert.equal(result.students, 1);
+  const records = sheets.Attendance.rows.slice(1);
+  assert.equal(records.length, 4);
+  assert.equal(records.find(row => row[0] === 'existing_absent')[5], 'ข');
+  assert.equal(records.filter(row => row[5] === '/').length, 3);
+  const secondRun = context.serverMarkSemesterPresent('token', 'class_a', 'math');
+  assert.equal(secondRun.saved, 0);
+  assert.equal(sheets.Attendance.rows.length, 5);
+});
+
 test('report attendance cells distinguish periods on the same date', () => {
   const html = fs.readFileSync(path.join(root, 'teacher', 'class_report.html'), 'utf8');
   const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
@@ -171,9 +192,14 @@ test('report attendance cells distinguish periods on the same date', () => {
   const result = context.pageReferenceAttendanceChunk({
     attendance_students: [{ student_id: 'student_a', seq_no: 1, student_code: '100', full_name: 'นักเรียน', attendance: { '2026-09-30|3': '/', '2026-09-30|4': 'ข' } }],
   }, 1, [{ date: '2026-09-30', period: 3, week: 1 }, { date: '2026-09-30', period: 4, week: 1 }], 0);
-  assert.match(result, /คาบ 3/);
-  assert.match(result, /คาบ 4/);
+  assert.match(result, /<th colspan="2">30<\/th>/);
+  assert.match(result, /<th style="width:5mm">3<\/th><th style="width:5mm">4<\/th>/);
+  assert.doesNotMatch(result, /คาบ/);
   assert.match(result, /<td>\/<\/td><td>ข<\/td>/);
+  const indicatorHead = context.indicatorHeaders({ indicators: [{ code: 'พ 5/6 ป.1' }] }, 4);
+  assert.match(indicatorHead, /ต พ 5\/6 ป\.1/);
+  assert.equal((indicatorHead.match(/class="rot"/g) || []).length, 4);
+  assert.doesNotMatch(indicatorHead, /ต 2|ต 3|ต 4/);
 });
 
 test('report aggregation counts period records and retains separate same-date values', () => {
@@ -217,6 +243,14 @@ test('client click cycle and bulk actions keep date and period separate', () => 
   context.refreshAttendanceWeeklyTotals = () => {};
   context.showToast = () => {};
   context.currentData = { can_edit: true, sessions: [{ date: '2026-09-30', period: 3 }, { date: '2026-09-30', period: 4 }] };
+  const grouped = context.groupAttendanceSessionsByDate([
+    { date: '2026-09-30', period: 3 },
+    { date: '2026-09-30', period: 4 },
+    { date: '2026-10-02', period: 1 },
+  ]);
+  assert.equal(grouped.length, 2);
+  assert.deepEqual(Array.from(grouped[0].sessions, item => item.period), [3, 4]);
+  assert.deepEqual(Array.from(grouped[1].sessions, item => item.period), [1]);
   for (const status of ['/', 'ล', 'ข', '']) {
     context.cycleCell(cells[0]);
     assert.equal(cells[0].textContent, status);
@@ -228,6 +262,57 @@ test('client click cycle and bulk actions keep date and period separate', () => 
   assert.equal(cells[1].textContent, '/');
   assert.equal(context.pendingChanges['a|2026-09-30|3'].status, '/');
   assert.equal(context.pendingChanges['a|2026-09-30|4'].status, '/');
+
+  const scheduleButton = {
+    disabled: false, textContent: 'ตั้งค่าคาบเรียน', innerHTML: '', attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+  };
+  let requestCount = 0;
+  let failureHandler;
+  const runner = {
+    withSuccessHandler() { return this; },
+    withFailureHandler(handler) { failureHandler = handler; return this; },
+    getSubjectSchedule() { requestCount++; },
+  };
+  context.document.getElementById = id => id === 'openScheduleBtn' ? scheduleButton : { addEventListener: () => {} };
+  context.google = { script: { run: runner } };
+  context.openScheduleEditor();
+  context.openScheduleEditor();
+  assert.equal(requestCount, 1);
+  assert.equal(scheduleButton.disabled, true);
+  assert.equal(scheduleButton.attributes['aria-busy'], 'true');
+  assert.match(scheduleButton.innerHTML, /กำลังโหลด/);
+  failureHandler({ message: 'test error' });
+  assert.equal(scheduleButton.disabled, false);
+  assert.equal(scheduleButton.textContent, 'ตั้งค่าคาบเรียน');
+  assert.equal(scheduleButton.attributes['aria-busy'], undefined);
+
+  const semesterButton = {
+    disabled: false, textContent: '✓ เช็คช่องว่างทั้งภาคเรียนว่ามาเรียน', innerHTML: '', attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+  };
+  let semesterRequests = 0;
+  let semesterSuccess;
+  const semesterRunner = {
+    withSuccessHandler(handler) { semesterSuccess = handler; return this; },
+    withFailureHandler() { return this; },
+    serverMarkSemesterPresent() { semesterRequests++; },
+  };
+  context.pendingChanges = {};
+  context.loadAttendance = () => {};
+  context.document.getElementById = id => id === 'markSemesterPresentBtn' ? semesterButton : { addEventListener: () => {} };
+  context.google = { script: { run: semesterRunner } };
+  context.markSemesterPresent();
+  context.markSemesterPresent();
+  assert.equal(semesterRequests, 1);
+  assert.equal(semesterButton.disabled, true);
+  assert.equal(semesterButton.attributes['aria-busy'], 'true');
+  assert.match(semesterButton.innerHTML, /กำลังเช็คทั้งภาคเรียน/);
+  semesterSuccess({ saved: 3 });
+  assert.equal(semesterButton.disabled, false);
+  assert.equal(semesterButton.textContent, '✓ เช็คช่องว่างทั้งภาคเรียนว่ามาเรียน');
 });
 
 test('schema includes SubjectSchedules and attendance copy controls are absent', () => {
@@ -238,6 +323,39 @@ test('schema includes SubjectSchedules and attendance copy controls are absent',
   const html = fs.readFileSync(path.join(root, 'teacher', 'class_attendance.html'), 'utf8');
   assert.equal(html.includes('openCopyBtn'), false);
   assert.equal(html.includes('getAttendanceSourceValues'), false);
+});
+
+test('attendance creates a missing subject schedule tab once before reading it', () => {
+  const context = vm.createContext({ Logger: { log: () => {} } });
+  vm.runInContext(fs.readFileSync(path.join(root, 'database', 'setup.gs'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'teacher', 'subject_schedules.gs'), 'utf8'), context);
+  const tabs = {};
+  let created = 0;
+  const spreadsheet = {
+    getSheetByName: name => tabs[name] || null,
+    insertSheet: name => {
+      created++;
+      tabs[name] = {
+        rows: [],
+        getRange: () => ({ setValues: values => { tabs[name].rows = values; }, setFontWeight: () => {} }),
+        setFrozenRows: () => {},
+      };
+      return tabs[name];
+    },
+  };
+  context.PropertiesService = { getScriptProperties: () => ({ getProperty: () => 'db_id' }) };
+  context.SpreadsheetApp = { openById: () => spreadsheet };
+  context.LockService = { getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
+  context.dbGetAll = name => {
+    assert.equal(name, 'SubjectSchedules');
+    assert.ok(tabs[name]);
+    return [];
+  };
+  const term = { semester: '1', academic_year: '2569' };
+  assert.equal(context.subjectScheduleRows_('class_a', 'math', term).length, 0);
+  assert.equal(context.subjectScheduleRows_('class_a', 'math', term).length, 0);
+  assert.equal(created, 1);
+  assert.deepEqual(Array.from(tabs.SubjectSchedules.rows[0]), scheduleHeaders);
 });
 
 test('database setup appends missing schedule columns without changing existing data', () => {
