@@ -2,200 +2,13 @@
 
 var ATTENDANCE_STATUSES = ['/', 'ล', 'ข'];
 
-function attendanceSubjectBelongsToClass(subject, class_id, enrollments) {
-  if (!subject) return false;
-  if (String(subject.class_id || '') === String(class_id)) return true;
-  return enrollments.some(function(enrollment) {
-    return String(enrollment.class_id) === String(class_id) &&
-      String(enrollment.subject_id) === String(subject.subject_id);
-  });
-}
-
-function requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments, classes, subjects) {
-  var cls = null;
-  (classes || dbGetAll('Classes')).some(function(item) {
-    if (String(item.class_id) === String(class_id)) { cls = item; return true; }
-    return false;
-  });
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  var subject = null;
-  (subjects || dbGetAll('Subjects')).some(function(item) {
-    if (String(item.subject_id) === String(subject_id)) { subject = item; return true; }
-    return false;
-  });
-  if (!subject || !attendanceSubjectBelongsToClass(subject, class_id, enrollments)) {
-    throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
-  }
-
-  if (session.role !== 'admin') {
-    var assigned = enrollments.some(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === String(subject_id) &&
-        String(enrollment.teacher_user_id) === String(session.user_id);
-    });
-    if (!assigned) throw new Error('ไม่มีสิทธิ์แก้ไขการเข้าเรียนของวิชานี้');
-  }
-
-  return { class_info: cls, subject_info: subject };
-}
-
-function buildAttendanceSourceContext_(session, class_id, current_subject_id) {
-  var enrollments = dbGetAll('Enrollments');
-  var classes = dbGetAll('Classes');
-  var subjects = dbGetAll('Subjects');
-  var access = requireAttendanceDestinationAccess(session, class_id, current_subject_id, enrollments, classes, subjects);
-  var destinationClassLabel = withClassLabel(access.class_info).class_label;
-
-  var students = dbGetAll('Students').filter(function(student) { return String(student.class_id) === String(class_id); });
-  if (!students.length) return { sources: [], has_destination_values: false, values_by_subject: {} };
-
-  var attendanceConfig = getAttendanceConfig();
-  var dates = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days);
-  if (!dates.length) return { sources: [], has_destination_values: false, values_by_subject: {} };
-
-  var studentIds = {};
-  students.forEach(function(student) { studentIds[String(student.student_id)] = true; });
-  var allowedDates = {};
-  dates.forEach(function(date) { allowedDates[formatDateISO(date)] = true; });
-
-  var users = {};
-  dbGetAll('Users').forEach(function(user) { users[String(user.user_id)] = user.full_name || ''; });
-
-  var rowsBySubject = {};
-  var destinationHasValues = false;
-  dbGetAll('Attendance').forEach(function(row) {
-    var subjectId = String(row.subject_id || '');
-    var studentId = String(row.student_id || '');
-    var dateStr = formatDateISO(new Date(row.date));
-    if (!studentIds[studentId] || !allowedDates[dateStr]) return;
-    if (subjectId === String(current_subject_id) && ATTENDANCE_STATUSES.indexOf(String(row.status || '')) !== -1) {
-      destinationHasValues = true;
-    }
-    if (!rowsBySubject[subjectId]) rowsBySubject[subjectId] = [];
-    rowsBySubject[subjectId].push(row);
-  });
-
-  var sources = [];
-  var valuesBySubject = {};
-  subjects.forEach(function(subject) {
-    var subjectId = String(subject.subject_id || '');
-    if (!subjectId || subjectId === String(current_subject_id)) return;
-    if (!attendanceSubjectBelongsToClass(subject, class_id, enrollments)) return;
-
-    var sourceEnrollments = enrollments.filter(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === subjectId;
-    });
-
-    var teacherIds = {};
-    sourceEnrollments.forEach(function(enrollment) {
-      if (enrollment.teacher_user_id) teacherIds[String(enrollment.teacher_user_id)] = true;
-    });
-
-    var rowsByKey = {};
-    var updatedAt = '';
-    (rowsBySubject[subjectId] || []).forEach(function(row) {
-      var studentId = String(row.student_id || '');
-      var dateStr = formatDateISO(new Date(row.date));
-      if (!studentIds[studentId] || !allowedDates[dateStr]) return;
-      var key = studentId + '|' + dateStr;
-      var status = String(row.status || '');
-      if (ATTENDANCE_STATUSES.indexOf(status) === -1) return;
-      if (!rowsByKey[key] || String(row.updated_at || '') >= String(rowsByKey[key].updated_at || '')) rowsByKey[key] = row;
-      var rowUpdatedAt = String(row.updated_at || '');
-      if (rowUpdatedAt > updatedAt) updatedAt = rowUpdatedAt;
-    });
-    var rowKeys = Object.keys(rowsByKey);
-    if (!rowKeys.length) return;
-    var sourceValues = rowKeys.map(function(key) {
-      var row = rowsByKey[key];
-      return {
-        student_id: String(row.student_id),
-        date: formatDateISO(new Date(row.date)),
-        status: String(row.status)
-      };
-    });
-    sourceValues.sort(function(a, b) {
-      return a.date === b.date
-        ? String(a.student_id).localeCompare(String(b.student_id))
-        : String(a.date).localeCompare(String(b.date));
-    });
-    var studentsWithData = {};
-    var datesWithData = {};
-    sourceValues.forEach(function(value) {
-      studentsWithData[value.student_id] = true;
-      datesWithData[value.date] = true;
-    });
-    valuesBySubject[subjectId] = sourceValues;
-
-    sources.push({
-      subject_id: subjectId,
-      subject_name: subject.subject_name || subjectId,
-      teacher_names: Object.keys(teacherIds).map(function(teacherId) { return users[teacherId] || teacherId; }),
-      class_id: String(class_id),
-      class_label: destinationClassLabel,
-      status: 'partial',
-      student_count: Object.keys(studentsWithData).length,
-      students_with_data: Object.keys(studentsWithData).length,
-      day_count: Object.keys(datesWithData).length,
-      record_count: sourceValues.length,
-      updated_at: updatedAt
-    });
-  });
-
-  sources.sort(function(a, b) {
-    if (a.updated_at !== b.updated_at) return String(b.updated_at).localeCompare(String(a.updated_at));
-    return String(a.subject_name).localeCompare(String(b.subject_name), 'th', { numeric: true });
-  });
-  return { sources: sources, has_destination_values: destinationHasValues, values_by_subject: valuesBySubject };
-}
-
-function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
-  var context = buildAttendanceSourceContext_(session, class_id, current_subject_id);
-  return { sources: context.sources, has_destination_values: context.has_destination_values };
-}
-
-function getEligibleAttendanceSources(token, class_id, current_subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-  return buildEligibleAttendanceSources(session, class_id, current_subject_id);
-}
-
-function getAttendanceSourceValues(token, class_id, current_subject_id, source_subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var eligibility = buildAttendanceSourceContext_(session, class_id, current_subject_id);
-  var source = null;
-  for (var i = 0; i < eligibility.sources.length; i++) {
-    if (String(eligibility.sources[i].subject_id) === String(source_subject_id)) {
-      source = eligibility.sources[i];
-      break;
-    }
-  }
-  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่สามารถนำมาใช้กับวิชาปลายทางนี้');
-
-  var values = eligibility.values_by_subject[String(source_subject_id)] || [];
-
-  appendAuditLog(session.user_id, 'AttendanceCopy', current_subject_id, null, {
-    class_id: class_id,
-    source_subject_id: source_subject_id,
-    destination_subject_id: current_subject_id,
-    rows_loaded: values.length,
-    matched_student_count: source.students_with_data,
-    copied_value_count: values.length
-  });
-  return { source: source, values: values, has_destination_values: eligibility.has_destination_values };
-}
-
 // Returns attendance data for a given class/subject/week.
 // week: 1–N integer. Week 1 starts on SchoolInfo.semester_start_date exactly.
 // If no opening date is configured, the academic-year fallback starts on the
 // first Monday on or after May 13.
 //
 // Returns:
-//   { students, week, weekStart, dates, attendance, subject_info, class_info, can_edit }
+//   { students, week, weekStart, sessions, attendance, subject_info, class_info, can_edit }
 function getAttendanceData(token, class_id, subject_id, week) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
@@ -207,11 +20,15 @@ function getAttendanceData(token, class_id, subject_id, week) {
   if (weekNum < 1) weekNum = 1;
   var attendanceConfig = getAttendanceConfig();
   var holidaySet = getHolidayDateSet();
-  var attendanceWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
+  var term = subjectScheduleTerm_();
+  var schedule = subjectScheduleRows_(class_id, subject_id, term);
+  var calendarWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
+  var attendanceWeeks = buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule);
   var maxWeeks = Math.max(1, attendanceWeeks.length);
   if (weekNum > maxWeeks) weekNum = maxWeeks;
-  var dates = attendanceWeeks[weekNum - 1] || [];
-  var weekStart = dates[0] || attendanceConfig.start_date;
+  var sessions = attendanceWeeks[weekNum - 1] || [];
+  var weekDates = calendarWeeks[weekNum - 1] || [];
+  var weekStart = weekDates[0] || attendanceConfig.start_date;
 
   // Get students ordered by seq_no
   var students = dbFind('Students', 'class_id', class_id);
@@ -219,30 +36,30 @@ function getAttendanceData(token, class_id, subject_id, week) {
 
   // Get all attendance rows for this subject + date range
   var allAttendance = dbGetAll('Attendance');
-  var dateStrings = dates.map(function(dt) { return formatDateISO(dt); });
-
-  // Build map: student_id -> date -> status
-  var attMap = {};
-  allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id) return;
-    var ds = formatDateISO(new Date(row.date));
-    if (dateStrings.indexOf(ds) === -1) return;
-    if (!attMap[row.student_id]) attMap[row.student_id] = {};
-    attMap[row.student_id][ds] = row.status;
+  var sessionSet = {};
+  sessions.forEach(function(item) { sessionSet[item.date + '|' + item.period] = true; });
+  var yearDateSet = {};
+  calendarWeeks.forEach(function(weekDates) {
+    weekDates.forEach(function(date) { yearDateSet[formatDateISO(date)] = true; });
   });
 
-  // Compute per-student totals across full year (all dates for this subject)
+  // Build period-aware weekly lookup and full-year totals in one pass.
+  var attMap = {};
   var yearlyMap = {};
   allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id) return;
-    var rowDate = formatDateISO(new Date(row.date));
-    if (holidaySet[rowDate]) return;
+    if (String(row.subject_id) !== String(subject_id) || !Number.isSafeInteger(Number(row.period)) || Number(row.period) < 1) return;
     var sid = row.student_id;
+    var ds = formatDateISO(new Date(row.date));
+    if (!yearDateSet[ds]) return;
     if (!yearlyMap[sid]) yearlyMap[sid] = { present: 0, leave: 0, absent: 0 };
     var s = row.status;
     if (s === '/') yearlyMap[sid].present++;
     else if (s === 'ล') yearlyMap[sid].leave++;
     else if (s === 'ข') yearlyMap[sid].absent++;
+    if (sessionSet[ds + '|' + Number(row.period)] && ATTENDANCE_STATUSES.indexOf(String(row.status)) !== -1) {
+      if (!attMap[sid]) attMap[sid] = {};
+      attMap[sid][ds + '|' + Number(row.period)] = row.status;
+    }
   });
 
   return {
@@ -251,7 +68,8 @@ function getAttendanceData(token, class_id, subject_id, week) {
     max_weeks: maxWeeks,
     required_attendance_days: attendanceConfig.required_days,
     weekStart: formatDateISO(weekStart),
-    dates: dateStrings,
+    sessions: sessions,
+    schedule_entries: normalizeScheduleEntries_(schedule),
     attendance: attMap,
     yearly: yearlyMap,
     subject_info: subj,
@@ -261,19 +79,21 @@ function getAttendanceData(token, class_id, subject_id, week) {
 }
 
 // Save attendance for a week.
-// cells: array of { student_id, date, status }
+// cells: array of { student_id, date, period, status }
 // status: '/' | 'ล' | 'ข' | ''
 function serverSaveAttendance(token, class_id, subject_id, cells) {
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (!Array.isArray(cells)) throw new Error('ข้อมูลการเข้าเรียนไม่ถูกต้อง');
 
-  var enrollments = dbGetAll('Enrollments');
-  requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments);
+  requireSubjectAccess_(session, class_id, subject_id);
 
   var attendanceConfig = getAttendanceConfig();
-  var allowedDates = {};
-  buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days).forEach(function(date) {
-    allowedDates[formatDateISO(date)] = true;
+  var term = subjectScheduleTerm_();
+  var schedule = subjectScheduleRows_(class_id, subject_id, term);
+  var allowedSessions = {};
+  buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(), schedule).forEach(function(weekSessions) {
+    weekSessions.forEach(function(item) { allowedSessions[item.date + '|' + item.period] = true; });
   });
 
   var classStudentIds = {};
@@ -283,25 +103,31 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   var invalidDates = [];
   var invalidStudents = [];
   var invalidStatuses = [];
+  var invalidPeriods = [];
   var normalizedByKey = {};
   (cells || []).forEach(function(cell) {
+    if (!cell || typeof cell !== 'object') throw new Error('ข้อมูลการเข้าเรียนไม่ถูกต้อง');
     var dateStr = normalizeISODate(cell.date);
-    if (!dateStr || !allowedDates[dateStr]) invalidDates.push(String(cell.date || ''));
+    var period;
+    try { period = schedulePeriod_(cell.period); } catch (e) { invalidPeriods.push(String(cell.period || '')); }
+    if (!dateStr || (period && !allowedSessions[dateStr + '|' + period])) invalidDates.push(String(cell.date || ''));
     var studentId = String(cell.student_id || '');
     if (!classStudentIds[studentId]) invalidStudents.push(studentId);
     var status = String(cell.status || '');
     if (ATTENDANCE_STATUSES.indexOf(status) === -1 && status !== '') invalidStatuses.push(status);
-    if (dateStr && allowedDates[dateStr] && classStudentIds[studentId] &&
+    if (dateStr && period && allowedSessions[dateStr + '|' + period] && classStudentIds[studentId] &&
         (ATTENDANCE_STATUSES.indexOf(status) !== -1 || status === '')) {
-      normalizedByKey[studentId + '|' + dateStr] = {
+      normalizedByKey[studentId + '|' + dateStr + '|' + period] = {
         student_id: studentId,
         date: dateStr,
+        period: period,
         status: status
       };
     }
   });
+  if (invalidPeriods.length > 0) throw new Error('คาบเรียนต้องเป็นจำนวนเต็มมากกว่า 0');
   if (invalidDates.length > 0) {
-    throw new Error('วันที่เข้าเรียนอยู่นอกช่วงภาคเรียน: ' + invalidDates.join(', '));
+    throw new Error('วันหรือคาบเรียนไม่ตรงกับตารางเรียนของวิชานี้: ' + invalidDates.join(', '));
   }
   if (invalidStudents.length > 0) throw new Error('พบนักเรียนที่ไม่ได้อยู่ในชั้นเรียนนี้');
   if (invalidStatuses.length > 0) throw new Error('พบสถานะการเข้าเรียนที่ไม่ถูกต้อง');
@@ -312,12 +138,23 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
+    requireSubjectAccess_(session, class_id, subject_id);
+    var liveTerm = subjectScheduleTerm_();
+    var liveSessions = {};
+    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(),
+      subjectScheduleRows_(class_id, subject_id, liveTerm)).forEach(function(weekSessions) {
+        weekSessions.forEach(function(item) { liveSessions[item.date + '|' + item.period] = true; });
+      });
+    normalizedCells.forEach(function(cell) {
+      if (!liveSessions[cell.date + '|' + cell.period]) throw new Error('วันหรือคาบเรียนไม่ตรงกับตารางเรียนของวิชานี้');
+    });
     var sheet = getSheet('Attendance');
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var sidCol = headers.indexOf('student_id');
     var subjCol = headers.indexOf('subject_id');
     var dateCol = headers.indexOf('date');
+    var periodCol = headers.indexOf('period');
     var statusCol = headers.indexOf('status');
     var updByCol = headers.indexOf('updated_by');
     var updAtCol = headers.indexOf('updated_at');
@@ -328,13 +165,13 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][subjCol]) !== String(subject_id)) continue;
       var existingDate = formatDateISO(new Date(data[i][dateCol]));
-      existingByKey[String(data[i][sidCol]) + '|' + existingDate] = i;
+      existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
     }
 
     var modifiedRows = {};
     var appendedRows = [];
     normalizedCells.forEach(function(cell) {
-      var key = cell.student_id + '|' + cell.date;
+      var key = cell.student_id + '|' + cell.date + '|' + cell.period;
       var existingIndex = existingByKey[key];
       if (existingIndex !== undefined) {
         data[existingIndex][statusCol] = cell.status;
@@ -348,6 +185,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
         newRow[sidCol] = cell.student_id;
         newRow[subjCol] = subject_id;
         newRow[dateCol] = cell.date;
+        newRow[periodCol] = cell.period;
         newRow[statusCol] = cell.status;
         newRow[updByCol] = session.user_id;
         newRow[updAtCol] = now;

@@ -224,48 +224,39 @@ function getReportBookData(token, class_id, subject_id) {
 
   var attendanceConfig = getAttendanceConfig();
   var holidaySet = getHolidayDateSet();
-  var attendanceCalendar = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days)
-    .map(function(date) { return formatDateISO(date); });
+  var attendanceYearDates = {};
+  buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet).forEach(function(weekDates) {
+    weekDates.forEach(function(date) { attendanceYearDates[formatDateISO(date)] = true; });
+  });
+  var scheduleTerm = subjectScheduleTerm_();
+  var subjectSchedule = subjectScheduleRows_(class_id, subject_id, scheduleTerm);
+  var attendanceCalendar = [];
+  buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, subjectSchedule)
+    .forEach(function(weekSessions, weekIndex) {
+      weekSessions.forEach(function(item) {
+        attendanceCalendar.push({ date: item.date, day_of_week: item.day_of_week, period: item.period, week: weekIndex + 1 });
+      });
+    });
   var attendanceCalendarSet = {};
-  attendanceCalendar.forEach(function(date, index) { attendanceCalendarSet[date] = index; });
+  attendanceCalendar.forEach(function(item, index) { attendanceCalendarSet[item.date + '|' + item.period] = index; });
   var allAttendance = dbGetAll('Attendance');
   var lastAttendanceIndex = -1;
   allAttendance.forEach(function(row) {
     var status = reportNormalizeAttendanceStatus(row.status);
-    if (row.subject_id !== subject_id || !studentSet[row.student_id] || !status) return;
+    if (row.subject_id !== subject_id || !studentSet[row.student_id] || ['/', 'ล', 'ข'].indexOf(status) === -1) return;
     var dateStr = reportNormalizeAttendanceDate(row.date);
-    if (holidaySet[dateStr]) return;
-    if (attendanceCalendarSet[dateStr] !== undefined && attendanceCalendarSet[dateStr] > lastAttendanceIndex) {
-      lastAttendanceIndex = attendanceCalendarSet[dateStr];
+    var key = dateStr + '|' + Number(row.period);
+    if (attendanceCalendarSet[key] !== undefined && attendanceCalendarSet[key] > lastAttendanceIndex) {
+      lastAttendanceIndex = attendanceCalendarSet[key];
     }
   });
-  var attendance_dates = attendanceCalendar.slice(0, lastAttendanceIndex >= 0 ? lastAttendanceIndex + 1 : 24);
-  var attendance_holiday_notes = getReportAttendanceHolidayNotes(attendance_dates);
+  var attendance_sessions = attendanceCalendar.slice(0, lastAttendanceIndex >= 0 ? lastAttendanceIndex + 1 : 24);
+  var attendance_holiday_notes = getReportAttendanceHolidayNotes(attendance_sessions.map(function(item) { return item.date; }));
   var attendanceDateSet = {};
-  attendance_dates.forEach(function(date) { attendanceDateSet[date] = true; });
-  var attendance_totals = {};
-  var attendance_by_student = {};
-  students.forEach(function(student) {
-    attendance_totals[student.student_id] = { present: 0, leave: 0, absent: 0, total: 0 };
-    attendance_by_student[student.student_id] = {};
-  });
-  allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
-    var bucket = attendance_totals[row.student_id];
-    if (!bucket) return;
-    var status = reportNormalizeAttendanceStatus(row.status);
-    var dateStr = reportNormalizeAttendanceDate(row.date);
-    if (holidaySet[dateStr]) return;
-    if (status === '/') bucket.present++;
-    else if (status === 'ล') bucket.leave++;
-    else if (status === 'ข') bucket.absent++;
-    bucket.total = bucket.present + bucket.leave + bucket.absent;
-    if (attendanceDateSet[dateStr]) {
-      attendance_by_student[row.student_id][dateStr] = status;
-    }
-  });
+  attendance_sessions.forEach(function(item) { attendanceDateSet[item.date + '|' + item.period] = true; });
+  var attendanceSummary = summarizeReportAttendanceRows_(allAttendance, subject_id, studentSet, attendanceDateSet, attendanceYearDates);
   var attendance_students = students.map(function(student) {
-    var totals = attendance_totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+    var totals = attendanceSummary.totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
     return {
       student_id: student.student_id,
       seq_no: student.seq_no,
@@ -275,7 +266,7 @@ function getReportBookData(token, class_id, subject_id) {
       leave: totals.leave,
       absent: totals.absent,
       total: totals.total,
-      attendance: attendance_by_student[student.student_id] || {}
+      attendance: attendanceSummary.by_student[student.student_id] || {}
     };
   });
 
@@ -314,7 +305,7 @@ function getReportBookData(token, class_id, subject_id) {
   d.weights = weights;
   d.formative_students = formative_students;
   d.summative_students = summative_students;
-  d.attendance_dates = attendance_dates;
+  d.attendance_sessions = attendance_sessions;
   d.attendance_holiday_notes = attendance_holiday_notes;
   d.attendance_students = attendance_students;
   d.characteristics_students = characteristics_students;
@@ -325,6 +316,33 @@ function getReportBookData(token, class_id, subject_id) {
 
 function reportValueOrBlank(value) {
   return value === null || value === undefined ? '' : value;
+}
+
+function summarizeReportAttendanceRows_(rows, subjectId, studentSet, sessionSet, yearDateSet) {
+  var totals = {};
+  var byStudent = {};
+  Object.keys(studentSet).forEach(function(studentId) {
+    totals[studentId] = { present: 0, leave: 0, absent: 0, total: 0 };
+    byStudent[studentId] = {};
+  });
+  rows.forEach(function(row) {
+    var studentId = String(row.student_id);
+    var period = Number(row.period);
+    if (String(row.subject_id) !== String(subjectId) || !studentSet[studentId] ||
+        !Number.isSafeInteger(period) || period < 1) return;
+    var status = reportNormalizeAttendanceStatus(row.status);
+    if (['/', 'ล', 'ข'].indexOf(status) === -1) return;
+    var dateStr = reportNormalizeAttendanceDate(row.date);
+    if (yearDateSet && !yearDateSet[dateStr]) return;
+    var bucket = totals[studentId];
+    if (status === '/') bucket.present++;
+    else if (status === 'ล') bucket.leave++;
+    else if (status === 'ข') bucket.absent++;
+    bucket.total = bucket.present + bucket.leave + bucket.absent;
+    var key = dateStr + '|' + period;
+    if (sessionSet[key]) byStudent[studentId][key] = status;
+  });
+  return { totals: totals, by_student: byStudent };
 }
 
 function getReportAttendanceHolidayNotes(attendanceDates) {

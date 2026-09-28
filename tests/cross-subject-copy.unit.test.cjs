@@ -150,44 +150,8 @@ test('ReadThinkWrite client merge preserves blanks and copies numeric zero', () 
   assert.equal(inputs.r3.value, 0);
 });
 
-test('Attendance: partial same-class data from another teacher is eligible and other classes are rejected', () => {
-  const state = {
-    Classes: [{ class_id: 'dest_class', level: 'ป.3', section: '1' }, { class_id: 'other_class', level: 'ป.3', section: '2' }],
-    Subjects: [
-      { subject_id: 'destination', class_id: 'dest_class', subject_name: 'ปลายทาง' },
-      { subject_id: 'partial', class_id: 'dest_class', subject_name: 'ต้นทาง' },
-      { subject_id: 'other_class_source', class_id: 'other_class', subject_name: 'คนละห้อง' },
-    ],
-    Enrollments: [
-      { class_id: 'dest_class', subject_id: 'destination', teacher_user_id: 'destination_teacher' },
-      { class_id: 'dest_class', subject_id: 'partial', teacher_user_id: 'source_teacher' },
-      { class_id: 'other_class', subject_id: 'other_class_source', teacher_user_id: 'source_teacher' },
-    ],
-    Students: [{ student_id: 'shared', class_id: 'dest_class' }, { student_id: 'second', class_id: 'dest_class' }],
-    Users: [{ user_id: 'source_teacher', full_name: 'ครูต้นทาง' }],
-    Attendance: [
-      { student_id: 'shared', subject_id: 'partial', date: '2026-05-18', status: '/', updated_by: 'someone_else', updated_at: '2026-05-18' },
-      { student_id: 'shared', subject_id: 'partial', date: '2026-05-19', status: '', updated_by: 'someone_else' },
-      { student_id: 'second', subject_id: 'partial', date: '2026-05-19', status: 'invalid', updated_by: 'someone_else' },
-      { student_id: 'shared', subject_id: 'other_class_source', date: '2026-05-18', status: '/', updated_by: 'source_teacher' },
-    ],
-  };
-  const api = createServer('attendance.gs', state);
-  api.getAttendanceConfig = () => ({ start_date: new Date(2026, 4, 18), required_days: 2 });
-  api.buildAttendanceDates = () => [new Date(2026, 4, 18), new Date(2026, 4, 19)];
-  api.formatDateISO = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-  const listed = api.getEligibleAttendanceSources('token', 'dest_class', 'destination');
-  assert.deepEqual(Array.from(listed.sources, (source) => source.subject_id), ['partial']);
-  assert.equal(listed.sources[0].record_count, 1);
-  assert.deepEqual(Array.from(listed.sources[0].teacher_names), ['ครูต้นทาง']);
-  const loaded = api.getAttendanceSourceValues('token', 'dest_class', 'destination', 'partial');
-  assert.equal(loaded.values.length, 1);
-  assert.equal(loaded.values[0].status, '/');
-  assert.throws(() => api.getAttendanceSourceValues('token', 'dest_class', 'destination', 'other_class_source'), /ไม่สามารถนำมาใช้/);
-  const unauthorized = createServer('attendance.gs', state, { user_id: 'other_teacher', role: 'teacher' });
-  unauthorized.getAttendanceConfig = api.getAttendanceConfig;
-  unauthorized.buildAttendanceDates = api.buildAttendanceDates;
-  unauthorized.formatDateISO = api.formatDateISO;
-  assert.throws(() => unauthorized.getEligibleAttendanceSources('token', 'dest_class', 'destination'), /ไม่มีสิทธิ์แก้ไข/);
+test('Attendance cross-subject copy API is removed', () => {
+  const api = createServer('attendance.gs', {});
+  assert.equal(api.getEligibleAttendanceSources, undefined);
+  assert.equal(api.getAttendanceSourceValues, undefined);
 });

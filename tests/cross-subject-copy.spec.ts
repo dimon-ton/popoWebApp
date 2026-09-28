@@ -2,7 +2,6 @@ import { test, expect } from './helpers/custom-test';
 import {
   cleanupTestData,
   queryTestRows,
-  seedTestAttendance,
   seedTestCharacteristics,
   seedTestClass,
   seedTestEnrollment,
@@ -115,54 +114,4 @@ test.describe('Partial cross-subject assessment copy', () => {
     expect(afterSave?.r3).toBe(0);
   });
 
-  test('Attendance stages partial same-class data from another teacher and rejects another class', async ({ page }) => {
-    const classId = await seedTestClass({ suffix: 'copy_att_dest', level: 'ป.2', section: '1' });
-    const otherClassId = await seedTestClass({ suffix: 'copy_att_other', level: 'ป.2', section: '2' });
-    const destinationSubjectId = await seedTestSubject({ suffix: 'copy_att_dest', name: 'ปลายทางการเข้าเรียนบางส่วน', class_id: classId });
-    const sourceSubjectId = await seedTestSubject({ suffix: 'copy_att_source', name: 'ต้นทางการเข้าเรียนบางส่วน', class_id: classId });
-    const otherClassSubjectId = await seedTestSubject({ suffix: 'copy_att_other', name: 'ต้นทางการเข้าเรียนต่างห้อง', class_id: otherClassId });
-    const studentId = await seedTestStudent({ class_suffix: 'copy_att_dest', seq: 1, full_name: 'test_นักเรียนการเข้าเรียนบางส่วน' });
-    const destinationTeacherId = await seedTestUser({ suffix: 'copy_att_dest', full_name: 'test_ครูปลายทางการเข้าเรียน' });
-    const sourceTeacherId = await seedTestUser({ suffix: 'copy_att_source', full_name: 'test_ครูต้นทางการเข้าเรียน' });
-
-    await seedTestEnrollment({ suffix: 'copy_att_dest', class_id: classId, subject_id: destinationSubjectId, teacher_user_id: destinationTeacherId });
-    await seedTestEnrollment({ suffix: 'copy_att_source', class_id: classId, subject_id: sourceSubjectId, teacher_user_id: sourceTeacherId });
-    await seedTestEnrollment({ suffix: 'copy_att_other', class_id: otherClassId, subject_id: otherClassSubjectId, teacher_user_id: sourceTeacherId });
-
-    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${destinationSubjectId}&week=1`);
-    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
-    const firstDate = await page.locator('#attBody .att-cell').nth(0).getAttribute('data-date');
-    const secondDate = await page.locator('#attBody .att-cell').nth(1).getAttribute('data-date');
-    expect(firstDate).toBeTruthy();
-    expect(secondDate).toBeTruthy();
-    await seedTestAttendance({ student_id: studentId, subject_id: sourceSubjectId, updated_by: sourceTeacherId, date: firstDate!, status: '/' });
-    await seedTestAttendance({ student_id: studentId, subject_id: destinationSubjectId, updated_by: destinationTeacherId, date: secondDate!, status: 'ล' });
-    await seedTestAttendance({ student_id: studentId, subject_id: otherClassSubjectId, updated_by: sourceTeacherId, date: firstDate!, status: 'ข' });
-
-    await page.reload();
-    await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
-    await page.locator('#openCopyBtn').click();
-    await expect(page.locator('#sourceList')).toContainText('ต้นทางการเข้าเรียนบางส่วน', { timeout: 20_000 });
-    await expect(page.locator('#sourceList')).toContainText('test_ครูต้นทางการเข้าเรียน');
-    await expect(page.locator('#sourceList')).not.toContainText('ต้นทางการเข้าเรียนต่างห้อง');
-    await page.locator(`input[name="attendanceSource"][value="${sourceSubjectId}"]`).check();
-    await page.locator('#confirmSourceBtn').click();
-    await expect(page.locator('#replaceWarning')).toBeVisible();
-    await page.locator('#confirmSourceBtn').click();
-
-    const firstCell = page.locator(`.att-cell[data-student="${studentId}"][data-date="${firstDate}"]`);
-    const secondCell = page.locator(`.att-cell[data-student="${studentId}"][data-date="${secondDate}"]`);
-    await expect(firstCell).toHaveText('/');
-    await expect(secondCell).toHaveText('ล');
-    const beforeSave = (await queryTestRows('Attendance', 'student_id')).filter(row => row.student_id === studentId && row.subject_id === destinationSubjectId);
-    expect(beforeSave).toHaveLength(1);
-    expect(beforeSave[0].status).toBe('ล');
-
-    await page.locator('#saveBtn').click();
-    await expect(page.locator('#toast')).toContainText('บันทึกการเข้าเรียนสำเร็จ', { timeout: 30_000 });
-    const afterSave = (await queryTestRows('Attendance', 'student_id')).filter(row => row.student_id === studentId && row.subject_id === destinationSubjectId);
-    expect(afterSave).toHaveLength(2);
-    expect(afterSave.find(row => row.date === firstDate)?.status).toBe('/');
-    expect(afterSave.find(row => row.date === secondDate)?.status).toBe('ล');
-  });
 });

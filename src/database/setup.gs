@@ -21,6 +21,7 @@ var TAB_SCHEMA = {
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],
   'SubjectWeights':   ['subject_id', 'class_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
   'Attendance':       ['attendance_id', 'student_id', 'subject_id', 'date', 'period', 'status', 'updated_by', 'updated_at'],
+  'SubjectSchedules': ['schedule_id', 'class_id', 'subject_id', 'day_of_week', 'period', 'semester', 'academic_year', 'created_by', 'updated_at'],
   'IndicatorScores':  ['id', 'student_id', 'subject_id', 'indicator_id', 'score', 'updated_by', 'updated_at'],
   'LearningOutcomes': ['outcome_id', 'subject_id', 'term', 'code', 'description', 'max_score', 'display_order'],
   'LearningOutcomeScores': ['id', 'student_id', 'subject_id', 'outcome_id', 'score', 'updated_by', 'updated_at'],
@@ -35,7 +36,7 @@ var TAB_SCHEMA = {
 
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
-  'Students', 'Indicators', 'SubjectWeights', 'Attendance',
+  'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'SubjectSchedules',
   'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
@@ -103,8 +104,13 @@ function ensureTab(ss, tabName, headers) {
   var existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var missing = headers.filter(function(h) { return existingHeaders.indexOf(h) === -1; });
   if (missing.length > 0) {
-    Logger.log('WARNING: tab "' + tabName + '" is missing columns: ' + missing.join(', ')
-      + '. Fix the headers in row 1 of that tab before using the app.');
+    var requiredColumns = existingHeaders.length + missing.length;
+    if (sheet.getMaxColumns && sheet.getMaxColumns() < requiredColumns) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredColumns - sheet.getMaxColumns());
+    }
+    sheet.getRange(1, existingHeaders.length + 1, 1, missing.length).setValues([missing]);
+    sheet.getRange(1, existingHeaders.length + 1, 1, missing.length).setFontWeight('bold');
+    Logger.log('Added missing columns to "' + tabName + '": ' + missing.join(', '));
   } else {
     Logger.log('Tab OK: ' + tabName);
   }

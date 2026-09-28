@@ -227,6 +227,7 @@ interface SeedAttendanceOpts {
   subject_id: string;
   updated_by: string;
   date: string;
+  period: number;
   status?: '/' | 'ล' | 'ข';
   updated_at?: string;
 }
@@ -289,9 +290,20 @@ export async function seedTestAttendance(opts: SeedAttendanceOpts): Promise<void
     subject_id: opts.subject_id,
     updated_by: opts.updated_by,
     date: opts.date,
+    period: opts.period,
     status: opts.status ?? '/',
     updated_at: opts.updated_at ?? '',
   });
+}
+
+export async function seedTestSubjectSchedule(opts: {
+  class_id: string;
+  subject_id: string;
+  created_by: string;
+  day_of_week: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI';
+  period: number;
+}): Promise<void> {
+  await apiCall({ api: 'seed_subject_schedule', ...opts });
 }
 
 export async function seedCompleteTestAttendance(opts: SeedCompleteAttendanceOpts): Promise<Record<string, unknown>> {

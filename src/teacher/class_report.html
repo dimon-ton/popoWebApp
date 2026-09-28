@@ -355,15 +355,15 @@ function attendanceHolidayNote(d) {
 
 function attendanceDayHeaders(dates) {
   return dates.map(function(value) {
-    var date = parseReportIsoDate(value);
-    return '<th style="width:5mm">' + (date ? date.getDate() : '') + '</th>';
+    var date = parseReportIsoDate(value.date || value);
+    return '<th style="width:5mm">' + (date ? date.getDate() : '') + '<br>คาบ ' + (value.period || '') + '</th>';
   }).join('');
 }
 
 function attendanceMonthHeaders(dates) {
   var groups = [];
   dates.forEach(function(value) {
-    var date = parseReportIsoDate(value);
+    var date = parseReportIsoDate(value.date || value);
     var label = date ? THAI_MONTH_ABBR[date.getMonth()] : '';
     var last = groups[groups.length - 1];
     if (last && last.label === label) last.count++;
@@ -499,18 +499,18 @@ function pageReferenceSubjectDescription(d, n) {
 }
 
 function pageReferenceAttendance(d, n) {
-  var allDates = d.attendance_dates || [];
-  return chunkArray(allDates, 24).map(function(dates, pageIndex) {
-    return pageReferenceAttendanceChunk(d, n + pageIndex, dates, pageIndex * 24);
+  var allSessions = d.attendance_sessions || [];
+  return chunkArray(allSessions, 24).map(function(sessions, pageIndex) {
+    return pageReferenceAttendanceChunk(d, n + pageIndex, sessions, pageIndex * 24);
   });
 }
 
 function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
-  var startWeek = Math.floor(startIndex / 5) + 1;
-  var endWeek = Math.max(startWeek, Math.ceil((startIndex + dates.length) / 5));
+  var startWeek = dates.length ? dates[0].week : 1;
+  var endWeek = dates.length ? dates[dates.length - 1].week : startWeek;
   var rows = (d.attendance_students || studentRows(d)).map(function(s, i) {
     var attendance = s.attendance || {};
-    var marks = dates.map(function(date) { return '<td>' + blank(attendance[date] || '') + '</td>'; }).join('');
+    var marks = dates.map(function(item) { return '<td>' + blank(attendance[item.date + '|' + item.period] || '') + '</td>'; }).join('');
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
