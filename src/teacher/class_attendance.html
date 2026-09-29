@@ -46,7 +46,7 @@
     <div id="scheduleEmpty" style="display:none;text-align:center;padding:32px 12px">
       <h3>ยังไม่ได้ตั้งค่าคาบเรียนสำหรับวิชานี้</h3>
       <p>กรุณากำหนดวันและคาบเรียนก่อนเริ่มเช็คชื่อ</p>
-      <button type="button" class="btn-primary" onclick="openScheduleEditor()">ตั้งค่าคาบเรียน</button>
+      <button type="button" class="btn-primary" id="openScheduleEmptyBtn" onclick="openScheduleEditor()">ตั้งค่าคาบเรียน</button>
     </div>
     <div id="weekEmpty" style="display:none;text-align:center;padding:24px">สัปดาห์นี้ไม่มีคาบเรียนที่กำหนดไว้</div>
     <div class="loading-msg" id="loadingMsg">
@@ -77,7 +77,7 @@
     <h3 id="scheduleModalTitle">ตั้งค่าคาบเรียน</h3>
     <p>เลือกวันและคาบเรียนของวิชานี้ สามารถเลือกหลายคาบในวันเดียวกันได้</p>
     <div id="scheduleEditorGrid"></div>
-    <div id="scheduleWarning" class="copy-warning" style="display:none" role="alert">วิชานี้มีข้อมูลการเข้าเรียนอยู่แล้ว การเปลี่ยนตารางเรียนอาจทำให้คาบเรียนเดิมไม่ตรงกับตารางใหม่ ข้อมูลการเข้าเรียนเดิมจะไม่ถูกลบ</div>
+    <div id="scheduleWarning" class="copy-warning" style="display:none" role="alert">วิชานี้มีข้อมูลการเข้าเรียนอยู่แล้ว เมื่อยืนยัน ระบบจะลบเฉพาะข้อมูลเช็คชื่อของวันและคาบที่เอาติ๊กออก ส่วนข้อมูลของคาบอื่นจะยังคงอยู่</div>
     <div class="modal-actions">
       <button type="button" class="btn-secondary" onclick="closeScheduleEditor()">ยกเลิก</button>
       <button type="button" class="btn-primary" id="saveScheduleBtn" onclick="saveScheduleEditor()">บันทึกตารางเรียน</button>
@@ -109,6 +109,7 @@ var originalScheduleEntries = [];
 var scheduleChangeConfirmed = false;
 var extraSchedulePeriods = [];
 var scheduleEditorLoading = false;
+var scheduleSaveLoading = false;
 var semesterMarkLoading = false;
 var SCHEDULE_DAYS = [
   { code: 'MON', name: 'จันทร์' }, { code: 'TUE', name: 'อังคาร' },
@@ -212,16 +213,18 @@ function overlayPendingAttendance(data) {
 
 function setScheduleEditorLoading(isLoading) {
   scheduleEditorLoading = !!isLoading;
-  var button = document.getElementById('openScheduleBtn');
-  if (!button) return;
-  button.disabled = scheduleEditorLoading;
-  if (scheduleEditorLoading) {
-    button.setAttribute('aria-busy', 'true');
-    button.innerHTML = '<span class="button-inline-spinner" aria-hidden="true"></span>กำลังโหลด...';
-  } else {
-    button.removeAttribute('aria-busy');
-    button.textContent = 'ตั้งค่าคาบเรียน';
-  }
+  ['openScheduleBtn', 'openScheduleEmptyBtn'].forEach(function(buttonId) {
+    var button = document.getElementById(buttonId);
+    if (!button) return;
+    button.disabled = scheduleEditorLoading;
+    if (scheduleEditorLoading) {
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<span class="button-inline-spinner" aria-hidden="true"></span>กำลังโหลด...';
+    } else {
+      button.removeAttribute('aria-busy');
+      button.textContent = 'ตั้งค่าคาบเรียน';
+    }
+  });
 }
 
 function openScheduleEditor() {
@@ -288,28 +291,55 @@ function resetScheduleConfirmation() {
   document.getElementById('saveScheduleBtn').textContent = 'บันทึกตารางเรียน';
 }
 
+function setScheduleSaveLoading(isLoading) {
+  scheduleSaveLoading = !!isLoading;
+  var button = document.getElementById('saveScheduleBtn');
+  if (!button) return;
+  button.disabled = scheduleSaveLoading;
+  if (scheduleSaveLoading) {
+    button.setAttribute('aria-busy', 'true');
+    button.innerHTML = '<span class="button-inline-spinner" aria-hidden="true"></span>กำลังบันทึก...';
+  } else {
+    button.removeAttribute('aria-busy');
+    button.textContent = scheduleChangeConfirmed ? 'ยืนยันการแก้ไข' : 'บันทึกตารางเรียน';
+  }
+}
+
+function hasRemovedScheduleEntries(entries) {
+  var selected = {};
+  (entries || []).forEach(function(entry) {
+    selected[String(entry.day_of_week) + '|' + Number(entry.period)] = true;
+  });
+  return originalScheduleEntries.some(function(entry) {
+    return !selected[String(entry.day_of_week) + '|' + Number(entry.period)];
+  });
+}
+
 function closeScheduleEditor() { document.getElementById('scheduleModal').classList.remove('open'); }
 
 function saveScheduleEditor() {
+  if (scheduleSaveLoading) return;
   var entries = readScheduleEditor();
   if (scheduleHasAttendance && originalScheduleEntries.length && !scheduleChangeConfirmed &&
-      JSON.stringify(entries) !== JSON.stringify(originalScheduleEntries)) {
+      hasRemovedScheduleEntries(entries)) {
     scheduleChangeConfirmed = true;
     document.getElementById('scheduleWarning').style.display = 'block';
     document.getElementById('saveScheduleBtn').textContent = 'ยืนยันการแก้ไข';
     return;
   }
   if (!confirmDiscardAttendanceChanges()) return;
-  var button = document.getElementById('saveScheduleBtn');
-  button.disabled = true;
-  google.script.run.withSuccessHandler(function() {
-    button.disabled = false;
+  setScheduleSaveLoading(true);
+  google.script.run.withSuccessHandler(function(result) {
+    setScheduleSaveLoading(false);
     closeScheduleEditor();
     pendingChanges = {};
-    showToast('บันทึกตารางเรียนสำเร็จ', 'success');
+    var deleted = Number(result && result.attendance_deleted) || 0;
+    showToast(deleted
+      ? 'บันทึกตารางเรียนสำเร็จ และลบข้อมูลเช็คชื่อที่เกี่ยวข้อง ' + deleted + ' รายการ'
+      : 'บันทึกตารางเรียนสำเร็จ', 'success');
     loadAttendance();
   }).withFailureHandler(function(err) {
-    button.disabled = false;
+    setScheduleSaveLoading(false);
     showToast('บันทึกตารางเรียนไม่สำเร็จ: ' + err.message, 'error');
   }).serverSaveSubjectSchedule(TOKEN, CLASS_ID, SUBJECT_ID, entries, scheduleChangeConfirmed);
 }
@@ -356,7 +386,7 @@ function renderGrid(data) {
   var saveBar = document.getElementById('saveBar');
   var hasSchedule = (data.schedule_entries || []).length > 0;
   document.getElementById('scheduleEmpty').style.display = hasSchedule ? 'none' : 'block';
-  document.querySelector('#scheduleEmpty button').style.display = data.can_edit ? '' : 'none';
+  document.getElementById('openScheduleEmptyBtn').style.display = data.can_edit ? '' : 'none';
   document.getElementById('weekEmpty').style.display = hasSchedule && !data.sessions.length ? 'block' : 'none';
   document.getElementById('openScheduleBtn').style.display = data.can_edit ? '' : 'none';
   if (data.can_edit) {

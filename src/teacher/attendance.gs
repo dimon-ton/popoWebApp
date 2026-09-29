@@ -38,27 +38,32 @@ function getAttendanceData(token, class_id, subject_id, week) {
   var allAttendance = dbGetAll('Attendance');
   var sessionSet = {};
   sessions.forEach(function(item) { sessionSet[item.date + '|' + item.period] = true; });
-  var yearDateSet = {};
-  calendarWeeks.forEach(function(weekDates) {
-    weekDates.forEach(function(date) { yearDateSet[formatDateISO(date)] = true; });
+  var yearSessionSet = {};
+  attendanceWeeks.forEach(function(weekSessions) {
+    weekSessions.forEach(function(item) { yearSessionSet[item.date + '|' + item.period] = true; });
   });
+  var classStudentSet = {};
+  students.forEach(function(student) { classStudentSet[String(student.student_id)] = true; });
 
   // Build period-aware weekly lookup and full-year totals in one pass.
   var attMap = {};
   var yearlyMap = {};
   allAttendance.forEach(function(row) {
     if (String(row.subject_id) !== String(subject_id) || !Number.isSafeInteger(Number(row.period)) || Number(row.period) < 1) return;
-    var sid = row.student_id;
-    var ds = formatDateISO(new Date(row.date));
-    if (!yearDateSet[ds]) return;
+    var sid = String(row.student_id);
+    if (!classStudentSet[sid]) return;
+    var ds = normalizeISODate(row.date);
+    var sessionKey = ds + '|' + Number(row.period);
+    if (!yearSessionSet[sessionKey]) return;
+    var s = String(row.status);
+    if (ATTENDANCE_STATUSES.indexOf(s) === -1) return;
     if (!yearlyMap[sid]) yearlyMap[sid] = { present: 0, leave: 0, absent: 0 };
-    var s = row.status;
     if (s === '/') yearlyMap[sid].present++;
     else if (s === 'ล') yearlyMap[sid].leave++;
     else if (s === 'ข') yearlyMap[sid].absent++;
-    if (sessionSet[ds + '|' + Number(row.period)] && ATTENDANCE_STATUSES.indexOf(String(row.status)) !== -1) {
+    if (sessionSet[sessionKey]) {
       if (!attMap[sid]) attMap[sid] = {};
-      attMap[sid][ds + '|' + Number(row.period)] = row.status;
+      attMap[sid][sessionKey] = s;
     }
   });
 

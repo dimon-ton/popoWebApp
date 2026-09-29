@@ -48,6 +48,46 @@ function normalizeScheduleEntries_(entries) {
   });
 }
 
+function removedScheduleEntryKeys_(before, after) {
+  var kept = {};
+  (after || []).forEach(function(entry) {
+    kept[String(entry.day_of_week) + '|' + Number(entry.period)] = true;
+  });
+  var removed = {};
+  (before || []).forEach(function(entry) {
+    var key = String(entry.day_of_week) + '|' + Number(entry.period);
+    if (!kept[key]) removed[key] = true;
+  });
+  return removed;
+}
+
+// Caller must hold the document lock. Return the physical Attendance row
+// numbers whose weekday/period was removed from this class-subject schedule.
+function attendanceRowsForRemovedSchedule_(classId, subjectId, removedKeys) {
+  if (!Object.keys(removedKeys || {}).length) return [];
+  var students = getClassStudentIdSet_(classId);
+  var sheet = getSheet('Attendance');
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return [];
+  var headers = data[0];
+  var studentCol = headers.indexOf('student_id');
+  var subjectCol = headers.indexOf('subject_id');
+  var dateCol = headers.indexOf('date');
+  var periodCol = headers.indexOf('period');
+  if (studentCol === -1 || subjectCol === -1 || dateCol === -1 || periodCol === -1) {
+    throw new Error('โครงสร้างข้อมูลการเข้าเรียนไม่ครบถ้วน');
+  }
+  var positions = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][subjectCol]) !== String(subjectId) || !students[String(data[i][studentCol])]) continue;
+    var date = parseISODate(data[i][dateCol]);
+    if (!date) continue;
+    var day = SUBJECT_SCHEDULE_DAYS[date.getDay() - 1];
+    if (removedKeys[String(day) + '|' + Number(data[i][periodCol])]) positions.push(i + 1);
+  }
+  return positions;
+}
+
 function subjectScheduleRows_(classId, subjectId, term, rows) {
   if (!rows) ensureSubjectSchedulesSchema_();
   return (rows || dbGetAll('SubjectSchedules')).filter(function(row) {
@@ -99,11 +139,10 @@ function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries,
     var before = normalizeScheduleEntries_(oldRows);
     var changed = oldRows.length !== before.length || JSON.stringify(before) !== JSON.stringify(entries);
     if (!changed) return { ok: true, saved: entries.length, has_attendance: false };
-    var students = getClassStudentIdSet_(class_id);
-    var hasAttendance = oldRows.length && dbGetAll('Attendance').some(function(row) {
-      return String(row.subject_id) === String(subject_id) && students[String(row.student_id)];
-    });
-    if (hasAttendance && !confirmChange) throw new Error('วิชานี้มีข้อมูลการเข้าเรียนอยู่แล้ว กรุณายืนยันการแก้ไขตารางเรียน');
+    var removedKeys = removedScheduleEntryKeys_(before, entries);
+    var attendanceRowsToDelete = attendanceRowsForRemovedSchedule_(class_id, subject_id, removedKeys);
+    var hasAttendance = attendanceRowsToDelete.length > 0;
+    if (hasAttendance && !confirmChange) throw new Error('คาบเรียนที่นำออกมีข้อมูลการเช็คชื่ออยู่ กรุณายืนยันการลบข้อมูลที่เกี่ยวข้อง');
 
     var now = new Date().toISOString();
     var existingByKey = {};
@@ -124,7 +163,16 @@ function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries,
     for (var j = 0; j < reuse; j++) sheet.getRange(positions[j] + 1, 1, 1, headers.length).setValues([values[j]]);
     for (var k = positions.length - 1; k >= reuse; k--) sheet.deleteRow(positions[k] + 1);
     if (values.length > reuse) sheet.getRange(sheet.getLastRow() + 1, 1, values.length - reuse, headers.length).setValues(values.slice(reuse));
-    return { ok: true, saved: entries.length, has_attendance: !!hasAttendance };
+    var attendanceSheet = getSheet('Attendance');
+    for (var m = attendanceRowsToDelete.length - 1; m >= 0; m--) {
+      attendanceSheet.deleteRow(attendanceRowsToDelete[m]);
+    }
+    return {
+      ok: true,
+      saved: entries.length,
+      has_attendance: !!hasAttendance,
+      attendance_deleted: attendanceRowsToDelete.length
+    };
   });
 }
 

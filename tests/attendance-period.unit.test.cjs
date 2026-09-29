@@ -134,6 +134,22 @@ test('two periods save independently, appear independently, and count as two hou
   assert.equal(context.getAttendanceData('token', 'class_a', 'math', 1).attendance.student_a['2026-09-30|4'], 'ล');
 });
 
+test('yearly totals ignore attendance outside the current schedule and class', () => {
+  const { context, sheets } = harness();
+  context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
+  sheets.Attendance.rows.push(['valid', 'student_a', 'math', '2026-09-30', 3, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['removed_period', 'student_a', 'math', '2026-09-30', 9, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['wrong_weekday', 'student_a', 'math', '2026-09-29', 3, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['other_class', 'student_elsewhere', 'math', '2026-09-30', 3, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['blank_status', 'student_a', 'math', '2026-09-30', 4, '', 'teacher_a', '']);
+
+  const result = context.getAttendanceData('token', 'class_a', 'math', 1);
+  assert.deepEqual({ ...result.yearly.student_a }, { present: 1, leave: 0, absent: 0 });
+  assert.equal(result.yearly.student_elsewhere, undefined);
+  assert.equal(result.attendance.student_a['2026-09-30|3'], '/');
+  assert.equal(result.attendance.student_a['2026-09-30|4'], undefined);
+});
+
 test('unscheduled periods, invalid periods, and forged teacher saves are rejected', () => {
   const { context, sheets } = harness();
   context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
@@ -149,16 +165,36 @@ test('unscheduled periods, invalid periods, and forged teacher saves are rejecte
   assert.equal(sheets.Attendance.rows.length, 1);
 });
 
-test('editing a schedule requires confirmation with attendance and retains every attendance row', () => {
+test('unchecking schedule periods deletes only matching attendance rows after confirmation', () => {
+  const { context, sheets } = harness();
+  context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
+  context.serverSaveAttendance('token', 'class_a', 'math', [
+    { student_id: 'student_a', date: '2026-09-30', period: 3, status: '/' },
+    { student_id: 'student_a', date: '2026-09-30', period: 4, status: 'ข' },
+    { student_id: 'student_a', date: '2026-09-28', period: 2, status: 'ล' },
+  ]);
+  sheets.Attendance.rows.push(['other_day', 'student_a', 'math', '2026-09-28', 3, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['other_subject', 'student_a', 'science', '2026-09-30', 3, '/', 'teacher_a', '']);
+  sheets.Attendance.rows.push(['other_class', 'student_elsewhere', 'math', '2026-09-30', 3, '/', 'teacher_a', '']);
+  assert.throws(() => context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }]), /ยืนยัน/);
+  const result = context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }], true);
+  assert.equal(result.attendance_deleted, 2);
+  assert.deepEqual(sheets.Attendance.rows.slice(1).map(row => row[0]), [
+    'att_7', 'other_day', 'other_subject', 'other_class',
+  ]);
+});
+
+test('adding a schedule period preserves attendance and does not require confirmation', () => {
   const { context, sheets } = harness();
   context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
   context.serverSaveAttendance('token', 'class_a', 'math', [
     { student_id: 'student_a', date: '2026-09-30', period: 3, status: '/' },
   ]);
-  assert.throws(() => context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }]), /ยืนยัน/);
-  context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }], true);
+  const result = context.serverSaveSubjectSchedule('token', 'class_a', 'math', [
+    ...weekly, { day_of_week: 'TUE', period: 5 },
+  ]);
+  assert.equal(result.attendance_deleted, 0);
   assert.equal(sheets.Attendance.rows.length, 2);
-  assert.equal(sheets.Attendance.rows[1][attendanceHeaders.indexOf('period')], 3);
 });
 
 test('semester bulk attendance fills only blank scheduled cells and preserves existing statuses', () => {
@@ -243,6 +279,11 @@ test('client click cycle and bulk actions keep date and period separate', () => 
   context.refreshAttendanceWeeklyTotals = () => {};
   context.showToast = () => {};
   context.currentData = { can_edit: true, sessions: [{ date: '2026-09-30', period: 3 }, { date: '2026-09-30', period: 4 }] };
+  context.originalScheduleEntries = [{ day_of_week: 'WED', period: 3 }, { day_of_week: 'WED', period: 4 }];
+  assert.equal(context.hasRemovedScheduleEntries([{ day_of_week: 'WED', period: 3 }]), true);
+  assert.equal(context.hasRemovedScheduleEntries([
+    { day_of_week: 'WED', period: 3 }, { day_of_week: 'WED', period: 4 }, { day_of_week: 'FRI', period: 1 },
+  ]), false);
   const grouped = context.groupAttendanceSessionsByDate([
     { date: '2026-09-30', period: 3 },
     { date: '2026-09-30', period: 4 },
@@ -268,6 +309,11 @@ test('client click cycle and bulk actions keep date and period separate', () => 
     setAttribute(name, value) { this.attributes[name] = value; },
     removeAttribute(name) { delete this.attributes[name]; },
   };
+  const scheduleEmptyButton = {
+    disabled: false, textContent: 'ตั้งค่าคาบเรียน', innerHTML: '', attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+  };
   let requestCount = 0;
   let failureHandler;
   const runner = {
@@ -275,7 +321,8 @@ test('client click cycle and bulk actions keep date and period separate', () => 
     withFailureHandler(handler) { failureHandler = handler; return this; },
     getSubjectSchedule() { requestCount++; },
   };
-  context.document.getElementById = id => id === 'openScheduleBtn' ? scheduleButton : { addEventListener: () => {} };
+  context.document.getElementById = id => id === 'openScheduleBtn' ? scheduleButton
+    : id === 'openScheduleEmptyBtn' ? scheduleEmptyButton : { addEventListener: () => {} };
   context.google = { script: { run: runner } };
   context.openScheduleEditor();
   context.openScheduleEditor();
@@ -283,10 +330,33 @@ test('client click cycle and bulk actions keep date and period separate', () => 
   assert.equal(scheduleButton.disabled, true);
   assert.equal(scheduleButton.attributes['aria-busy'], 'true');
   assert.match(scheduleButton.innerHTML, /กำลังโหลด/);
+  assert.equal(scheduleEmptyButton.disabled, true);
+  assert.equal(scheduleEmptyButton.attributes['aria-busy'], 'true');
+  assert.match(scheduleEmptyButton.innerHTML, /กำลังโหลด/);
   failureHandler({ message: 'test error' });
   assert.equal(scheduleButton.disabled, false);
   assert.equal(scheduleButton.textContent, 'ตั้งค่าคาบเรียน');
   assert.equal(scheduleButton.attributes['aria-busy'], undefined);
+  assert.equal(scheduleEmptyButton.disabled, false);
+  assert.equal(scheduleEmptyButton.textContent, 'ตั้งค่าคาบเรียน');
+  assert.equal(scheduleEmptyButton.attributes['aria-busy'], undefined);
+
+  const scheduleSaveButton = {
+    disabled: false, textContent: 'ยืนยันการแก้ไข', innerHTML: '', attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+  };
+  context.scheduleChangeConfirmed = true;
+  context.document.getElementById = id => id === 'saveScheduleBtn' ? scheduleSaveButton : { addEventListener: () => {} };
+  context.setScheduleSaveLoading(true);
+  assert.equal(scheduleSaveButton.disabled, true);
+  assert.equal(scheduleSaveButton.attributes['aria-busy'], 'true');
+  assert.match(scheduleSaveButton.innerHTML, /button-inline-spinner/);
+  assert.match(scheduleSaveButton.innerHTML, /กำลังบันทึก/);
+  context.setScheduleSaveLoading(false);
+  assert.equal(scheduleSaveButton.disabled, false);
+  assert.equal(scheduleSaveButton.textContent, 'ยืนยันการแก้ไข');
+  assert.equal(scheduleSaveButton.attributes['aria-busy'], undefined);
 
   const semesterButton = {
     disabled: false, textContent: '✓ เช็คช่องว่างทั้งภาคเรียนว่ามาเรียน', innerHTML: '', attributes: {},
