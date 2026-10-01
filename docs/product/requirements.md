@@ -59,15 +59,18 @@ established calculations or layout.
 
 ### Cross-subject assessment copying
 
-- Attendance, characteristics, and read-think-write pages may stage completed values
-  from another subject in the same class.
+- Characteristics and read-think-write pages may stage partial values from another
+  subject in the same grade level, including another section. Attendance may stage
+  partial values only from another subject in the same class.
 - Match students only by `student_id`; never match by displayed name or row position.
-- Exclude the destination subject and revalidate class, teacher access, completeness,
-  and value validity on the server when listing and retrieving sources.
+- Exclude the destination subject and revalidate its edit authorization, the source
+  class/level relationship, matching students, and individual value validity on the
+  server when listing and retrieving sources. Source teacher ownership is not required.
 - Copy into unsaved browser state. The user must use the destination page's save action
-  to persist values, and missing source values must not clear destination values.
-- Attendance copying covers the configured full-year date set and persists through its
-  existing indexed batched save operation.
+  to persist values. Only valid nonblank source values are staged; numeric zero is valid,
+  and missing source values must not clear destination values.
+- Attendance copying can use any available valid status from the configured full-year
+  date set and persists through its existing indexed batched save operation.
 
 ### Shared experience
 

@@ -12,6 +12,8 @@ import {
   seedTestEnrollment,
   seedTestSubjectWeights,
   seedTestIndicator,
+  seedTestIndicatorScore,
+  seedTestSummative,
   cleanupTestData,
   queryTestRows,
 } from './helpers/seed';
@@ -321,6 +323,25 @@ test.describe('US-006: Indicator catalog CRUD', () => {
     await expect(page.locator('#indicatorsBody')).toContainText('test_ind_001', { timeout: 15_000 });
   });
 
+  test('US-006: edit an indicator record inline and persist the changes', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_indicators&subject_id=${subjectId}`);
+
+    await expect(page.locator('#indicatorsTable')).toBeVisible({ timeout: 20_000 });
+    const row = page.locator('#indicatorsBody tr', { hasText: 'test_ind_001' });
+    await row.locator('.btn-edit').click();
+    await row.locator('.indicator-edit-code').fill('test_ind_001_updated');
+    await row.locator('.indicator-edit-description').fill('แก้ไขคำอธิบายแล้ว');
+    await row.locator('.indicator-edit-max').fill('5');
+    await row.locator('.indicator-edit-order').fill('2');
+    await row.locator('.btn-save').click();
+
+    await expect(page.locator('#toast')).toContainText('แก้ไขตัวชี้วัดสำเร็จ', { timeout: 15_000 });
+    const updatedRow = page.locator('#indicatorsBody tr', { hasText: 'test_ind_001_updated' });
+    await expect(updatedRow).toContainText('แก้ไขคำอธิบายแล้ว');
+    await expect(updatedRow.locator('td').nth(4)).toHaveText('5');
+  });
+
   test('US-006: delete indicator and assert it is gone', async ({ page }) => {
     const url = process.env.WEB_APP_URL!;
     await page.goto(`${url}?page=admin_indicators&subject_id=${subjectId}`);
@@ -330,7 +351,7 @@ test.describe('US-006: Indicator catalog CRUD', () => {
     // Dismiss confirm dialog automatically
     page.on('dialog', async (dialog) => { await dialog.accept(); });
 
-    // Click delete on the first row (test_ind_001 we just added)
+    // Click delete on the first row (the indicator edited in the previous test)
     await page.locator('#indicatorsBody .btn-danger').first().click();
 
     await expect(page.locator('#toast')).toContainText('ลบตัวชี้วัดสำเร็จ', { timeout: 15_000 });
@@ -477,14 +498,25 @@ test.describe('US-018: Teacher enrollment management', () => {
   let classYId: string;
   let subjectZXId: string;
   let subjectZYId: string;
+  let teacherNoCodeId: string;
+  let classNoCodeId: string;
+  let subjectNoCodeId: string;
 
   test.beforeAll(async () => {
     teacherAId = await seedTestUser({ suffix: 'us018_ta', role: 'teacher', full_name: 'ครูทดสอบ A' });
     teacherBId = await seedTestUser({ suffix: 'us018_tb', role: 'teacher', full_name: 'ครูทดสอบ B' });
+    teacherNoCodeId = await seedTestUser({ suffix: 'us018_nocode_teacher', role: 'teacher', full_name: 'ครูหลักสูตรใหม่' });
     classXId = await seedTestClass({ suffix: 'us018_cx', level: 'ป.1', section: '1' });
     classYId = await seedTestClass({ suffix: 'us018_cy', level: 'ป.1', section: '2' });
+    classNoCodeId = await seedTestClass({ suffix: 'us018_nocode_class', level: 'ป.1', section: '3' });
     subjectZXId = await seedTestSubject({ suffix: 'us018_sz_x', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classXId });
     subjectZYId = await seedTestSubject({ suffix: 'us018_sz_y', name: 'วิชาทดสอบ Z', code: 'TST018', class_id: classYId });
+    subjectNoCodeId = await seedTestSubject({
+      suffix: 'us018_nocode_subject',
+      name: 'การอ่านและการเขียนเพื่อการสื่อสารภาษาไทย',
+      code: '',
+      class_id: classNoCodeId,
+    });
   });
 
   test.afterAll(async () => {
@@ -516,6 +548,34 @@ test.describe('US-018: Teacher enrollment management', () => {
     await expect(page.locator('#allPairsTab #enrollmentCsvInput')).toBeVisible();
     await expect(page.locator('#allPairsTab #importEnrollmentCsvBtn')).toBeVisible();
     await expect(page.locator('#tab-bulk')).toHaveCount(0);
+  });
+
+  test('US-018: CSV import matches a code-less subject by class + subject name', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_enrollments`);
+    await page.click('#tab-allpairs');
+
+    const csv = [
+      'teacher_username,teacher_full_name,class_id,grade_level*,section,subject_name*',
+      [teacherNoCodeId, 'ครูหลักสูตรใหม่', classNoCodeId, 'ป.1', '3', 'การอ่านและการเขียนเพื่อการสื่อสารภาษาไทย'].join(','),
+    ].join('\r\n');
+
+    await page.locator('#enrollmentCsvInput').setInputFiles({
+      name: 'teaching_assignments_no_subject_code.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('\uFEFF' + csv, 'utf8'),
+    });
+    await page.click('#importEnrollmentCsvBtn');
+
+    await expect(page.locator('#importEnrollmentResult')).toContainText('นำเข้าสำเร็จ', { timeout: 20_000 });
+
+    const enrollments = await queryTestRows('Enrollments', 'subject_id');
+    const imported = enrollments.find((row) =>
+      (row as Record<string, string>).class_id === classNoCodeId &&
+      (row as Record<string, string>).subject_id === subjectNoCodeId
+    );
+    expect(imported).toBeTruthy();
+    expect((imported as Record<string, string>).teacher_user_id).toBe(teacherNoCodeId);
   });
 
   test('US-018: teacher search filters the teacher list', async ({ page }) => {
@@ -873,10 +933,13 @@ test.describe('US-016: Audit log', () => {
 
   test.beforeAll(async () => {
     await cleanupTestData();
-    classId = await seedTestClass({ suffix: 'us016_c1', level: 'ป.1', section: '1' });
-    subjectId = await seedTestSubject({ suffix: 'us016_s1', name: 'วิชาทดสอบ US016', code: 'US016' });
+    classId = await seedTestClass({ suffix: 'us016_c1', level: 'ป.4', section: '1' });
+    subjectId = await seedTestSubject({ suffix: 'us016_s1', name: 'วิชาทดสอบ US016', code: 'US016', class_id: classId });
     await seedTestSubjectWeights({ subject_id: subjectId });
     studentId = await seedTestStudent({ class_suffix: 'us016_c1', seq: 1, full_name: 'test_นักเรียน016' });
+    const indicatorId = await seedTestIndicator({ suffix: 'us016_i1', subject_id: subjectId, max_score: 10 });
+    await seedTestIndicatorScore({ student_id: studentId, subject_id: subjectId, indicator_id: indicatorId, score: 10 });
+    await seedTestSummative({ student_id: studentId, subject_id: subjectId, coursework: 50, total: 50 });
   });
 
   test.afterAll(async () => {
@@ -893,7 +956,8 @@ test.describe('US-016: Audit log', () => {
 
     // Find the score inputs for our student and enter scores
     const cwInput = page.locator(`input[data-student="${studentId}"][data-col="coursework"]`);
-    await cwInput.fill('50');
+    await expect(cwInput).toHaveValue('50');
+    await expect(cwInput).toBeEditable();
     const midInput = page.locator(`input[data-student="${studentId}"][data-col="midterm"]`);
     await midInput.fill('15');
     const finInput = page.locator(`input[data-student="${studentId}"][data-col="final"]`);

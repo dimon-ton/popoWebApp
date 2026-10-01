@@ -33,8 +33,20 @@ var TEMPLATE_PATHS = {
   'class_readthinkwrite': 'teacher/class_readthinkwrite',
   'class_report': 'teacher/class_report',
   'class_students': 'teacher/class_students',
-  'class_summative': 'teacher/class_summative'
+  'class_summative': 'teacher/class_summative',
+  'class_curriculum': 'teacher/class_curriculum'
 };
+
+function curriculumPageFor_(page, classId, subjectId) {
+  if (page !== 'class_formative' && page !== 'class_summative' && page !== 'admin_indicators') return page;
+  var resolvedClassId = classId;
+  if (!resolvedClassId && subjectId) {
+    var subject = dbFindOne('Subjects', 'subject_id', subjectId);
+    resolvedClassId = subject && subject.class_id;
+  }
+  var cls = resolvedClassId && dbFindOne('Classes', 'class_id', resolvedClassId);
+  return cls && isCurriculumLevel_(cls.level) ? 'class_curriculum' : page;
+}
 
 function getTemplatePath(pageName) {
   return TEMPLATE_PATHS[pageName] || pageName;
@@ -108,9 +120,9 @@ function doGet(e) {
       case 'admin_subjects':
         return buildPage('admin_subjects', { session: session, token: token });
       case 'admin_indicators':
-        return buildPage('admin_indicators', {
+        return buildPage(curriculumPageFor_('admin_indicators', '', params.subject_id || ''), {
           session: session, token: token,
-          subject_id: params.subject_id || '',
+          class_id: (dbFindOne('Subjects', 'subject_id', params.subject_id || '') || {}).class_id || '', subject_id: params.subject_id || '',
           subject_name: params.subject_name || params.subject_id || ''
         });
       case 'admin_holidays':
@@ -129,13 +141,13 @@ function doGet(e) {
           week: parseInt(params.week) || 1
         });
       case 'class_formative':
-        return buildPage('class_formative', {
+        return buildPage(curriculumPageFor_('class_formative', params.class_id, params.subject_id), {
           session: session, token: token,
           class_id: params.class_id || '',
           subject_id: params.subject_id || ''
         });
       case 'class_summative':
-        return buildPage('class_summative', {
+        return buildPage(curriculumPageFor_('class_summative', params.class_id, params.subject_id), {
           session: session, token: token,
           class_id: params.class_id || '',
           subject_id: params.subject_id || ''
@@ -418,8 +430,11 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
     };
     var tmplName = templateMap[page];
     if (!tmplName) return getPageHtml(token, page);
+    if (page === 'admin_indicators' && session.role !== 'admin') return '<div>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
+    tmplName = curriculumPageFor_(page, classId, subjectId);
+    var resolvedClassId = classId || ((dbFindOne('Subjects', 'subject_id', subjectId || '') || {}).class_id || '');
     var tmpl = createTemplate(tmplName);
-    tmpl.data = { session: session, token: token, class_id: classId || '', subject_id: subjectId || '' };
+    tmpl.data = { session: session, token: token, class_id: resolvedClassId, subject_id: subjectId || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return safeErrorHtml_('เกิดข้อผิดพลาด', err);
@@ -463,7 +478,7 @@ function getSummativePageHtml(token, class_id, subject_id) {
     if (!session) {
       return getLoginHtml();
     }
-    var tmpl = createTemplate('class_summative');
+    var tmpl = createTemplate(curriculumPageFor_('class_summative', class_id, subject_id));
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -523,7 +538,7 @@ function getFormativePageHtml(token, class_id, subject_id) {
     if (!session) {
       return getLoginHtml();
     }
-    var tmpl = createTemplate('class_formative');
+    var tmpl = createTemplate(curriculumPageFor_('class_formative', class_id, subject_id));
     tmpl.data = { session: session, token: token, class_id: class_id || '', subject_id: subject_id || '' };
     return tmpl.evaluate().getContent();
   } catch (err) {
@@ -554,8 +569,8 @@ function getIndicatorsPageHtml(token, subject_id) {
       if (cls) class_label = fmtClassLabel(cls.level, cls.section);
     }
     var subject_title = (subj && subj.subject_code ? subj.subject_code + ' - ' : '') + subject_name + (class_label ? ' - ' + class_label : '');
-    var tmpl = createTemplate('admin_indicators');
-    tmpl.data = { session: session, token: token, subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
+    var tmpl = createTemplate(curriculumPageFor_('admin_indicators', subj && subj.class_id, subject_id));
+    tmpl.data = { session: session, token: token, class_id: subj && subj.class_id || '', subject_id: subject_id, subject_name: subject_name, class_label: class_label, subject_title: subject_title };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return safeErrorHtml_('เกิดข้อผิดพลาด', err);
@@ -640,4 +655,57 @@ function getCachedSchoolName() {
   } catch (e) {
     return 'PopoWebApp';
   }
+}
+
+
+// ── Shared bulk record actions ────────────────────────────────────────────────
+function serverBulkRecordAction(token, actionType, ids) {
+  var seenIds = {};
+  ids = Array.isArray(ids) ? ids.map(function(id) { return String(id || '').trim(); }).filter(function(id) {
+    if (!id || seenIds[id]) return false;
+    seenIds[id] = true;
+    return true;
+  }) : [];
+  if (!ids.length) return { ok: true, succeeded: [], failed: [] };
+
+  var succeeded = [];
+  var failed = [];
+
+  ids.forEach(function(id) {
+    try {
+      var result;
+      switch (actionType) {
+        case 'class':
+          result = serverDeleteClass(token, id);
+          break;
+        case 'subject':
+          result = serverDeleteSubject(token, id);
+          break;
+        case 'indicator':
+          result = serverDeleteIndicator(token, id);
+          break;
+        case 'holiday':
+          result = serverDeleteHoliday(token, id);
+          break;
+        case 'user':
+          result = serverDeleteUser(token, id);
+          break;
+        case 'student':
+          result = serverDeleteStudent(token, id);
+          break;
+        case 'enrollment':
+          result = clientRemoveEnrollment(token, id, '');
+          if (result && result.error) throw new Error(result.error);
+          break;
+        default:
+          throw new Error('Unsupported bulk action: ' + actionType);
+      }
+      if (result && result.error) throw new Error(result.error);
+      succeeded.push(id);
+    } catch (err) {
+      failed.push({ id: id, error: err && err.message ? err.message : String(err) });
+    }
+  });
+
+  return { ok: failed.length === 0, succeeded: succeeded, failed: failed };
 }

@@ -157,6 +157,21 @@ export async function seedTestIndicator(opts: SeedIndicatorOpts): Promise<string
   return indicatorId;
 }
 
+export async function seedTestIndicatorScore(opts: {
+  student_id: string;
+  subject_id: string;
+  indicator_id: string;
+  score: number | string;
+}): Promise<void> {
+  await apiCall({
+    api: 'seed_indicator_score',
+    student_id: opts.student_id,
+    subject_id: opts.subject_id,
+    indicator_id: opts.indicator_id,
+    score: opts.score,
+  });
+}
+
 interface SeedSubjectWeightsOpts {
   subject_id: string;
   coursework_max?: number;
@@ -185,6 +200,7 @@ interface SeedSummativeOpts {
   subject_id: string;
   total: number;
   coursework?: number | string;
+  coursework_override?: number | string;
   midterm?: number | string;
   final?: number | string;
   makeup_grade?: number | string;
@@ -211,6 +227,7 @@ interface SeedAttendanceOpts {
   subject_id: string;
   updated_by: string;
   date: string;
+  period: number;
   status?: '/' | 'ล' | 'ข';
   updated_at?: string;
 }
@@ -230,6 +247,7 @@ export async function seedTestSummative(opts: SeedSummativeOpts): Promise<void> 
     subject_id: opts.subject_id,
     total: opts.total,
     coursework: opts.coursework ?? '',
+    coursework_override: opts.coursework_override ?? '',
     midterm: opts.midterm ?? '',
     final: opts.final ?? '',
     makeup_grade: opts.makeup_grade ?? '',
@@ -272,9 +290,20 @@ export async function seedTestAttendance(opts: SeedAttendanceOpts): Promise<void
     subject_id: opts.subject_id,
     updated_by: opts.updated_by,
     date: opts.date,
+    period: opts.period,
     status: opts.status ?? '/',
     updated_at: opts.updated_at ?? '',
   });
+}
+
+export async function seedTestSubjectSchedule(opts: {
+  class_id: string;
+  subject_id: string;
+  created_by: string;
+  day_of_week: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI';
+  period: number;
+}): Promise<void> {
+  await apiCall({ api: 'seed_subject_schedule', ...opts });
 }
 
 export async function seedCompleteTestAttendance(opts: SeedCompleteAttendanceOpts): Promise<Record<string, unknown>> {
@@ -290,6 +319,20 @@ export async function seedCompleteTestAttendance(opts: SeedCompleteAttendanceOpt
 
 export async function cleanupTestData(): Promise<void> {
   await apiCall({ api: 'cleanup' });
+}
+
+export async function seedLearningOutcome(opts: { suffix: string; subject_id: string; term: 1 | 2; code: string; max_score: number; description?: string; display_order?: number }): Promise<string> {
+  const outcomeId = `test_outcome_${opts.suffix}`;
+  await apiCall({ api: 'seed_learning_outcome', outcome_id: outcomeId, subject_id: opts.subject_id, term: opts.term, code: opts.code, max_score: opts.max_score, description: opts.description ?? opts.code, display_order: opts.display_order ?? 1 });
+  return outcomeId;
+}
+
+export async function seedLearningOutcomeScore(studentId: string, subjectId: string, outcomeId: string, score: number | ''): Promise<void> {
+  await apiCall({ api: 'seed_learning_outcome_score', student_id: studentId, subject_id: subjectId, outcome_id: outcomeId, score });
+}
+
+export async function seedTermAssessment(studentId: string, subjectId: string, term: 1 | 2, score: number | ''): Promise<void> {
+  await apiCall({ api: 'seed_term_assessment', student_id: studentId, subject_id: subjectId, term, score });
 }
 
 export async function queryTestRows(tab: string, field: string): Promise<Record<string, unknown>[]> {

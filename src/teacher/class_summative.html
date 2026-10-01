@@ -229,7 +229,7 @@ function renderGrid(data) {
     var makeup = s.makeup_grade !== undefined && s.makeup_grade !== '' ? s.makeup_grade : '';
 
     var total = computeTotal(cw, mid, fin);
-    var grade = computeGrade(total);
+    var grade = cw !== '' && mid !== '' && fin !== '' ? computeGrade(total) : '';
     var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
 
     var tr = document.createElement('tr');
@@ -237,7 +237,7 @@ function renderGrid(data) {
 
     var editable = data.can_edit;
     var cwCell = editable
-      ? '<input class="score-input" type="number" min="0" max="' + cwMax + '" step="0.5" value="' + escHtml(cw) + '" data-student="' + escHtml(sid) + '" data-col="coursework" data-max="' + cwMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
+      ? '<input class="score-input coursework-input" type="number" min="0" max="' + cwMax + '" step="0.5" value="' + escHtml(cw) + '" data-student="' + escHtml(sid) + '" data-col="coursework" data-max="' + cwMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
       : escHtml(cw);
     var midCell = editable
       ? '<input class="score-input" type="number" min="0" max="' + midMax + '" step="0.5" value="' + escHtml(mid) + '" data-student="' + escHtml(sid) + '" data-col="midterm" data-max="' + midMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
@@ -261,6 +261,7 @@ function renderGrid(data) {
       '<td class="final-grade-col" id="final-grade-' + escHtml(sid) + '">' + (finalGrade !== '' ? finalGrade : '') + '</td>';
 
     tbody.appendChild(tr);
+    resizeCourseworkInput(tr.querySelector('input[data-col="coursework"]'));
   });
 
   document.getElementById('summativeTable').style.display = 'table';
@@ -279,7 +280,14 @@ function computeTotal(cw, mid, fin) {
   return sum;
 }
 
+function resizeCourseworkInput(input) {
+  if (!input) return;
+  var characterCount = Math.max(2, String(input.value || '').length);
+  input.style.width = 'calc(' + characterCount + 'ch + 22px)';
+}
+
 function updateRow(input) {
+  if (input.getAttribute('data-col') === 'coursework') resizeCourseworkInput(input);
   markUnsavedChanges();
   var sid = input.getAttribute('data-student');
   var tr = input.closest('tr');
@@ -296,7 +304,7 @@ function updateRow(input) {
   var makeup = makeupInput && makeupInput.value !== '' ? makeupInput.value : '';
 
   var total = computeTotal(cw, mid, fin);
-  var grade = computeGrade(total);
+  var grade = cw !== '' && mid !== '' && fin !== '' ? computeGrade(total) : '';
   var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
 
   var totalCell = document.getElementById('total-' + sid);

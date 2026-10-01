@@ -207,6 +207,7 @@ function renderTeacherPairs(pairs) {
   var container = document.getElementById('teacherPairs');
   var html = '';
   pairs.forEach(function(p) {
+    var curriculum = /^ป\.[123]$/.test(String(p.level || '').replace(/\s+/g, ''));
     var cid = encodeURIComponent(p.class_id);
     var sid = encodeURIComponent(p.subject_id);
     html += '<div class="pair-card">' +
@@ -217,8 +218,9 @@ function renderTeacherPairs(pairs) {
       '<div class="pair-links">' +
         '<a class="pair-link students" href="#" onclick="goPage(\'class_students\',\'' + escAttr(p.class_id) + '\'); return false;">' + flowbiteIcon('students') + '<span>ข้อมูลนักเรียน</span></a>' +
         '<a class="pair-link attendance" href="#" onclick="goPage(\'class_attendance\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('attendance') + '<span>เช็คชื่อ</span></a>' +
+        (curriculum ? '<a class="pair-link formative" href="#" onclick="goPage(\'class_formative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('formative') + '<span>ผลลัพธ์การเรียนรู้ / คะแนนรายภาค</span></a>' :
         '<a class="pair-link formative" href="#" onclick="goPage(\'class_formative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('formative') + '<span>คะแนน1 ตัวชี้วัด</span></a>' +
-        '<a class="pair-link summative" href="#" onclick="goPage(\'class_summative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('summative') + '<span>คะแนน2 ผลการเรียน</span></a>' +
+        '<a class="pair-link summative" href="#" onclick="goPage(\'class_summative\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('summative') + '<span>คะแนน2 ผลการเรียน</span></a>') +
         '<a class="pair-link characteristics" href="#" onclick="goPage(\'class_characteristics\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('characteristics') + '<span>คุณลักษณะ</span></a>' +
         '<a class="pair-link readthinkwrite" href="#" onclick="goPage(\'class_readthinkwrite\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('readthinkwrite') + '<span>อ่านคิดเขียน</span></a>' +
         '<a class="pair-link report" href="#" onclick="goPage(\'class_dev_activity\',\'' + escAttr(p.class_id) + '\',\'' + escAttr(p.subject_id) + '\'); return false;">' + flowbiteIcon('activity') + '<span>กิจกรรมพัฒนาผู้เรียน</span></a>' +

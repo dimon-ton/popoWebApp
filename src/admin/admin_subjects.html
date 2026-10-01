@@ -45,7 +45,7 @@
         <input type="text" id="newSubjectName" placeholder="ชื่อวิชา">
       </div>
       <div class="form-group">
-        <label>กลุ่มสาระฯ</label>
+        <label>กลุ่มสาระการเรียนรู้</label>
         <input type="text" id="newSubjectGroup" placeholder="เช่น ภาษาไทย">
       </div>
       <div class="form-group">
@@ -54,9 +54,13 @@
       </div>
       <div class="form-group">
         <label>ชั้นเรียน</label>
-        <select id="newClassIds" style="min-width:180px">
+        <select id="newClassIds" style="min-width:180px" onchange="toggleNewSubjectAbility()">
           <option value="">เลือกชั้นเรียน</option>
         </select>
+      </div>
+      <div class="form-group" id="newAbilityTypeGroup" style="display:none">
+        <label for="newAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
+        <select id="newAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
       </div>
       <div class="form-group" style="justify-content:flex-end">
         <button class="btn-primary" id="addSubjectBtn" onclick="addSubject()">เพิ่มวิชา</button>
@@ -67,7 +71,7 @@
   <div class="card">
     <h3>นำเข้ารายวิชาด้วย CSV</h3>
     <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; font-size: 13px; color: #856404; line-height: 1.5;">
-      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
+      <strong>ข้อกำหนดโครงสร้างไฟล์ CSV:</strong> ดาวน์โหลดแม่แบบ กรอกข้อมูล แล้วอัปโหลดกลับเข้าระบบ คอลัมน์ <code>ชื่อวิชา*</code> ต้องกรอก และต้องระบุชั้นเรียนด้วย <code>class_id</code> หรือกรอกระดับชั้นและห้อง รายวิชาใหม่ ป.1–ป.3 ต้องเลือกประเภทความสามารถ ระบบจะเพิ่มหรืออัปเดตรายวิชา และตั้งค่าน้ำหนักคะแนนเมื่อกรอกคะแนนรวมครบ 100 คะแนน
       <div style="margin-top: 8px;">
         <strong>ลำดับคอลัมน์:</strong>
         <code>class_id</code>,
@@ -77,6 +81,7 @@
         <code>รหัสวิชา</code>,
         <code>ชื่อวิชา*</code>,
         <code>กลุ่มสาระฯ</code>,
+        <code>ประเภทความสามารถ</code>,
         <code>จำนวนชั่วโมง</code>,
         <code>กลุ่มน้ำหนัก</code>,
         <code>ก่อนกลางภาค</code>,
@@ -106,7 +111,33 @@
   </div>
 
   <div class="card">
-    <h3>รายการวิชาทั้งหมด</h3>
+    <div class="subject-list-heading">
+      <div>
+        <h3>รายการวิชาทั้งหมด</h3>
+        <p id="subjectListSummary" aria-live="polite">กำลังโหลดรายวิชา...</p>
+      </div>
+    </div>
+
+    <div class="subject-list-toolbar" role="search" aria-label="ค้นหาและกรองรายวิชา">
+      <div class="subject-search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <label class="sr-only" for="subjectSearch">ค้นหารหัสหรือชื่อวิชา</label>
+        <input type="search" id="subjectSearch" placeholder="ค้นหารหัส ชื่อวิชา หรือกลุ่มสาระฯ" oninput="applySubjectFilters()">
+      </div>
+      <div class="subject-filter-field">
+        <label for="subjectClassFilter">ชั้นเรียน</label>
+        <select id="subjectClassFilter" onchange="applySubjectFilters()">
+          <option value="all">ทั้งหมด</option>
+        </select>
+      </div>
+      <div class="subject-filter-field">
+        <label for="subjectGroupFilter">กลุ่มสาระฯ</label>
+        <select id="subjectGroupFilter" onchange="applySubjectFilters()">
+          <option value="all">ทั้งหมด</option>
+        </select>
+      </div>
+      <button type="button" class="btn-secondary subject-filter-clear" id="clearSubjectFiltersBtn" onclick="clearSubjectFilters()" hidden>ล้างตัวกรอง</button>
+    </div>
 
     <div class="loading-msg" id="subjectsLoading">
       <div class="skeleton-table">
@@ -115,19 +146,33 @@
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:22%"></div><div class="skeleton-table-cell" style="width:13%"></div><div class="skeleton-table-cell" style="width:15%"></div><div class="skeleton-table-cell" style="width:20%"></div></div>
       </div>
     </div>
+    <div class="bulk-action-bar" id="subjectsBulkActions" aria-live="polite">
+      <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+      <div class="bulk-action-buttons">
+        <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+        <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+      </div>
+    </div>
     <table id="subjectsTable" style="display:none">
       <thead>
         <tr>
+          <th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกวิชาทั้งหมดที่แสดง"></th>
           <th>ชั้นเรียน</th>
           <th>รหัสวิชา</th>
           <th>ชื่อวิชา</th>
           <th>กลุ่มสาระฯ</th>
           <th>เวลาเรียน</th>
-          <th class="subject-actions-heading">จัดการ</th>
+          <th class="table-action-heading">จัดการ</th>
         </tr>
       </thead>
       <tbody id="subjectsBody"></tbody>
     </table>
+    <div class="bulk-pagination" id="subjectsPagination" aria-label="แบ่งหน้ารายการวิชา"></div>
+    <div class="subject-empty-state" id="subjectsEmpty" hidden>
+      <strong>ไม่พบวิชาที่ตรงกับตัวกรอง</strong>
+      <span>ลองเปลี่ยนคำค้นหา ชั้นเรียน หรือกลุ่มสาระฯ</span>
+      <button class="btn-secondary" type="button" onclick="clearSubjectFilters()">ล้างตัวกรอง</button>
+    </div>
   </div>
 </div>
 
@@ -145,12 +190,16 @@
       <input type="text" id="editSubjectName" placeholder="ชื่อวิชา">
     </div>
     <div class="form-group">
-      <label>กลุ่มสาระฯ</label>
+      <label>กลุ่มสาระการเรียนรู้</label>
       <input type="text" id="editSubjectGroup" placeholder="เช่น ภาษาไทย">
     </div>
     <div class="form-group">
       <label>เวลาเรียน (ชม./ปี)</label>
       <input type="number" id="editHours" placeholder="80" min="0">
+    </div>
+    <div class="form-group" id="editAbilityTypeGroup" style="display:none">
+      <label for="editAbilityType">ประเภทความสามารถ (ป.1–ป.3)</label>
+      <select id="editAbilityType"><option value="">เลือกประเภท</option><option value="พื้นฐาน">พื้นฐาน</option><option value="การประยุกต์ใช้ในชีวิตประจำวัน">การประยุกต์ใช้ในชีวิตประจำวัน</option></select>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="saveEditBtn" onclick="saveSubjectEdit()">บันทึก</button>
@@ -209,6 +258,27 @@ function fmtCls(level, section) {
   return String(level || '') + (section ? '/' + section : '');
 }
 
+function isP1P3Level(level) {
+  return /^ป\.[123]$/.test(String(level || '').replace(/\s+/g, ''));
+}
+
+function selectedNewClassIsP1P3() {
+  var classId = document.getElementById('newClassIds').value;
+  var cls = allClasses.find(function(item) { return String(item.class_id) === classId; });
+  return !!cls && isP1P3Level(cls.level);
+}
+
+function toggleNewSubjectAbility() {
+  var visible = selectedNewClassIsP1P3();
+  document.getElementById('newAbilityTypeGroup').style.display = visible ? '' : 'none';
+}
+
+function subjectAbilityValues(prefix) {
+  var type = document.getElementById(prefix + 'AbilityType').value;
+  if (!type) { showToast('กรุณาเลือกประเภทความสามารถ', 'error'); return null; }
+  return { type: type };
+}
+
 function loadClassesForSubjects() {
   google.script.run
     .withSuccessHandler(function(result) {
@@ -218,6 +288,7 @@ function loadClassesForSubjects() {
       }).join('');
       var select = document.getElementById('newClassIds');
       if (select) select.innerHTML = options;
+      toggleNewSubjectAbility();
     })
     .withFailureHandler(function(err) { showToast('โหลดชั้นเรียนไม่สำเร็จ: ' + err.message, 'error'); })
     .getClassesList(TOKEN);
@@ -228,35 +299,119 @@ function loadSubjects() {
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
       allSubjects = (result && result.subjects) ? result.subjects : [];
-      renderSubjects(allSubjects);
+      populateSubjectFilters();
+      applySubjectFilters();
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSubjectsList(TOKEN);
 }
 
+function normalizeSubjectFilterValue(value) {
+  return String(value == null ? '' : value).trim().toLocaleLowerCase('th');
+}
+
+function populateSubjectFilters() {
+  var classSelect = document.getElementById('subjectClassFilter');
+  var groupSelect = document.getElementById('subjectGroupFilter');
+  var selectedClass = classSelect ? classSelect.value : 'all';
+  var selectedGroup = groupSelect ? groupSelect.value : 'all';
+  var classes = {};
+  var groups = {};
+
+  allSubjects.forEach(function(subject) {
+    var classId = String(subject.class_id || '');
+    var classLabel = String(subject.class_label || (classId ? classId : 'Legacy'));
+    var group = String(subject.subject_group || '').trim();
+    classes[classId] = classLabel;
+    if (group) groups[group] = true;
+  });
+
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="all">ทั้งหมด</option>' + Object.keys(classes).sort(function(a, b) {
+      return classes[a].localeCompare(classes[b], 'th', { numeric: true });
+    }).map(function(classId) {
+      return '<option value="' + escHtml(classId) + '">' + escHtml(classes[classId]) + '</option>';
+    }).join('');
+    if (selectedClass === 'all' || Object.prototype.hasOwnProperty.call(classes, selectedClass)) classSelect.value = selectedClass;
+  }
+
+  if (groupSelect) {
+    groupSelect.innerHTML = '<option value="all">ทั้งหมด</option>' + Object.keys(groups).sort(function(a, b) {
+      return a.localeCompare(b, 'th');
+    }).map(function(group) {
+      return '<option value="' + escHtml(group) + '">' + escHtml(group) + '</option>';
+    }).join('');
+    if (selectedGroup === 'all' || groups[selectedGroup]) groupSelect.value = selectedGroup;
+  }
+}
+
+function applySubjectFilters() {
+  var search = document.getElementById('subjectSearch');
+  var classSelect = document.getElementById('subjectClassFilter');
+  var groupSelect = document.getElementById('subjectGroupFilter');
+  var query = normalizeSubjectFilterValue(search ? search.value : '');
+  var classId = classSelect ? classSelect.value : 'all';
+  var group = groupSelect ? groupSelect.value : 'all';
+  var filtered = allSubjects.filter(function(subject) {
+    var haystack = normalizeSubjectFilterValue([
+      subject.subject_code,
+      subject.subject_name,
+      subject.subject_group,
+      subject.class_label,
+      subject.class_id
+    ].join(' '));
+    return (!query || haystack.indexOf(query) !== -1) &&
+      (classId === 'all' || String(subject.class_id || '') === classId) &&
+      (group === 'all' || String(subject.subject_group || '').trim() === group);
+  });
+
+  renderSubjects(filtered);
+  var hasFilters = !!query || classId !== 'all' || group !== 'all';
+  var summary = document.getElementById('subjectListSummary');
+  var clearButton = document.getElementById('clearSubjectFiltersBtn');
+  if (summary) {
+    summary.textContent = hasFilters
+      ? 'พบ ' + filtered.length + ' จาก ' + allSubjects.length + ' วิชา'
+      : 'ทั้งหมด ' + allSubjects.length + ' วิชา';
+  }
+  if (clearButton) clearButton.hidden = !hasFilters;
+}
+
+function clearSubjectFilters() {
+  document.getElementById('subjectSearch').value = '';
+  document.getElementById('subjectClassFilter').value = 'all';
+  document.getElementById('subjectGroupFilter').value = 'all';
+  applySubjectFilters();
+  document.getElementById('subjectSearch').focus();
+}
+
 function renderSubjects(subjects) {
   document.getElementById('subjectsLoading').style.display = 'none';
   var tbody = document.getElementById('subjectsBody');
+  var table = document.getElementById('subjectsTable');
+  var empty = document.getElementById('subjectsEmpty');
   tbody.innerHTML = '';
   subjects.forEach(function(s) {
     var tr = document.createElement('tr');
     tr.setAttribute('data-subject-id', s.subject_id);
 
     tr.innerHTML =
+      '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(s.subject_id) + '" aria-label="เลือกวิชา ' + escHtml(s.subject_name) + '"></td>' +
       '<td>' + escHtml(s.class_label || (s.class_id ? s.class_id : 'Legacy')) + '</td>' +
       '<td>' + escHtml(s.subject_code || '—') + '</td>' +
       '<td>' + escHtml(s.subject_name) + '</td>' +
       '<td>' + escHtml(s.subject_group || '') + '</td>' +
       '<td>' + escHtml(s.hours_per_year) + ' ชม.</td>' +
-      '<td class="subject-actions-cell"><div class="subject-actions">' +
-        '<button class="btn-primary" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
-        '<button class="btn-primary" style="background:#f59e0b" onclick="openEditModal(\'' + escHtml(s.subject_id) + '\')">แก้ไข</button>' +
-        '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')">ลบ</button>' +
+      '<td class="table-action-cell"><div class="table-row-actions">' +
+        '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px" onclick="viewIndicators(\'' + escHtml(s.subject_id) + '\')">ตัวชี้วัด</button>' +
+        '<button class="btn-primary" style="margin-right:6px;font-size:12px;padding:5px 12px;background:#f59e0b" onclick="openEditModal(\'' + escHtml(s.subject_id) + '\')">แก้ไข</button>' +
+        '<button class="btn-danger" onclick="deleteSubject(\'' + escHtml(s.subject_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
       '</div></td>';
     tbody.appendChild(tr);
   });
-  document.getElementById('subjectsTable').style.display = 'table';
-  setupBulkDelete('subjectsTable', 'data-subject-id', 'serverDeleteSubject', loadSubjects);
+  table.style.display = subjects.length ? 'table' : 'none';
+  empty.hidden = subjects.length !== 0;
+  if (subjectsBulkController) subjectsBulkController.refresh();
 }
 
 function addSubject() {
@@ -269,6 +424,8 @@ function addSubject() {
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
   if (!classId) { showToast('กรุณาเลือกชั้นเรียน', 'error'); return; }
+  var ability = selectedNewClassIsP1P3() ? subjectAbilityValues('new') : { type: '' };
+  if (!ability) return;
 
   var btn = document.getElementById('addSubjectBtn');
   btn.disabled = true;
@@ -283,6 +440,8 @@ function addSubject() {
       document.getElementById('newSubjectCode').value = '';
       document.getElementById('newHours').value = '';
       document.getElementById('newClassIds').value = '';
+      document.getElementById('newAbilityType').value = '';
+      toggleNewSubjectAbility();
       document.getElementById('subjectsLoading').style.display = 'block';
       document.getElementById('subjectsTable').style.display = 'none';
       loadSubjects();
@@ -291,7 +450,7 @@ function addSubject() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group);
+    .serverAddSubject(TOKEN, '', subject_name, subject_code, hours, '1', classId, subject_group, ability.type);
 }
 
 function openEditModal(subject_id) {
@@ -303,6 +462,9 @@ function openEditModal(subject_id) {
   document.getElementById('editSubjectName').value = s.subject_name || '';
   document.getElementById('editSubjectGroup').value = s.subject_group || '';
   document.getElementById('editHours').value = s.hours_per_year || '';
+  var isP1P3 = isP1P3Level(s.class_level);
+  document.getElementById('editAbilityTypeGroup').style.display = isP1P3 ? '' : 'none';
+  document.getElementById('editAbilityType').value = s.curriculum_ability_type || '';
   
   document.getElementById('editModalOverlay').classList.add('open');
 }
@@ -319,6 +481,9 @@ function saveSubjectEdit() {
   var hours = document.getElementById('editHours').value.trim();
 
   if (!subject_name) { showToast('กรุณากรอก ชื่อวิชา', 'error'); return; }
+  var currentSubject = allSubjects.find(function(item) { return item.subject_id === subject_id; });
+  var ability = currentSubject && isP1P3Level(currentSubject.class_level) ? subjectAbilityValues('edit') : { type: '' };
+  if (!ability) return;
 
   var btn = document.getElementById('saveEditBtn');
   btn.disabled = true;
@@ -335,7 +500,7 @@ function saveSubjectEdit() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group);
+    .serverUpdateSubject(TOKEN, subject_id, subject_name, subject_code, hours, '1', subject_group, ability.type);
 }
 
 function parseCSV(text) {
@@ -384,10 +549,10 @@ function normalizeCSVHeader(header) {
 }
 
 function downloadCSVTemplate() {
-  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
+  var headers = ['class_id', 'ระดับชั้น', 'ห้อง', 'รหัสระบบ', 'รหัสวิชา', 'ชื่อวิชา*', 'กลุ่มสาระฯ', 'ประเภทความสามารถ', 'จำนวนชั่วโมง', 'กลุ่มน้ำหนัก', 'ก่อนกลางภาค', 'กลางภาค', 'หลังกลางภาค', 'ปลายภาค'];
   var rows = [
-    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', '200', '1', '30', '20', '20', '30'],
-    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', '200', '1', '30', '20', '20', '30']
+    ['', 'ป.1', '1', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', '200', '1', '30', '20', '20', '30'],
+    ['', 'ป.1', '2', '', 'ท11101', 'ภาษาไทย', 'ภาษาไทย', 'พื้นฐาน', '200', '1', '30', '20', '20', '30']
   ];
   var csv = [headers].concat(rows).map(function(row) {
     return row.map(csvEscape).join(',');
@@ -436,6 +601,7 @@ function importCSVFile() {
       var codeIdx = headers.indexOf('รหัสวิชา');
       var nameIdx = headers.indexOf('ชื่อวิชา');
       var subjectGroupIdx = headers.indexOf('กลุ่มสาระฯ');
+      var abilityTypeIdx = headers.indexOf('ประเภทความสามารถ');
       var hoursIdx = headers.indexOf('จำนวนชั่วโมง');
       var groupIdx = headers.indexOf('กลุ่มน้ำหนัก');
       var preMidIdx = headers.indexOf('ก่อนกลางภาค');
@@ -473,6 +639,7 @@ function importCSVFile() {
           subject_code: code,
           subject_name: name,
           subject_group: subjectGroup,
+          curriculum_ability_type: abilityTypeIdx !== -1 && row[abilityTypeIdx] ? row[abilityTypeIdx].trim() : '',
           hours: hours,
           weight_group: group,
           pre_mid_max: preMidIdx !== -1 && row[preMidIdx] ? row[preMidIdx].trim() : '',
@@ -573,6 +740,15 @@ function deleteSubject(subject_id) {
     .serverDeleteSubject(TOKEN, subject_id);
 }
 
+var subjectsBulkController = initBulkCrudTable({
+  tableId: 'subjectsTable',
+  toolbarId: 'subjectsBulkActions',
+  paginationId: 'subjectsPagination',
+  pageSize: 20,
+  actionType: 'subject',
+  actionLabel: 'ลบ',
+  onComplete: loadSubjects
+});
 loadClassesForSubjects();
 loadSubjects();
 </script>

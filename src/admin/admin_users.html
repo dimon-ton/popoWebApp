@@ -93,6 +93,7 @@
         <h3>บัญชีผู้ใช้งาน</h3>
         <p id="userListSummary" aria-live="polite">กำลังโหลดรายชื่อ...</p>
       </div>
+      <button type="button" class="btn-secondary" id="exportUsersCsvBtn" onclick="exportUsersCSV()" disabled>ส่งออก CSV</button>
     </div>
     <div class="user-list-toolbar" role="search" aria-label="ค้นหารายชื่อผู้ใช้">
       <div class="user-search-field">
@@ -119,18 +120,27 @@
       </div>
     </div>
     <div class="users-table-wrap">
+      <div class="bulk-action-bar" id="usersBulkActions" aria-live="polite">
+        <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+        <div class="bulk-action-buttons">
+          <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+          <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+        </div>
+      </div>
       <table id="usersTable" style="display:none">
         <thead>
           <tr>
+            <th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกผู้ใช้ทั้งหมดที่แสดง"></th>
             <th>ชื่อผู้ใช้</th>
             <th>ชื่อ-สกุล</th>
             <th>บทบาท</th>
-            <th class="user-actions-heading">การจัดการ</th>
+            <th class="user-actions-heading table-action-heading">การจัดการ</th>
           </tr>
         </thead>
         <tbody id="usersBody"></tbody>
       </table>
     </div>
+    <div class="bulk-pagination" id="usersPagination" aria-label="แบ่งหน้ารายการผู้ใช้"></div>
     <div class="user-empty-state" id="usersEmpty" hidden>
       <strong>ไม่พบผู้ใช้ที่ตรงกับการค้นหา</strong>
       <span>ลองเปลี่ยนคำค้นหาหรือตัวกรองบทบาท</span>
@@ -290,6 +300,33 @@ function downloadUsersCSVTemplate() {
   ]);
 }
 
+function csvExportValue(value) {
+  var text = String(value == null ? '' : value);
+  return /^[=+\-@]/.test(text) ? "'" + text : text;
+}
+
+function exportUsersCSV() {
+  if (!allUsers.length) {
+    showToast('ไม่มีข้อมูลผู้ใช้สำหรับส่งออก', 'error');
+    return;
+  }
+
+  var rows = [['user_id', 'username', 'full_name', 'role']];
+  allUsers.forEach(function(user) {
+    rows.push([
+      csvExportValue(user.user_id),
+      csvExportValue(user.username),
+      csvExportValue(user.full_name),
+      csvExportValue(user.role)
+    ]);
+  });
+
+  var now = new Date();
+  var datePart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  downloadCSVFile('users_export_' + datePart + '.csv', rows);
+  showToast('ส่งออกรายชื่อผู้ใช้ ' + allUsers.length + ' บัญชีแล้ว', 'success');
+}
+
 function importUsersCSV() {
   var input = document.getElementById('usersCsvInput');
   if (!input.files || input.files.length === 0) { showToast('กรุณาเลือกไฟล์ CSV', 'error'); return; }
@@ -369,6 +406,7 @@ function loadUsers() {
     .withSuccessHandler(function(result) {
       if (result && result.error) { showToast(result.error, 'error'); return; }
       allUsers = (result && result.users) ? result.users : [];
+      document.getElementById('exportUsersCsvBtn').disabled = allUsers.length === 0;
       applyUserFilters();
     })
     .withFailureHandler(function(err) {
@@ -414,17 +452,18 @@ function renderUsers(users) {
     tr.setAttribute('data-user-id', u.user_id);
     tr.setAttribute('data-username', u.username);
     tr.innerHTML =
+      '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(u.user_id) + '" aria-label="เลือกผู้ใช้ ' + escHtml(u.full_name) + '"></td>' +
       '<td class="user-username-cell"><span>@' + escHtml(u.username) + '</span></td>' +
       '<td class="user-name-cell"><strong>' + escHtml(u.full_name) + '</strong></td>' +
       '<td class="user-role-cell"><span class="role-badge ' + u.role + '">' + (u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครู') + '</span></td>' +
-      '<td class="user-actions-cell"><div class="user-row-actions"><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button>' +
+      '<td class="user-actions-cell table-action-cell"><div class="user-row-actions table-row-actions"><button class="btn-secondary" onclick="openEditModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.username) + '\', \'' + escHtml(u.full_name) + '\', \'' + escHtml(u.role) + '\')">แก้ไข</button>' +
       '<button class="btn-secondary" onclick="openResetModal(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">รีเซตรหัสผ่าน</button>' +
       '<button class="btn-danger" onclick="deleteUser(\'' + escHtml(u.user_id) + '\', \'' + escHtml(u.full_name) + '\')">ลบ</button></div></td>';
     tbody.appendChild(tr);
   });
   table.style.display = users.length ? '' : 'none';
   empty.hidden = users.length !== 0;
-  setupBulkDelete('usersTable', 'data-user-id', 'serverDeleteUser', loadUsers);
+  if (usersBulkController) usersBulkController.refresh();
 }
 
 function escHtml(s) {
@@ -608,6 +647,16 @@ document.addEventListener('keydown', function(event) {
     if (modalId === 'editModal') closeEditModal();
     else closeResetModal();
   });
+});
+
+var usersBulkController = initBulkCrudTable({
+  tableId: 'usersTable',
+  toolbarId: 'usersBulkActions',
+  paginationId: 'usersPagination',
+  pageSize: 20,
+  actionType: 'user',
+  actionLabel: 'ลบ',
+  onComplete: loadUsers
 });
 
 // Load users on page open

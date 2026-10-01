@@ -74,10 +74,18 @@
   <div class="card">
     <h3>รายการวันหยุด</h3>
     <div class="loading-msg" id="holidaysLoading">กำลังโหลด...</div>
+    <div class="bulk-action-bar" id="holidaysBulkActions" aria-live="polite">
+      <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+      <div class="bulk-action-buttons">
+        <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+        <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+      </div>
+    </div>
     <table id="holidaysTable" style="display:none">
-      <thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ประเภท</th><th>รายละเอียด</th><th></th></tr></thead>
+      <thead><tr><th class="bulk-row-select-col"><input type="checkbox" class="bulk-select-all" aria-label="เลือกวันหยุดทั้งหมดที่แสดง"></th><th>วันที่</th><th>ชื่อวันหยุด</th><th>ประเภท</th><th>รายละเอียด</th><th class="table-action-heading"></th></tr></thead>
       <tbody id="holidaysBody"></tbody>
     </table>
+    <div class="bulk-pagination" id="holidaysPagination" aria-label="แบ่งหน้ารายการวันหยุด"></div>
   </div>
 </div>
 
@@ -159,9 +167,9 @@ function renderHolidays() {
   holidays.forEach(function(row, index) {
     var range = holidayRangeDisplay(row);
     var tr = document.createElement('tr');
-    tr.setAttribute('data-holiday-id', row.holiday_id);
     if (editingHolidayIndex === index) {
       tr.innerHTML =
+        '<td class="bulk-row-select-col"></td>' +
         '<td><div style="display:grid;gap:6px;min-width:150px">' +
           '<div class="thai-date-picker" data-thai-date-picker>' +
             '<input type="hidden" id="editHolidayStart' + index + '" data-thai-date-value value="' + escHtml(row.start_date || '') + '">' +
@@ -175,22 +183,23 @@ function renderHolidays() {
         '<td><input type="text" id="editHolidayName' + index + '" value="' + escHtml(row.name || '') + '" style="width:100%"></td>' +
         '<td><select id="editHolidayType' + index + '" style="width:100%">' + holidayTypeOptions(row.type || 'custom') + '</select></td>' +
         '<td><input type="text" id="editHolidayDescription' + index + '" value="' + escHtml(row.description || '') + '" style="width:100%"></td>' +
-        '<td><button class="btn-primary" id="saveHolidayInlineBtn' + index + '" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="saveHolidayInline(' + index + ')">บันทึก</button>' +
-        '<button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="cancelHolidayEdit()">ยกเลิก</button></td>';
+        '<td class="table-action-cell"><div class="table-row-actions"><button class="btn-primary" id="saveHolidayInlineBtn' + index + '" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="saveHolidayInline(' + index + ')">บันทึก</button>' +
+        '<button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="cancelHolidayEdit()">ยกเลิก</button></div></td>';
     } else {
-      tr.innerHTML = '<td>' + escHtml(range) + '</td>' +
+      tr.innerHTML = '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(row.holiday_id) + '" aria-label="เลือกวันหยุด ' + escHtml(row.name) + '"></td>' +
+        '<td>' + escHtml(range) + '</td>' +
         '<td>' + escHtml(row.name) + '</td>' +
         '<td>' + escHtml(row.type || '') + '</td>' +
         '<td>' + escHtml(row.description || '') + '</td>' +
-        '<td><button class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="editHoliday(' + index + ')">แก้ไข</button>' +
-        '<button class="btn-danger" style="font-size:12px;padding:5px 12px" onclick="deleteHolidayByIndex(' + index + ')">ลบ</button></td>';
+        '<td class="table-action-cell"><div class="table-row-actions"><button class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:6px" onclick="editHoliday(' + index + ')">แก้ไข</button>' +
+        '<button class="btn-danger" style="font-size:12px;padding:5px 12px" onclick="deleteHolidayByIndex(' + index + ')">ลบ</button></div></td>';
     }
     tbody.appendChild(tr);
     if (editingHolidayIndex === index && typeof initThaiDatePickers === 'function') initThaiDatePickers(tr);
   });
   document.getElementById('holidaysLoading').style.display = 'none';
   document.getElementById('holidaysTable').style.display = 'table';
-  setupBulkDelete('holidaysTable', 'data-holiday-id', 'serverDeleteHoliday', loadHolidays);
+  if (holidaysBulkController) holidaysBulkController.refresh();
 }
 
 function holidayTypeOptions(selected) {
@@ -293,6 +302,15 @@ function deleteHolidayByIndex(index) {
   if (holidays[index]) deleteHoliday(holidays[index].holiday_id);
 }
 
+var holidaysBulkController = initBulkCrudTable({
+  tableId: 'holidaysTable',
+  toolbarId: 'holidaysBulkActions',
+  paginationId: 'holidaysPagination',
+  pageSize: 20,
+  actionType: 'holiday',
+  actionLabel: 'ลบ',
+  onComplete: loadHolidays
+});
 loadHolidays();
 </script>
 </body>

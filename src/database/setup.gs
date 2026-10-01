@@ -2,7 +2,7 @@
 //   1. Open the Apps Script project.
 //   2. Select "setupDatabase_" in the function dropdown.
 //   3. Click Run. Approve the OAuth prompts.
-//   4. The script creates a new Google Sheet with all 16 tabs (headers in row 1),
+//   4. The script creates a new Google Sheet with all tabs (headers in row 1),
 //      seeds a default admin user, and stores the Sheet's ID in
 //      Script Property DB_SHEET_ID so the rest of the app finds it.
 //
@@ -15,14 +15,18 @@ var TAB_SCHEMA = {
   'Users':            ['user_id', 'username', 'password_hash', 'salt', 'full_name', 'role', 'avatar', 'must_change_pwd', 'last_login_at', 'created_at'],
   'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days', 'semester', 'school_address', 'phone_number', 'education_area', 'school_logo', 'measurement_head_name', 'academic_head_name', 'director_name'],
   'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id', 'homeroom_teacher_user_ids'],
-  'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group'],
+  'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group', 'curriculum_ability_type', 'curriculum_ability_name'],
   'Enrollments':      ['enrollment_id', 'class_id', 'subject_id', 'teacher_user_id', 'dev_activity_result'],
   'Students':         ['student_id', 'class_id', 'seq_no', 'student_code', 'citizen_id', 'full_name', 'dob', 'note'],
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],
   'SubjectWeights':   ['subject_id', 'class_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
   'Attendance':       ['attendance_id', 'student_id', 'subject_id', 'date', 'period', 'status', 'updated_by', 'updated_at'],
+  'SubjectSchedules': ['schedule_id', 'class_id', 'subject_id', 'day_of_week', 'period', 'semester', 'academic_year', 'created_by', 'updated_at'],
   'IndicatorScores':  ['id', 'student_id', 'subject_id', 'indicator_id', 'score', 'updated_by', 'updated_at'],
-  'SummativeScores':  ['id', 'student_id', 'subject_id', 'coursework', 'midterm', 'final', 'total', 'computed_grade', 'makeup_grade', 'final_grade', 'updated_by', 'updated_at'],
+  'LearningOutcomes': ['outcome_id', 'subject_id', 'term', 'code', 'description', 'max_score', 'display_order'],
+  'LearningOutcomeScores': ['id', 'student_id', 'subject_id', 'outcome_id', 'score', 'updated_by', 'updated_at'],
+  'TermAssessments': ['id', 'student_id', 'subject_id', 'term', 'score', 'updated_by', 'updated_at'],
+  'SummativeScores':  ['id', 'student_id', 'subject_id', 'coursework', 'coursework_override', 'midterm', 'final', 'total', 'computed_grade', 'makeup_grade', 'final_grade', 'updated_by', 'updated_at'],
   'Characteristics':  ['id', 'student_id', 'subject_id', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 'total', 'label', 'updated_by', 'updated_at'],
   'ReadThinkWrite':   ['id', 'student_id', 'subject_id', 'r1', 'r2', 'r3', 't1', 't2', 't3', 't4', 'w1', 'w2', 'w3', 'total', 'label', 'updated_by', 'updated_at'],
   'AuditLog':         ['timestamp', 'user_id', 'entity', 'entity_id', 'old_value', 'new_value'],
@@ -32,8 +36,8 @@ var TAB_SCHEMA = {
 
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
-  'Students', 'Indicators', 'SubjectWeights', 'Attendance',
-  'IndicatorScores', 'SummativeScores', 'Characteristics',
+  'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'SubjectSchedules',
+  'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];
 
@@ -100,8 +104,13 @@ function ensureTab(ss, tabName, headers) {
   var existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var missing = headers.filter(function(h) { return existingHeaders.indexOf(h) === -1; });
   if (missing.length > 0) {
-    Logger.log('WARNING: tab "' + tabName + '" is missing columns: ' + missing.join(', ')
-      + '. Fix the headers in row 1 of that tab before using the app.');
+    var requiredColumns = existingHeaders.length + missing.length;
+    if (sheet.getMaxColumns && sheet.getMaxColumns() < requiredColumns) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredColumns - sheet.getMaxColumns());
+    }
+    sheet.getRange(1, existingHeaders.length + 1, 1, missing.length).setValues([missing]);
+    sheet.getRange(1, existingHeaders.length + 1, 1, missing.length).setFontWeight('bold');
+    Logger.log('Added missing columns to "' + tabName + '": ' + missing.join(', '));
   } else {
     Logger.log('Tab OK: ' + tabName);
   }

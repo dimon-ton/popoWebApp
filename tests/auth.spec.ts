@@ -5,6 +5,7 @@
  */
 import { test, expect, wrapPage } from './helpers/custom-test';
 import { seedTestUser, cleanupTestData } from './helpers/seed';
+import { readFile } from 'node:fs/promises';
 
 // US-002 tests run in a fresh context without auth.json — we test the login flow itself
 
@@ -136,6 +137,28 @@ test.describe('US-003: User management and password reset', () => {
 
     // User table should load (at least admin row)
     await expect(page.locator('#usersTable')).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('US-003: admin can export the user list as a UTF-8 CSV without credentials', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=admin_users`);
+
+    const exportButton = page.locator('#exportUsersCsvBtn');
+    await expect(exportButton).toBeEnabled({ timeout: 20_000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await exportButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^users_export_\d{4}-\d{2}-\d{2}\.csv$/);
+
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    const csv = await readFile(downloadPath!, 'utf8');
+    expect(csv.charCodeAt(0)).toBe(0xFEFF);
+    expect(csv.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0]).toBe('user_id,username,full_name,role');
+    expect(csv).toContain(seededTeacherId);
+    expect(csv).not.toContain('password_hash');
+    expect(csv).not.toContain('salt');
   });
 
   test('US-003: create new user via UI — row appears in list', async ({ page }) => {

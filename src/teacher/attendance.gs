@@ -2,187 +2,13 @@
 
 var ATTENDANCE_STATUSES = ['/', 'ล', 'ข'];
 
-function attendanceSubjectBelongsToClass(subject, class_id, enrollments) {
-  if (!subject) return false;
-  if (String(subject.class_id || '') === String(class_id)) return true;
-  return enrollments.some(function(enrollment) {
-    return String(enrollment.class_id) === String(class_id) &&
-      String(enrollment.subject_id) === String(subject.subject_id);
-  });
-}
-
-function requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments) {
-  var cls = dbFindOne('Classes', 'class_id', class_id);
-  if (!cls) throw new Error('ไม่พบชั้นเรียน: ' + class_id);
-
-  var subject = dbFindOne('Subjects', 'subject_id', subject_id);
-  if (!subject || !attendanceSubjectBelongsToClass(subject, class_id, enrollments)) {
-    throw new Error('ไม่พบวิชาในชั้นเรียนนี้');
-  }
-
-  if (session.role !== 'admin') {
-    var assigned = enrollments.some(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === String(subject_id) &&
-        String(enrollment.teacher_user_id) === String(session.user_id);
-    });
-    if (!assigned) throw new Error('ไม่มีสิทธิ์แก้ไขการเข้าเรียนของวิชานี้');
-  }
-
-  return { class_info: cls, subject_info: subject };
-}
-
-function buildEligibleAttendanceSources(session, class_id, current_subject_id) {
-  var enrollments = dbGetAll('Enrollments');
-  requireAttendanceDestinationAccess(session, class_id, current_subject_id, enrollments);
-
-  var students = dbFind('Students', 'class_id', class_id);
-  if (!students.length) return { sources: [], has_destination_values: false };
-
-  var attendanceConfig = getAttendanceConfig();
-  var dates = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days);
-  if (!dates.length) return { sources: [], has_destination_values: false };
-
-  var studentIds = {};
-  students.forEach(function(student) { studentIds[String(student.student_id)] = true; });
-  var allowedDates = {};
-  dates.forEach(function(date) { allowedDates[formatDateISO(date)] = true; });
-
-  var users = {};
-  dbGetAll('Users').forEach(function(user) { users[String(user.user_id)] = user.full_name || ''; });
-
-  var rowsBySubject = {};
-  var destinationHasValues = false;
-  dbGetAll('Attendance').forEach(function(row) {
-    var subjectId = String(row.subject_id || '');
-    var studentId = String(row.student_id || '');
-    var dateStr = formatDateISO(new Date(row.date));
-    if (!studentIds[studentId] || !allowedDates[dateStr]) return;
-    if (subjectId === String(current_subject_id) && ATTENDANCE_STATUSES.indexOf(String(row.status || '')) !== -1) {
-      destinationHasValues = true;
-    }
-    if (!rowsBySubject[subjectId]) rowsBySubject[subjectId] = [];
-    rowsBySubject[subjectId].push(row);
-  });
-
-  var requiredRecordCount = students.length * dates.length;
-  var sources = [];
-  dbGetAll('Subjects').forEach(function(subject) {
-    var subjectId = String(subject.subject_id || '');
-    if (!subjectId || subjectId === String(current_subject_id)) return;
-    if (!attendanceSubjectBelongsToClass(subject, class_id, enrollments)) return;
-
-    var sourceEnrollments = enrollments.filter(function(enrollment) {
-      return String(enrollment.class_id) === String(class_id) &&
-        String(enrollment.subject_id) === subjectId && String(enrollment.teacher_user_id || '') !== '';
-    });
-    if (!sourceEnrollments.length) return;
-
-    var teacherIds = {};
-    sourceEnrollments.forEach(function(enrollment) {
-      teacherIds[String(enrollment.teacher_user_id)] = true;
-    });
-
-    var rowsByKey = {};
-    var valid = true;
-    var updatedAt = '';
-    (rowsBySubject[subjectId] || []).forEach(function(row) {
-      var studentId = String(row.student_id || '');
-      var dateStr = formatDateISO(new Date(row.date));
-      if (!studentIds[studentId] || !allowedDates[dateStr]) return;
-      var key = studentId + '|' + dateStr;
-      var status = String(row.status || '');
-      if (rowsByKey[key] || ATTENDANCE_STATUSES.indexOf(status) === -1 || !teacherIds[String(row.updated_by || '')]) {
-        valid = false;
-        return;
-      }
-      rowsByKey[key] = row;
-      var rowUpdatedAt = String(row.updated_at || '');
-      if (rowUpdatedAt > updatedAt) updatedAt = rowUpdatedAt;
-    });
-    if (!valid || Object.keys(rowsByKey).length !== requiredRecordCount) return;
-
-    sources.push({
-      subject_id: subjectId,
-      subject_name: subject.subject_name || subjectId,
-      teacher_names: Object.keys(teacherIds).map(function(teacherId) { return users[teacherId] || teacherId; }),
-      status: 'complete',
-      student_count: students.length,
-      day_count: dates.length,
-      record_count: requiredRecordCount,
-      updated_at: updatedAt
-    });
-  });
-
-  sources.sort(function(a, b) {
-    return String(a.subject_name).localeCompare(String(b.subject_name), 'th');
-  });
-  return { sources: sources, has_destination_values: destinationHasValues };
-}
-
-function getEligibleAttendanceSources(token, class_id, current_subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-  return buildEligibleAttendanceSources(session, class_id, current_subject_id);
-}
-
-function getAttendanceSourceValues(token, class_id, current_subject_id, source_subject_id) {
-  var session = getSession(token);
-  if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
-
-  var eligibility = buildEligibleAttendanceSources(session, class_id, current_subject_id);
-  var source = null;
-  for (var i = 0; i < eligibility.sources.length; i++) {
-    if (String(eligibility.sources[i].subject_id) === String(source_subject_id)) {
-      source = eligibility.sources[i];
-      break;
-    }
-  }
-  if (!source) throw new Error('แหล่งข้อมูลนี้ไม่มีสิทธิ์ใช้งานหรือข้อมูลยังไม่ครบถ้วน');
-
-  var studentIds = {};
-  dbFind('Students', 'class_id', class_id).forEach(function(student) {
-    studentIds[String(student.student_id)] = true;
-  });
-  var attendanceConfig = getAttendanceConfig();
-  var allowedDates = {};
-  buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days).forEach(function(date) {
-    allowedDates[formatDateISO(date)] = true;
-  });
-
-  var values = dbGetAll('Attendance').filter(function(row) {
-    var dateStr = formatDateISO(new Date(row.date));
-    return String(row.subject_id) === String(source_subject_id) &&
-      studentIds[String(row.student_id)] && allowedDates[dateStr];
-  }).map(function(row) {
-    return {
-      student_id: String(row.student_id),
-      date: formatDateISO(new Date(row.date)),
-      status: String(row.status || '')
-    };
-  });
-  values.sort(function(a, b) {
-    return a.date === b.date
-      ? String(a.student_id).localeCompare(String(b.student_id))
-      : String(a.date).localeCompare(String(b.date));
-  });
-
-  appendAuditLog(session.user_id, 'AttendanceCopy', current_subject_id, null, {
-    class_id: class_id,
-    source_subject_id: source_subject_id,
-    destination_subject_id: current_subject_id,
-    rows_loaded: values.length
-  });
-  return { source: source, values: values, has_destination_values: eligibility.has_destination_values };
-}
-
 // Returns attendance data for a given class/subject/week.
 // week: 1–N integer. Week 1 starts on SchoolInfo.semester_start_date exactly.
 // If no opening date is configured, the academic-year fallback starts on the
 // first Monday on or after May 13.
 //
 // Returns:
-//   { students, week, weekStart, dates, attendance, subject_info, class_info, can_edit }
+//   { students, week, weekStart, sessions, attendance, subject_info, class_info, can_edit }
 function getAttendanceData(token, class_id, subject_id, week) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
@@ -194,11 +20,15 @@ function getAttendanceData(token, class_id, subject_id, week) {
   if (weekNum < 1) weekNum = 1;
   var attendanceConfig = getAttendanceConfig();
   var holidaySet = getHolidayDateSet();
-  var attendanceWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
+  var term = subjectScheduleTerm_();
+  var schedule = subjectScheduleRows_(class_id, subject_id, term);
+  var calendarWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
+  var attendanceWeeks = buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule);
   var maxWeeks = Math.max(1, attendanceWeeks.length);
   if (weekNum > maxWeeks) weekNum = maxWeeks;
-  var dates = attendanceWeeks[weekNum - 1] || [];
-  var weekStart = dates[0] || attendanceConfig.start_date;
+  var sessions = attendanceWeeks[weekNum - 1] || [];
+  var weekDates = calendarWeeks[weekNum - 1] || [];
+  var weekStart = weekDates[0] || attendanceConfig.start_date;
 
   // Get students ordered by seq_no
   var students = dbFind('Students', 'class_id', class_id);
@@ -206,30 +36,35 @@ function getAttendanceData(token, class_id, subject_id, week) {
 
   // Get all attendance rows for this subject + date range
   var allAttendance = dbGetAll('Attendance');
-  var dateStrings = dates.map(function(dt) { return formatDateISO(dt); });
-
-  // Build map: student_id -> date -> status
-  var attMap = {};
-  allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id) return;
-    var ds = formatDateISO(new Date(row.date));
-    if (dateStrings.indexOf(ds) === -1) return;
-    if (!attMap[row.student_id]) attMap[row.student_id] = {};
-    attMap[row.student_id][ds] = row.status;
+  var sessionSet = {};
+  sessions.forEach(function(item) { sessionSet[item.date + '|' + item.period] = true; });
+  var yearSessionSet = {};
+  attendanceWeeks.forEach(function(weekSessions) {
+    weekSessions.forEach(function(item) { yearSessionSet[item.date + '|' + item.period] = true; });
   });
+  var classStudentSet = {};
+  students.forEach(function(student) { classStudentSet[String(student.student_id)] = true; });
 
-  // Compute per-student totals across full year (all dates for this subject)
+  // Build period-aware weekly lookup and full-year totals in one pass.
+  var attMap = {};
   var yearlyMap = {};
   allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id) return;
-    var rowDate = formatDateISO(new Date(row.date));
-    if (holidaySet[rowDate]) return;
-    var sid = row.student_id;
+    if (String(row.subject_id) !== String(subject_id) || !Number.isSafeInteger(Number(row.period)) || Number(row.period) < 1) return;
+    var sid = String(row.student_id);
+    if (!classStudentSet[sid]) return;
+    var ds = normalizeISODate(row.date);
+    var sessionKey = ds + '|' + Number(row.period);
+    if (!yearSessionSet[sessionKey]) return;
+    var s = String(row.status);
+    if (ATTENDANCE_STATUSES.indexOf(s) === -1) return;
     if (!yearlyMap[sid]) yearlyMap[sid] = { present: 0, leave: 0, absent: 0 };
-    var s = row.status;
     if (s === '/') yearlyMap[sid].present++;
     else if (s === 'ล') yearlyMap[sid].leave++;
     else if (s === 'ข') yearlyMap[sid].absent++;
+    if (sessionSet[sessionKey]) {
+      if (!attMap[sid]) attMap[sid] = {};
+      attMap[sid][sessionKey] = s;
+    }
   });
 
   return {
@@ -238,7 +73,8 @@ function getAttendanceData(token, class_id, subject_id, week) {
     max_weeks: maxWeeks,
     required_attendance_days: attendanceConfig.required_days,
     weekStart: formatDateISO(weekStart),
-    dates: dateStrings,
+    sessions: sessions,
+    schedule_entries: normalizeScheduleEntries_(schedule),
     attendance: attMap,
     yearly: yearlyMap,
     subject_info: subj,
@@ -248,19 +84,21 @@ function getAttendanceData(token, class_id, subject_id, week) {
 }
 
 // Save attendance for a week.
-// cells: array of { student_id, date, status }
+// cells: array of { student_id, date, period, status }
 // status: '/' | 'ล' | 'ข' | ''
 function serverSaveAttendance(token, class_id, subject_id, cells) {
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
+  if (!Array.isArray(cells)) throw new Error('ข้อมูลการเข้าเรียนไม่ถูกต้อง');
 
-  var enrollments = dbGetAll('Enrollments');
-  requireAttendanceDestinationAccess(session, class_id, subject_id, enrollments);
+  requireSubjectAccess_(session, class_id, subject_id);
 
   var attendanceConfig = getAttendanceConfig();
-  var allowedDates = {};
-  buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days).forEach(function(date) {
-    allowedDates[formatDateISO(date)] = true;
+  var term = subjectScheduleTerm_();
+  var schedule = subjectScheduleRows_(class_id, subject_id, term);
+  var allowedSessions = {};
+  buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(), schedule).forEach(function(weekSessions) {
+    weekSessions.forEach(function(item) { allowedSessions[item.date + '|' + item.period] = true; });
   });
 
   var classStudentIds = {};
@@ -270,25 +108,31 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   var invalidDates = [];
   var invalidStudents = [];
   var invalidStatuses = [];
+  var invalidPeriods = [];
   var normalizedByKey = {};
   (cells || []).forEach(function(cell) {
+    if (!cell || typeof cell !== 'object') throw new Error('ข้อมูลการเข้าเรียนไม่ถูกต้อง');
     var dateStr = normalizeISODate(cell.date);
-    if (!dateStr || !allowedDates[dateStr]) invalidDates.push(String(cell.date || ''));
+    var period;
+    try { period = schedulePeriod_(cell.period); } catch (e) { invalidPeriods.push(String(cell.period || '')); }
+    if (!dateStr || (period && !allowedSessions[dateStr + '|' + period])) invalidDates.push(String(cell.date || ''));
     var studentId = String(cell.student_id || '');
     if (!classStudentIds[studentId]) invalidStudents.push(studentId);
     var status = String(cell.status || '');
     if (ATTENDANCE_STATUSES.indexOf(status) === -1 && status !== '') invalidStatuses.push(status);
-    if (dateStr && allowedDates[dateStr] && classStudentIds[studentId] &&
+    if (dateStr && period && allowedSessions[dateStr + '|' + period] && classStudentIds[studentId] &&
         (ATTENDANCE_STATUSES.indexOf(status) !== -1 || status === '')) {
-      normalizedByKey[studentId + '|' + dateStr] = {
+      normalizedByKey[studentId + '|' + dateStr + '|' + period] = {
         student_id: studentId,
         date: dateStr,
+        period: period,
         status: status
       };
     }
   });
+  if (invalidPeriods.length > 0) throw new Error('คาบเรียนต้องเป็นจำนวนเต็มมากกว่า 0');
   if (invalidDates.length > 0) {
-    throw new Error('วันที่เข้าเรียนอยู่นอกช่วงภาคเรียน: ' + invalidDates.join(', '));
+    throw new Error('วันหรือคาบเรียนไม่ตรงกับตารางเรียนของวิชานี้: ' + invalidDates.join(', '));
   }
   if (invalidStudents.length > 0) throw new Error('พบนักเรียนที่ไม่ได้อยู่ในชั้นเรียนนี้');
   if (invalidStatuses.length > 0) throw new Error('พบสถานะการเข้าเรียนที่ไม่ถูกต้อง');
@@ -299,12 +143,23 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
+    requireSubjectAccess_(session, class_id, subject_id);
+    var liveTerm = subjectScheduleTerm_();
+    var liveSessions = {};
+    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(),
+      subjectScheduleRows_(class_id, subject_id, liveTerm)).forEach(function(weekSessions) {
+        weekSessions.forEach(function(item) { liveSessions[item.date + '|' + item.period] = true; });
+      });
+    normalizedCells.forEach(function(cell) {
+      if (!liveSessions[cell.date + '|' + cell.period]) throw new Error('วันหรือคาบเรียนไม่ตรงกับตารางเรียนของวิชานี้');
+    });
     var sheet = getSheet('Attendance');
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var sidCol = headers.indexOf('student_id');
     var subjCol = headers.indexOf('subject_id');
     var dateCol = headers.indexOf('date');
+    var periodCol = headers.indexOf('period');
     var statusCol = headers.indexOf('status');
     var updByCol = headers.indexOf('updated_by');
     var updAtCol = headers.indexOf('updated_at');
@@ -315,13 +170,13 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][subjCol]) !== String(subject_id)) continue;
       var existingDate = formatDateISO(new Date(data[i][dateCol]));
-      existingByKey[String(data[i][sidCol]) + '|' + existingDate] = i;
+      existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
     }
 
     var modifiedRows = {};
     var appendedRows = [];
     normalizedCells.forEach(function(cell) {
-      var key = cell.student_id + '|' + cell.date;
+      var key = cell.student_id + '|' + cell.date + '|' + cell.period;
       var existingIndex = existingByKey[key];
       if (existingIndex !== undefined) {
         data[existingIndex][statusCol] = cell.status;
@@ -335,6 +190,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
         newRow[sidCol] = cell.student_id;
         newRow[subjCol] = subject_id;
         newRow[dateCol] = cell.date;
+        newRow[periodCol] = cell.period;
         newRow[statusCol] = cell.status;
         newRow[updByCol] = session.user_id;
         newRow[updAtCol] = now;
@@ -374,6 +230,124 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
     { class_id: class_id, subject_id: subject_id, cells_saved: normalizedCells.length });
 
   return { ok: true, saved: normalizedCells.length };
+}
+
+// Mark every blank scheduled period in the current semester as present.
+// Existing present, leave, and absent values are never overwritten.
+function serverMarkSemesterPresent(token, class_id, subject_id) {
+  var session = requireSession_(token);
+  requireSubjectAccess_(session, class_id, subject_id);
+  var attendanceConfig = getAttendanceConfig();
+  var holidaySet = getHolidayDateSet();
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
+
+  var result;
+  try {
+    requireSubjectAccess_(session, class_id, subject_id);
+    var term = subjectScheduleTerm_();
+    var schedule = subjectScheduleRows_(class_id, subject_id, term);
+    var sessions = [];
+    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule)
+      .forEach(function(weekSessions) {
+        weekSessions.forEach(function(item) { sessions.push(item); });
+      });
+    var students = dbFind('Students', 'class_id', class_id);
+    if (!sessions.length || !students.length) {
+      return { ok: true, saved: 0, sessions: sessions.length, students: students.length };
+    }
+
+    var sheet = getSheet('Attendance');
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var sidCol = headers.indexOf('student_id');
+    var subjCol = headers.indexOf('subject_id');
+    var dateCol = headers.indexOf('date');
+    var periodCol = headers.indexOf('period');
+    var statusCol = headers.indexOf('status');
+    var updByCol = headers.indexOf('updated_by');
+    var updAtCol = headers.indexOf('updated_at');
+    var idCol = headers.indexOf('attendance_id');
+    if ([sidCol, subjCol, dateCol, periodCol, statusCol, updByCol, updAtCol, idCol].some(function(col) { return col < 0; })) {
+      throw new Error('โครงสร้างตาราง Attendance ไม่ถูกต้อง');
+    }
+
+    var existingByKey = {};
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][subjCol]) !== String(subject_id)) continue;
+      var existingDate = formatDateISO(new Date(data[i][dateCol]));
+      existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
+    }
+
+    var now = new Date().toISOString();
+    var modifiedRows = {};
+    var appendedRows = [];
+    students.forEach(function(student) {
+      sessions.forEach(function(item) {
+        var key = String(student.student_id) + '|' + item.date + '|' + item.period;
+        var existingIndex = existingByKey[key];
+        if (existingIndex !== undefined) {
+          if (String(data[existingIndex][statusCol] || '').trim() !== '') return;
+          data[existingIndex][statusCol] = '/';
+          data[existingIndex][updByCol] = session.user_id;
+          data[existingIndex][updAtCol] = now;
+          modifiedRows[existingIndex] = data[existingIndex];
+          return;
+        }
+        var newRow = headers.map(function() { return ''; });
+        newRow[idCol] = generateId('att');
+        newRow[sidCol] = student.student_id;
+        newRow[subjCol] = subject_id;
+        newRow[dateCol] = item.date;
+        newRow[periodCol] = item.period;
+        newRow[statusCol] = '/';
+        newRow[updByCol] = session.user_id;
+        newRow[updAtCol] = now;
+        appendedRows.push(newRow);
+      });
+    });
+
+    var modifiedIndexes = Object.keys(modifiedRows).map(function(index) { return Number(index); })
+      .sort(function(a, b) { return a - b; });
+    var runStart = null;
+    var runRows = [];
+    function flushModifiedRun() {
+      if (runStart === null || !runRows.length) return;
+      sheet.getRange(runStart + 1, 1, runRows.length, headers.length).setValues(runRows);
+      runStart = null;
+      runRows = [];
+    }
+    modifiedIndexes.forEach(function(index) {
+      if (runStart === null) {
+        runStart = index;
+      } else if (index !== runStart + runRows.length) {
+        flushModifiedRun();
+        runStart = index;
+      }
+      runRows.push(modifiedRows[index]);
+    });
+    flushModifiedRun();
+
+    if (appendedRows.length) {
+      var appendStart = sheet.getLastRow() + 1;
+      sheet.getRange(appendStart, dateCol + 1, appendedRows.length, 1).setNumberFormat('@');
+      sheet.getRange(appendStart, 1, appendedRows.length, headers.length).setValues(appendedRows);
+    }
+    result = {
+      ok: true,
+      saved: modifiedIndexes.length + appendedRows.length,
+      sessions: sessions.length,
+      students: students.length
+    };
+  } finally {
+    lock.releaseLock();
+  }
+
+  appendAuditLog(session.user_id, 'Attendance', subject_id, null, {
+    action: 'mark_semester_present', class_id: class_id, subject_id: subject_id,
+    cells_saved: result.saved, sessions: result.sessions, students: result.students
+  });
+  return result;
 }
 
 // Returns the first Monday of the academic year based on SchoolInfo.academic_year

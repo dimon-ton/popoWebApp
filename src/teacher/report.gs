@@ -17,11 +17,12 @@ function getReportData(token, class_id, subject_id) {
   var enrollment = dbGetAll('Enrollments').filter(function(e) {
     return e.class_id === class_id && e.subject_id === subject_id;
   });
-  var teacher_name = '';
-  if (enrollment.length > 0 && enrollment[0].teacher_user_id) {
-    var teacher = dbFindOne('Users', 'user_id', enrollment[0].teacher_user_id);
-    if (teacher) teacher_name = teacher.full_name || '';
-  }
+  var teacher_names = enrollment.map(function(row) {
+    if (!row.teacher_user_id) return '';
+    var teacher = dbFindOne('Users', 'user_id', row.teacher_user_id);
+    return teacher ? teacher.full_name || '' : '';
+  }).filter(String).filter(function(name, index, names) { return names.indexOf(name) === index; });
+  var teacher_name = teacher_names[0] || '';
 
   // Homeroom teachers. Supports the new JSON list and the old single-teacher field.
   var homeroom_teacher_names = getHomeroomTeacherNames(cls);
@@ -34,7 +35,7 @@ function getReportData(token, class_id, subject_id) {
   var studentIds = students.map(function(s) { return s.student_id; });
 
   // --- Grade distribution from SummativeScores ---
-  var allSummative = dbGetAll('SummativeScores');
+  var allSummative = isCurriculumLevel_(cls.level) ? [] : dbGetAll('SummativeScores');
   var gradeLabels = [4, 3.5, 3, 2.5, 2, 1.5, 1, 0];
   var gradeCounts = {};
   gradeLabels.forEach(function(g) { gradeCounts[String(g)] = 0; });
@@ -118,11 +119,12 @@ function getReportData(token, class_id, subject_id) {
     return { student_id: s.student_id, full_name: s.full_name, seq_no: s.seq_no, result: devMap[s.student_id] || '' };
   });
 
-  return {
+  var report = {
     school_info: school_info,
     class_info: withClassLabel(cls),
     subject_info: subj,
     teacher_name: teacher_name,
+    teacher_names: teacher_names,
     homeroom_teacher_name: homeroom_teacher_name,
     homeroom_teacher_names: homeroom_teacher_names,
     total_students: total_students,
@@ -133,6 +135,19 @@ function getReportData(token, class_id, subject_id) {
     dev_students: dev_students,
     can_edit: true
   };
+  if (isCurriculumLevel_(cls.level)) {
+    var curriculum = getCurriculumData(token, class_id, subject_id);
+    report.curriculum_data = curriculum;
+    report.grade_dist = gradeLabels.map(function(g) {
+      var count = curriculum.students.filter(function(student) { return student.final_grade !== '' && Number(student.final_grade) === g; }).length;
+      return { grade: g, count: count, pct: total_students ? Math.round(count * 1000 / total_students) / 10 : 0 };
+    });
+    report.ability_dist = ['เชี่ยวชาญ', 'ชำนาญ', 'พัฒนา', 'เริ่มต้น'].map(function(label) {
+      var count = curriculum.students.filter(function(student) { return student.ability === label; }).length;
+      return { label: label, count: count, pct: total_students ? Math.round(count * 1000 / total_students) / 10 : 0 };
+    });
+  }
+  return report;
 }
 
 // Full printable ป.พ.5 report packet data.
@@ -146,11 +161,11 @@ function getReportBookData(token, class_id, subject_id) {
   var studentSet = {};
   studentIds.forEach(function(id) { studentSet[id] = true; });
 
-  var indicators = dbFind('Indicators', 'subject_id', subject_id);
+  var indicators = d.curriculum_data ? [] : dbFind('Indicators', 'subject_id', subject_id);
   indicators.sort(function(a, b) { return Number(a.display_order) - Number(b.display_order); });
 
   var formativeScoreMap = {};
-  dbGetAll('IndicatorScores').forEach(function(row) {
+  (d.curriculum_data ? [] : dbGetAll('IndicatorScores')).forEach(function(row) {
     if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
     if (!formativeScoreMap[row.student_id]) formativeScoreMap[row.student_id] = {};
     formativeScoreMap[row.student_id][row.indicator_id] = row.score === '' ? '' : Number(row.score);
@@ -178,7 +193,7 @@ function getReportBookData(token, class_id, subject_id) {
   });
 
   var summativeMap = {};
-  dbGetAll('SummativeScores').forEach(function(row) {
+  (d.curriculum_data ? [] : dbGetAll('SummativeScores')).forEach(function(row) {
     if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
     summativeMap[row.student_id] = {
       coursework: reportValueOrBlank(row.coursework),
@@ -209,48 +224,39 @@ function getReportBookData(token, class_id, subject_id) {
 
   var attendanceConfig = getAttendanceConfig();
   var holidaySet = getHolidayDateSet();
-  var attendanceCalendar = buildAttendanceDates(attendanceConfig.start_date, attendanceConfig.required_days)
-    .map(function(date) { return formatDateISO(date); });
+  var attendanceYearDates = {};
+  buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet).forEach(function(weekDates) {
+    weekDates.forEach(function(date) { attendanceYearDates[formatDateISO(date)] = true; });
+  });
+  var scheduleTerm = subjectScheduleTerm_();
+  var subjectSchedule = subjectScheduleRows_(class_id, subject_id, scheduleTerm);
+  var attendanceCalendar = [];
+  buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, subjectSchedule)
+    .forEach(function(weekSessions, weekIndex) {
+      weekSessions.forEach(function(item) {
+        attendanceCalendar.push({ date: item.date, day_of_week: item.day_of_week, period: item.period, week: weekIndex + 1 });
+      });
+    });
   var attendanceCalendarSet = {};
-  attendanceCalendar.forEach(function(date, index) { attendanceCalendarSet[date] = index; });
+  attendanceCalendar.forEach(function(item, index) { attendanceCalendarSet[item.date + '|' + item.period] = index; });
   var allAttendance = dbGetAll('Attendance');
   var lastAttendanceIndex = -1;
   allAttendance.forEach(function(row) {
     var status = reportNormalizeAttendanceStatus(row.status);
-    if (row.subject_id !== subject_id || !studentSet[row.student_id] || !status) return;
+    if (row.subject_id !== subject_id || !studentSet[row.student_id] || ['/', 'ล', 'ข'].indexOf(status) === -1) return;
     var dateStr = reportNormalizeAttendanceDate(row.date);
-    if (holidaySet[dateStr]) return;
-    if (attendanceCalendarSet[dateStr] !== undefined && attendanceCalendarSet[dateStr] > lastAttendanceIndex) {
-      lastAttendanceIndex = attendanceCalendarSet[dateStr];
+    var key = dateStr + '|' + Number(row.period);
+    if (attendanceCalendarSet[key] !== undefined && attendanceCalendarSet[key] > lastAttendanceIndex) {
+      lastAttendanceIndex = attendanceCalendarSet[key];
     }
   });
-  var attendance_dates = attendanceCalendar.slice(0, lastAttendanceIndex >= 0 ? lastAttendanceIndex + 1 : 24);
-  var attendance_holiday_notes = getReportAttendanceHolidayNotes(attendance_dates);
+  var attendance_sessions = attendanceCalendar.slice(0, lastAttendanceIndex >= 0 ? lastAttendanceIndex + 1 : 24);
+  var attendance_holiday_notes = getReportAttendanceHolidayNotes(attendance_sessions.map(function(item) { return item.date; }));
   var attendanceDateSet = {};
-  attendance_dates.forEach(function(date) { attendanceDateSet[date] = true; });
-  var attendance_totals = {};
-  var attendance_by_student = {};
-  students.forEach(function(student) {
-    attendance_totals[student.student_id] = { present: 0, leave: 0, absent: 0, total: 0 };
-    attendance_by_student[student.student_id] = {};
-  });
-  allAttendance.forEach(function(row) {
-    if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
-    var bucket = attendance_totals[row.student_id];
-    if (!bucket) return;
-    var status = reportNormalizeAttendanceStatus(row.status);
-    var dateStr = reportNormalizeAttendanceDate(row.date);
-    if (holidaySet[dateStr]) return;
-    if (status === '/') bucket.present++;
-    else if (status === 'ล') bucket.leave++;
-    else if (status === 'ข') bucket.absent++;
-    bucket.total = bucket.present + bucket.leave + bucket.absent;
-    if (attendanceDateSet[dateStr]) {
-      attendance_by_student[row.student_id][dateStr] = status;
-    }
-  });
+  attendance_sessions.forEach(function(item) { attendanceDateSet[item.date + '|' + item.period] = true; });
+  var attendanceSummary = summarizeReportAttendanceRows_(allAttendance, subject_id, studentSet, attendanceDateSet, attendanceYearDates);
   var attendance_students = students.map(function(student) {
-    var totals = attendance_totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+    var totals = attendanceSummary.totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
     return {
       student_id: student.student_id,
       seq_no: student.seq_no,
@@ -260,7 +266,7 @@ function getReportBookData(token, class_id, subject_id) {
       leave: totals.leave,
       absent: totals.absent,
       total: totals.total,
-      attendance: attendance_by_student[student.student_id] || {}
+      attendance: attendanceSummary.by_student[student.student_id] || {}
     };
   });
 
@@ -299,7 +305,7 @@ function getReportBookData(token, class_id, subject_id) {
   d.weights = weights;
   d.formative_students = formative_students;
   d.summative_students = summative_students;
-  d.attendance_dates = attendance_dates;
+  d.attendance_sessions = attendance_sessions;
   d.attendance_holiday_notes = attendance_holiday_notes;
   d.attendance_students = attendance_students;
   d.characteristics_students = characteristics_students;
@@ -310,6 +316,33 @@ function getReportBookData(token, class_id, subject_id) {
 
 function reportValueOrBlank(value) {
   return value === null || value === undefined ? '' : value;
+}
+
+function summarizeReportAttendanceRows_(rows, subjectId, studentSet, sessionSet, yearDateSet) {
+  var totals = {};
+  var byStudent = {};
+  Object.keys(studentSet).forEach(function(studentId) {
+    totals[studentId] = { present: 0, leave: 0, absent: 0, total: 0 };
+    byStudent[studentId] = {};
+  });
+  rows.forEach(function(row) {
+    var studentId = String(row.student_id);
+    var period = Number(row.period);
+    if (String(row.subject_id) !== String(subjectId) || !studentSet[studentId] ||
+        !Number.isSafeInteger(period) || period < 1) return;
+    var status = reportNormalizeAttendanceStatus(row.status);
+    if (['/', 'ล', 'ข'].indexOf(status) === -1) return;
+    var dateStr = reportNormalizeAttendanceDate(row.date);
+    if (yearDateSet && !yearDateSet[dateStr]) return;
+    var bucket = totals[studentId];
+    if (status === '/') bucket.present++;
+    else if (status === 'ล') bucket.leave++;
+    else if (status === 'ข') bucket.absent++;
+    bucket.total = bucket.present + bucket.leave + bucket.absent;
+    var key = dateStr + '|' + period;
+    if (sessionSet[key]) byStudent[studentId][key] = status;
+  });
+  return { totals: totals, by_student: byStudent };
 }
 
 function getReportAttendanceHolidayNotes(attendanceDates) {
@@ -400,7 +433,7 @@ function serverExportReportPdf(token, class_id, subject_id) {
 
   // --- Build the cover sheet ---
   var rows = [];
-  rows.push(['รายงานผลการเรียน', '', '', '']);
+  rows.push([d.curriculum_data ? 'แบบบันทึกผลการพัฒนาคุณภาพผู้เรียนประจำรายวิชา' : 'รายงานผลการเรียน', '', '', '']);
   rows.push(['โรงเรียน', school.school_name || '-', 'ปีการศึกษา', school.academic_year || '-']);
   rows.push(['อำเภอ', school.district   || '-', 'จังหวัด',   school.province    || '-']);
   rows.push(['ที่อยู่', school.school_address || '-', 'เขตพื้นที่', school.education_area || '-']);
@@ -414,10 +447,10 @@ function serverExportReportPdf(token, class_id, subject_id) {
   rows.push(['', '', '', '']);
 
   // Grade distribution table header
-  rows.push(['ผลการเรียน (คะแนน)', '', '', '']);
-  rows.push(['ผลการเรียน', 'จำนวนนักเรียน', 'ร้อยละ', '']);
-  (d.grade_dist || []).forEach(function(row) {
-    rows.push([String(row.grade), row.count, row.pct + '%', '']);
+  rows.push([d.curriculum_data ? 'ผลการประเมินระดับความสามารถ' : 'ผลการเรียน (คะแนน)', '', '', '']);
+  rows.push([d.curriculum_data ? 'ระดับความสามารถ' : 'ผลการเรียน', 'จำนวนนักเรียน', 'ร้อยละ', '']);
+  (d.curriculum_data ? d.ability_dist : d.grade_dist || []).forEach(function(row) {
+    rows.push([String(d.curriculum_data ? row.label : row.grade), row.count, row.pct + '%', '']);
   });
   rows.push(['', '', '', '']);
 

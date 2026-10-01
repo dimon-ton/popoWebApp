@@ -48,6 +48,175 @@ function parseMakeupGrade(value, student_id) {
   return n;
 }
 
+var summativeCourseworkOverrideColumnReady_ = false;
+
+function ensureSummativeCourseworkOverrideColumn_() {
+  if (summativeCourseworkOverrideColumnReady_) return;
+  ensureColumns('SummativeScores', ['coursework_override']);
+  summativeCourseworkOverrideColumnReady_ = true;
+}
+
+function isBlankScore_(value) {
+  return value === '' || value === null || value === undefined;
+}
+
+function roundScore_(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function getCourseworkMaxFromWeights_(weights) {
+  weights = weights || {};
+  var preMidMax = !isBlankScore_(weights.pre_mid_max) ? Number(weights.pre_mid_max) : 25;
+  var postMidMax = !isBlankScore_(weights.post_mid_max) ? Number(weights.post_mid_max) : 25;
+  return (isNaN(preMidMax) ? 25 : preMidMax) + (isNaN(postMidMax) ? 25 : postMidMax);
+}
+
+function buildIndicatorScoreContext_(subjectId, studentIds) {
+  var subjectKey = String(subjectId);
+  var studentSet = {};
+  (studentIds || []).forEach(function(studentId) { studentSet[String(studentId)] = true; });
+
+  var indicators = dbGetAll('Indicators').filter(function(indicator) {
+    return String(indicator.subject_id) === subjectKey;
+  });
+  var scoresByStudent = {};
+  dbGetAll('IndicatorScores').forEach(function(row) {
+    var studentKey = String(row.student_id);
+    if (String(row.subject_id) !== subjectKey || !studentSet[studentKey]) return;
+    if (!scoresByStudent[studentKey]) scoresByStudent[studentKey] = {};
+    scoresByStudent[studentKey][String(row.indicator_id)] = row.score;
+  });
+
+  return {
+    indicators: indicators,
+    scores_by_student: scoresByStudent,
+    coursework_max: getCourseworkMaxFromWeights_(dbFindOne('SubjectWeights', 'subject_id', subjectId))
+  };
+}
+
+function getIndicatorScoreSummary_(subjectId, studentId, context) {
+  var scoreContext = context || buildIndicatorScoreContext_(subjectId, [studentId]);
+  var scores = scoreContext.scores_by_student[String(studentId)] || {};
+  var rawScore = 0;
+  var rawMax = 0;
+  var complete = scoreContext.indicators.length > 0;
+
+  scoreContext.indicators.forEach(function(indicator) {
+    var maxScore = Number(indicator.max_score);
+    var score = scores[String(indicator.indicator_id)];
+    if (isNaN(maxScore) || maxScore <= 0) complete = false;
+    else rawMax += maxScore;
+    if (isBlankScore_(score) || isNaN(Number(score))) complete = false;
+    else rawScore += Number(score);
+  });
+
+  return {
+    raw_indicator_score: rawScore,
+    raw_indicator_max: rawMax,
+    complete: complete && rawMax > 0
+  };
+}
+
+function calculateCourseworkScore_(subjectId, studentId, context) {
+  var scoreContext = context || buildIndicatorScoreContext_(subjectId, [studentId]);
+  var summary = getIndicatorScoreSummary_(subjectId, studentId, scoreContext);
+  if (!summary.complete) return '';
+  return roundScore_((summary.raw_indicator_score / summary.raw_indicator_max) * scoreContext.coursework_max);
+}
+
+function validCourseworkOverride_(value, courseworkMax) {
+  if (isBlankScore_(value)) return '';
+  var score = Number(value);
+  return isNaN(score) || score < 0 || score > courseworkMax ? '' : score;
+}
+
+function validStoredMakeupGrade_(value) {
+  if (isBlankScore_(value)) return '';
+  var grade = Number(value);
+  return isNaN(grade) || grade < 0 || grade > 4 ? '' : grade;
+}
+
+function calculateSummativeResult_(coursework, midterm, finalScore, makeupGrade) {
+  var complete = !isBlankScore_(coursework) && !isBlankScore_(midterm) && !isBlankScore_(finalScore);
+  var total = '';
+  if (!isBlankScore_(coursework) || !isBlankScore_(midterm) || !isBlankScore_(finalScore)) {
+    total = roundScore_((isBlankScore_(coursework) ? 0 : Number(coursework)) +
+      (isBlankScore_(midterm) ? 0 : Number(midterm)) +
+      (isBlankScore_(finalScore) ? 0 : Number(finalScore)));
+  }
+  var computedGrade = complete ? computeGrade(total) : '';
+  var validMakeup = validStoredMakeupGrade_(makeupGrade);
+  return {
+    total: total,
+    computed_grade: computedGrade,
+    makeup_grade: validMakeup,
+    final_grade: validMakeup !== '' ? validMakeup : computedGrade
+  };
+}
+
+function syncSummativeCoursework_(classId, subjectId, studentIds, updatedBy) {
+  var cls = dbFindOne('Classes', 'class_id', classId);
+  if (!cls || isCurriculumLevel_(cls.level)) return { skipped: true, rows_synced: 0 };
+
+  var ids = (studentIds || []).map(function(studentId) { return String(studentId); });
+  if (!ids.length) return { skipped: false, rows_synced: 0 };
+  ensureSummativeCourseworkOverrideColumn_();
+  var idSet = {};
+  ids.forEach(function(studentId) { idSet[studentId] = true; });
+  var context = buildIndicatorScoreContext_(subjectId, ids);
+  var existingByStudent = {};
+  dbGetAll('SummativeScores').forEach(function(row) {
+    if (String(row.subject_id) === String(subjectId) && idSet[String(row.student_id)]) {
+      existingByStudent[String(row.student_id)] = row;
+    }
+  });
+  var now = new Date().toISOString();
+  var upsertRows = ids.map(function(studentId) {
+    var existing = existingByStudent[studentId] || {};
+    var derivedCoursework = calculateCourseworkScore_(subjectId, studentId, context);
+    var courseworkOverride = validCourseworkOverride_(existing.coursework_override, context.coursework_max);
+    var coursework = courseworkOverride !== '' ? courseworkOverride : derivedCoursework;
+    var result = calculateSummativeResult_(coursework, existing.midterm, existing.final, existing.makeup_grade);
+    return {
+      student_id: studentId,
+      subject_id: String(subjectId),
+      coursework: coursework,
+      coursework_override: courseworkOverride,
+      midterm: isBlankScore_(existing.midterm) ? '' : existing.midterm,
+      final: isBlankScore_(existing.final) ? '' : existing.final,
+      total: result.total,
+      computed_grade: result.computed_grade,
+      makeup_grade: result.makeup_grade,
+      final_grade: result.final_grade,
+      updated_by: updatedBy || existing.updated_by || '',
+      updated_at: now
+    };
+  });
+  dbBatchUpsertRows_('SummativeScores', ['student_id', 'subject_id'], upsertRows, 'id', 'ssum');
+  return { skipped: false, rows_synced: upsertRows.length };
+}
+
+function syncAllSummativeCourseworkForSubject_(classId, subjectId, updatedBy) {
+  var studentIds = dbFind('Students', 'class_id', classId).map(function(student) {
+    return String(student.student_id);
+  });
+  return syncSummativeCoursework_(classId, subjectId, studentIds, updatedBy);
+}
+
+function syncSummativeCourseworkForSubjectClasses_(subjectId, updatedBy) {
+  var classIds = {};
+  var subject = dbFindOne('Subjects', 'subject_id', subjectId);
+  if (subject && subject.class_id) classIds[String(subject.class_id)] = true;
+  dbGetAll('Enrollments').forEach(function(enrollment) {
+    if (String(enrollment.subject_id) === String(subjectId) && enrollment.class_id) {
+      classIds[String(enrollment.class_id)] = true;
+    }
+  });
+  Object.keys(classIds).forEach(function(classId) {
+    syncAllSummativeCourseworkForSubject_(classId, subjectId, updatedBy);
+  });
+}
+
 // Returns all data needed to render the summative scoring grid.
 // Returns: { students, weights, scores, subject_info, class_info, can_edit }
 // scores: map of student_id -> { coursework, midterm, final, total, computed_grade, makeup_grade, final_grade }
@@ -55,6 +224,7 @@ function getSummativeData(token, class_id, subject_id) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
   var cls = access.class_info;
+  if (isCurriculumLevel_(cls.level)) throw new Error('ชั้น ป.1–ป.3 ใช้คะแนนรายภาคเรียน');
   var subj = access.subject_info;
   var can_edit = true;
 
@@ -101,37 +271,42 @@ function getSummativeData(token, class_id, subject_id) {
 // Uses upsert pattern inside one LockService acquisition.
 function serverSaveSummative(token, class_id, subject_id, rows) {
   var session = requireSession_(token);
-  requireSubjectAccess_(session, class_id, subject_id);
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  if (isCurriculumLevel_(access.class_info.level)) throw new Error('ชั้น ป.1–ป.3 ใช้คะแนนรายภาคเรียน');
 
   if (!rows || rows.length === 0) return { ok: true };
   validateRowsBelongToClass_(rows, class_id);
+  ensureSummativeCourseworkOverrideColumn_();
 
   var maxes = getSummativeScoreMaxes(subject_id);
+  var studentIds = rows.map(function(row) { return String(row.student_id); });
+  var courseworkContext = buildIndicatorScoreContext_(subject_id, studentIds);
 
   var now = new Date().toISOString();
   var upsertRows = rows.map(function(row) {
     var student_id = String(row.student_id);
-    var cw = parseSummativeScore(row.coursework, maxes.coursework, 'ระหว่างเรียน', student_id);
+    var derivedCoursework = calculateCourseworkScore_(subject_id, student_id, courseworkContext);
+    var submittedCoursework = parseSummativeScore(row.coursework, maxes.coursework, 'ระหว่างเรียน', student_id);
+    var courseworkOverride = submittedCoursework;
+    if (submittedCoursework === '' || (derivedCoursework !== '' && roundScore_(submittedCoursework) === roundScore_(derivedCoursework))) {
+      courseworkOverride = '';
+    }
+    var cw = courseworkOverride !== '' ? courseworkOverride : derivedCoursework;
     var mid = parseSummativeScore(row.midterm, maxes.midterm, 'สอบกลางภาค', student_id);
     var fin = parseSummativeScore(row.final, maxes.final, 'สอบปลายภาค', student_id);
     var makeup = parseMakeupGrade(row.makeup_grade, student_id);
-
-    var total = '';
-    if (cw !== '' || mid !== '' || fin !== '') {
-      total = (cw === '' ? 0 : Number(cw)) + (mid === '' ? 0 : Number(mid)) + (fin === '' ? 0 : Number(fin));
-    }
-    var computed_grade = computeGrade(total);
-    var final_grade = (makeup !== '' && !isNaN(makeup)) ? makeup : computed_grade;
+    var result = calculateSummativeResult_(cw, mid, fin, makeup);
     return {
       student_id: student_id,
       subject_id: String(subject_id),
       coursework: cw,
+      coursework_override: courseworkOverride,
       midterm: mid,
       final: fin,
-      total: total,
-      computed_grade: computed_grade,
-      makeup_grade: makeup,
-      final_grade: final_grade,
+      total: result.total,
+      computed_grade: result.computed_grade,
+      makeup_grade: result.makeup_grade,
+      final_grade: result.final_grade,
       updated_by: session.user_id,
       updated_at: now
     };

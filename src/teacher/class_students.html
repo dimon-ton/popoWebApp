@@ -105,20 +105,29 @@
         <div class="skeleton-table-row"><div class="skeleton-table-cell" style="width:8%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:19%"></div><div class="skeleton-table-cell" style="width:23%"></div><div class="skeleton-table-cell" style="width:12%"></div><div class="skeleton-table-cell" style="width:14%"></div><div class="skeleton-table-cell" style="width:10%"></div></div>
       </div>
     </div>
+    <div class="bulk-action-bar" id="studentsBulkActions" aria-live="polite">
+      <div class="bulk-action-summary">เลือกแล้ว 0 รายการ</div>
+      <div class="bulk-action-buttons">
+        <button type="button" class="btn-secondary" data-bulk-clear>ยกเลิกการเลือก</button>
+        <button type="button" class="btn-danger" data-bulk-run disabled>ลบที่เลือก (0)</button>
+      </div>
+    </div>
     <table id="studentsTable" style="display:none">
       <thead>
         <tr>
+          <th class="bulk-row-select-col" id="studentSelectHeader" style="display:none"><input type="checkbox" class="bulk-select-all" aria-label="เลือกนักเรียนทั้งหมดที่แสดง"></th>
           <th>เลขที่</th>
           <th>เลขประจำตัว</th>
           <th>เลขประจำตัวประชาชน</th>
           <th class="student-name-col">ชื่อ-สกุล</th>
           <th>วันเกิด</th>
           <th>หมายเหตุ</th>
-          <th id="actionHeader"></th>
+          <th id="actionHeader" class="table-action-heading"></th>
         </tr>
       </thead>
       <tbody id="studentsBody"></tbody>
     </table>
+    <div class="bulk-pagination" id="studentsPagination" aria-label="แบ่งหน้ารายชื่อนักเรียน"></div>
   </div>
 </div>
 
@@ -338,11 +347,13 @@ function loadStudents() {
         document.getElementById('csvCard').style.display = 'block';
         document.getElementById('actionHeader').textContent = 'จัดการ';
         document.getElementById('readonlyNotice').style.display = 'none';
+        document.getElementById('studentSelectHeader').style.display = '';
       } else {
         document.getElementById('addCard').style.display = 'none';
         document.getElementById('csvCard').style.display = 'none';
         document.getElementById('actionHeader').textContent = '';
         document.getElementById('readonlyNotice').style.display = 'block';
+        document.getElementById('studentSelectHeader').style.display = 'none';
       }
       renderStudents(result.students || []);
     })
@@ -362,12 +373,13 @@ function renderStudents(students) {
     tr.setAttribute('data-student-id', s.student_id);
     tr.setAttribute('data-dob-input', s.dob_input || '');
     var actionCell = CAN_EDIT
-      ? '<td><div class="action-btns">' +
+      ? '<td class="table-action-cell"><div class="action-btns table-row-actions">' +
           '<button class="btn-secondary" onclick="startEdit(\'' + escHtml(s.student_id) + '\')" style="margin-right:6px;font-size:12px;padding:5px 12px">แก้ไข</button>' +
           '<button class="btn-danger" onclick="deleteStudent(\'' + escHtml(s.student_id) + '\')" style="font-size:12px;padding:5px 12px">ลบ</button>' +
         '</div></td>'
       : '<td></td>';
     tr.innerHTML =
+      (CAN_EDIT ? '<td class="bulk-row-select-col"><input type="checkbox" class="bulk-row-select" data-record-id="' + escHtml(s.student_id) + '" aria-label="เลือกนักเรียน ' + escHtml(s.full_name) + '"></td>' : '') +
       '<td class="cell-seq_no">' + escHtml(s.seq_no) + '</td>' +
       '<td class="cell-student_code">' + escHtml(s.student_code) + '</td>' +
       '<td class="cell-citizen_id">' + escHtml(s.citizen_id) + '</td>' +
@@ -378,6 +390,7 @@ function renderStudents(students) {
     tbody.appendChild(tr);
   });
   document.getElementById('studentsTable').style.display = 'table';
+  if (studentsBulkController) studentsBulkController.refresh();
 }
 
 function startEdit(student_id) {
@@ -483,6 +496,15 @@ function deleteStudent(student_id) {
     .serverDeleteStudent(TOKEN, student_id);
 }
 
+var studentsBulkController = initBulkCrudTable({
+  tableId: 'studentsTable',
+  toolbarId: 'studentsBulkActions',
+  paginationId: 'studentsPagination',
+  pageSize: 20,
+  actionType: 'student',
+  actionLabel: 'ลบ',
+  onComplete: loadStudents
+});
 loadStudents();
 </script>
 </body>

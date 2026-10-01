@@ -52,7 +52,7 @@ function handleTestApi(e) {
           subject_id: params.subject_id,
           class_id: params.class_id || '',
           subject_name: params.name || params.subject_id,
-          subject_code: params.code || 'TST0000',
+          subject_code: Object.prototype.hasOwnProperty.call(params, 'code') ? String(params.code) : 'TST0000',
           hours_per_year: params.hours || 40,
           weight_group: params.group || 1,
           subject_group: params.subject_group || ''
@@ -118,6 +118,39 @@ function handleTestApi(e) {
         });
         return jsonOk({ subject_id: params.subject_id });
 
+      case 'seed_learning_outcome':
+        ensureTestPrefix(params.outcome_id);
+        ensureTestPrefix(params.subject_id);
+        dbDelete('LearningOutcomes', 'outcome_id', params.outcome_id);
+        dbInsert('LearningOutcomes', {
+          outcome_id: params.outcome_id, subject_id: params.subject_id,
+          term: Number(params.term), code: params.code || params.outcome_id,
+          description: params.description || 'test outcome',
+          max_score: Number(params.max_score || 10), display_order: Number(params.display_order || 1)
+        });
+        return jsonOk({ outcome_id: params.outcome_id });
+
+      case 'seed_learning_outcome_score':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.outcome_id);
+        dbBatchUpsertRows_('LearningOutcomeScores', ['student_id', 'subject_id', 'outcome_id'], [{
+          student_id: params.student_id, subject_id: params.subject_id,
+          outcome_id: params.outcome_id, score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id, updated_at: new Date().toISOString()
+        }], 'id', 'test_los');
+        return jsonOk({ student_id: params.student_id, outcome_id: params.outcome_id });
+
+      case 'seed_term_assessment':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        dbBatchUpsertRows_('TermAssessments', ['student_id', 'subject_id', 'term'], [{
+          student_id: params.student_id, subject_id: params.subject_id,
+          term: Number(params.term), score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id, updated_at: new Date().toISOString()
+        }], 'id', 'test_term');
+        return jsonOk({ student_id: params.student_id, term: params.term });
+
       case 'seed_indicator':
         ensureTestPrefix(params.indicator_id);
         dbDelete('Indicators', 'indicator_id', params.indicator_id);
@@ -131,6 +164,20 @@ function handleTestApi(e) {
         });
         return jsonOk({ indicator_id: params.indicator_id });
 
+      case 'seed_indicator_score':
+        ensureTestPrefix(params.student_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.indicator_id);
+        dbBatchUpsertRows_('IndicatorScores', ['student_id', 'subject_id', 'indicator_id'], [{
+          student_id: params.student_id,
+          subject_id: params.subject_id,
+          indicator_id: params.indicator_id,
+          score: params.score === '' ? '' : Number(params.score),
+          updated_by: params.student_id,
+          updated_at: new Date().toISOString()
+        }], 'id', 'test_iscore');
+        return jsonOk({ student_id: params.student_id, indicator_id: params.indicator_id });
+
       case 'seed_summative':
         // Seed a SummativeScores row directly (for report aggregate tests)
         // student_id must start with test_; id is auto-generated
@@ -140,11 +187,14 @@ function handleTestApi(e) {
         var sGrade = computeGrade(sTotal);
         var sMakeup = params.makeup_grade !== '' && params.makeup_grade !== undefined ? parseFloat(params.makeup_grade) : '';
         var sFinalGrade = (sMakeup !== '' && !isNaN(sMakeup)) ? sMakeup : sGrade;
+        ensureColumns('SummativeScores', ['coursework_override']);
         dbInsert('SummativeScores', {
           id: generateId('ssum'),
           student_id: params.student_id,
           subject_id: params.subject_id,
           coursework: params.coursework || '',
+          coursework_override: params.coursework_override !== '' && params.coursework_override !== undefined
+            ? Number(params.coursework_override) : '',
           midterm: params.midterm || '',
           final: params.final || '',
           total: sTotal,
@@ -229,6 +279,7 @@ function handleTestApi(e) {
         ensureTestPrefix(params.subject_id);
         ensureTestPrefix(params.updated_by);
         var attendanceDate = normalizeISODate(params.date);
+        var attendancePeriod = schedulePeriod_(params.period);
         if (!attendanceDate) throw new Error('Test API: invalid attendance date');
         if (ATTENDANCE_STATUSES.indexOf(String(params.status || '')) === -1) {
           throw new Error('Test API: invalid attendance status');
@@ -236,7 +287,7 @@ function handleTestApi(e) {
         var existingAttendance = dbGetAll('Attendance').filter(function(row) {
           return String(row.student_id) === String(params.student_id) &&
             String(row.subject_id) === String(params.subject_id) &&
-            formatDateISO(new Date(row.date)) === attendanceDate;
+            formatDateISO(new Date(row.date)) === attendanceDate && Number(row.period) === attendancePeriod;
         });
         existingAttendance.forEach(function(row) {
           if (row.attendance_id) dbDelete('Attendance', 'attendance_id', row.attendance_id);
@@ -246,12 +297,32 @@ function handleTestApi(e) {
           student_id: params.student_id,
           subject_id: params.subject_id,
           date: attendanceDate,
-          period: '',
+          period: attendancePeriod,
           status: params.status,
           updated_by: params.updated_by,
           updated_at: params.updated_at || new Date().toISOString()
         });
-        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id, date: attendanceDate });
+        return jsonOk({ student_id: params.student_id, subject_id: params.subject_id, date: attendanceDate, period: attendancePeriod });
+
+      case 'seed_subject_schedule':
+        ensureTestPrefix(params.class_id);
+        ensureTestPrefix(params.subject_id);
+        ensureTestPrefix(params.created_by);
+        var testDay = String(params.day_of_week || '').toUpperCase();
+        if (SUBJECT_SCHEDULE_DAYS.indexOf(testDay) === -1) throw new Error('Test API: invalid weekday');
+        var testPeriod = schedulePeriod_(params.period);
+        var testTerm = subjectScheduleTerm_();
+        var testExisting = subjectScheduleRows_(params.class_id, params.subject_id, testTerm).some(function(row) {
+          return row.day_of_week === testDay && Number(row.period) === testPeriod;
+        });
+        if (!testExisting) dbInsert('SubjectSchedules', {
+          schedule_id: 'test_schedule_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12),
+          class_id: params.class_id, subject_id: params.subject_id,
+          day_of_week: testDay, period: testPeriod,
+          semester: testTerm.semester, academic_year: testTerm.academic_year,
+          created_by: params.created_by, updated_at: new Date().toISOString()
+        });
+        return jsonOk({ class_id: params.class_id, subject_id: params.subject_id });
 
       case 'seed_complete_attendance':
         ensureTestPrefix(params.class_id);
@@ -260,7 +331,12 @@ function handleTestApi(e) {
         var completeStudents = dbFind('Students', 'class_id', params.class_id);
         if (!completeStudents.length) throw new Error('Test API: no students in class');
         var completeConfig = getAttendanceConfig();
-        var completeDates = buildAttendanceDates(completeConfig.start_date, completeConfig.required_days);
+        var completeTerm = subjectScheduleTerm_();
+        var completeSessions = [];
+        buildSubjectAttendanceSessions(completeConfig.start_date, completeConfig.required_days, getHolidayDateSet(),
+          subjectScheduleRows_(params.class_id, params.subject_id, completeTerm)).forEach(function(weekSessions) {
+            completeSessions = completeSessions.concat(weekSessions);
+          });
         var completeStatus = String(params.status || '/');
         if (ATTENDANCE_STATUSES.indexOf(completeStatus) === -1) {
           throw new Error('Test API: invalid attendance status');
@@ -287,13 +363,13 @@ function handleTestApi(e) {
           var seededAt = params.updated_at || new Date().toISOString();
           var completeRows = [];
           completeStudents.forEach(function(student, studentIndex) {
-            completeDates.forEach(function(date, dateIndex) {
+            completeSessions.forEach(function(attendanceSession, dateIndex) {
               var row = attendanceHeaders.map(function() { return ''; });
               row[attendanceIdCol] = 'test_att_' + studentIndex + '_' + dateIndex + '_' + Utilities.getUuid().substring(0, 8);
               row[attendanceStudentCol] = student.student_id;
               row[attendanceSubjectCol] = params.subject_id;
-              row[attendanceDateCol] = formatDateISO(date);
-              if (attendancePeriodCol !== -1) row[attendancePeriodCol] = '';
+              row[attendanceDateCol] = attendanceSession.date;
+              if (attendancePeriodCol !== -1) row[attendancePeriodCol] = attendanceSession.period;
               row[attendanceStatusCol] = completeStatus;
               row[attendanceUpdatedByCol] = params.updated_by;
               row[attendanceUpdatedAtCol] = seededAt;
@@ -310,8 +386,8 @@ function handleTestApi(e) {
           class_id: params.class_id,
           subject_id: params.subject_id,
           students: completeStudents.length,
-          days: completeDates.length,
-          records: completeStudents.length * completeDates.length
+          days: completeSessions.length,
+          records: completeStudents.length * completeSessions.length
         });
 
       case 'cleanup':
@@ -325,7 +401,11 @@ function handleTestApi(e) {
           'Enrollments': 'enrollment_id',
           'Indicators': 'indicator_id',
           'Attendance': 'attendance_id',
+          'SubjectSchedules': 'schedule_id',
           'IndicatorScores': 'id',
+          'LearningOutcomes': 'outcome_id',
+          'LearningOutcomeScores': 'id',
+          'TermAssessments': 'id',
           'SummativeScores': 'id',
           'Characteristics': 'id',
           'ReadThinkWrite': 'id',
@@ -344,6 +424,9 @@ function handleTestApi(e) {
             // Ignore missing tabs during cleanup
           }
         });
+        // Schedule IDs created by the real save API are not test-prefixed.
+        try { count += dbDeleteWhere('SubjectSchedules', 'class_id', 'test_'); } catch (err) {}
+        try { count += dbDeleteWhere('SubjectSchedules', 'class_id', 'class_test_'); } catch (err) {}
         // Also clean Users by username prefix (catches UI-created test accounts)
         try { count += dbDeleteWhere('Users', 'username', 'test_'); } catch (err) {}
         // Also clean score tables by student_id prefix (IDs are auto-generated, not test_-prefixed)

@@ -45,10 +45,10 @@ The application is divided into server-side controllers (`.gs`) and client-side 
 
 ### Assessment UX and Cross-Subject Copying
 - Editable student tables use the shared `student-name-col` convention from `_styles.html`; both the `ชื่อ-สกุล` header and student-name cells must remain left-aligned and vertically centered. Do not apply this rule to unrelated columns.
-- `class_attendance.html`, `class_characteristics.html`, and `class_readthinkwrite.html` expose `ดึงข้อมูลจากวิชาอื่น`. All workflows load completed values from a **different subject in the same `class_id`** into unsaved client state.
+- `class_characteristics.html` and `class_readthinkwrite.html` expose `ดึงข้อมูลจากวิชาอื่น`. Characteristics and Read-Think-Write may load partial values from a different subject in the same grade level, including another section. Attendance does not offer cross-subject copying because its records are tied to scheduled teaching periods. All copied assessment values stay in unsaved client state.
 - Copying always matches students by `student_id`, never by displayed name or row position. Unmatched destination students remain unchanged, source records are read-only, and teachers must use the existing save button to persist copied values under the destination subject.
-- Source listing and value retrieval are revalidated server-side. Eligible sources must be complete for every current classroom student, contain values valid for their data type, belong to assigned source teachers, and exclude the destination subject. A teacher may copy from another subject they also teach. Admins retain their privileged override while remaining restricted to the same classroom.
-- Attendance copying stages every configured non-holiday school day for the full year, preserves the staged set while users review different weeks, and saves it with one indexed/batched call. Missing source statuses never clear destination values.
+- Source listing and value retrieval are revalidated server-side. Sources may be partial and may be owned by another teacher; source access is read-only, while authorization to edit the destination subject remains mandatory. Characteristics and Read-Think-Write compare the actual `Classes.level` value and require at least one valid value for a destination `student_id`.
+- Only valid, nonblank source values are staged. Numeric zero is valid for Characteristics and Read-Think-Write, missing source values never clear destination values, and unmatched students remain unchanged.
 - The assessment pages use a shared body-level tooltip portal from `_styles.html`. Tooltip triggers must support hover, keyboard focus, touch/click, Escape dismissal, `role="tooltip"`, and `aria-describedby`, and must not be clipped by horizontally scrollable table cards.
 - The visible Read-Think-Write reference maps `อ่าน 1–3`, `คิด 1–4`, and `เขียน 1–3` explicitly to their curriculum criteria; do not rely on list order or tooltips alone to explain a column.
 - **Protected grade-book boundary:** assessment UX changes must not modify `src/teacher/class_report.html`, its printable report tables, aggregation, or export behavior unless the user explicitly requests a grade-book/report change.
@@ -67,8 +67,9 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 - **`Indicators`**: `indicator_id`, `subject_id`, `code`, `description`, `max_score`, `display_order`
 - **`SubjectWeights`**: `subject_id`, `class_id`, `coursework_max`, `final_max`, `pre_mid_max`, `mid_max`, `post_mid_max`, `final_exam_max`
 - **`Attendance`**: `attendance_id`, `student_id`, `subject_id`, `date`, `period`, `status`, `updated_by`, `updated_at`
+- **`SubjectSchedules`**: `schedule_id`, `class_id`, `subject_id`, `day_of_week`, `period`, `semester`, `academic_year`, `created_by`, `updated_at`
 - **`IndicatorScores`**: `id`, `student_id`, `subject_id`, `indicator_id`, `score`, `updated_by`, `updated_at`
-- **`SummativeScores`**: `id`, `student_id`, `subject_id`, `coursework`, `midterm`, `final`, `total`, `computed_grade`, `makeup_grade`, `final_grade`, `updated_by`, `updated_at`
+- **`SummativeScores`**: `id`, `student_id`, `subject_id`, `coursework`, `coursework_override`, `midterm`, `final`, `total`, `computed_grade`, `makeup_grade`, `final_grade`, `updated_by`, `updated_at`
 - **`Characteristics`**: `id`, `student_id`, `subject_id`, `t1`...`t8`, `total`, `label`, `updated_by`, `updated_at`
 - **`ReadThinkWrite`**: `id`, `student_id`, `subject_id`, `r1`...`r3`, `t1`...`t4`, `w1`...`w3`, `total`, `label`, `updated_by`, `updated_at`
 - **`AuditLog`**: `timestamp`, `user_id`, `entity`, `entity_id`, `old_value`, `new_value`
@@ -100,10 +101,17 @@ Use this same URL as `WEB_APP_URL` when running production smoke tests.
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `326`
+- Stable production version: `335`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Keep table action buttons on one line across pages`
+- Latest verified production release: `P1-P3 two-term curriculum grading and reports`
+
+The script uses standard Google Cloud project `app-script-run-function` (project number
+`458875230672`). The Apps Script API is enabled, and the HEAD deployment has an API
+executable entry point. For CLI execution, use a named clasp profile authorized with
+Desktop OAuth credentials from that project and the manifest scopes, then run
+`npx clasp --user run run <functionName>`. The local `.clasp.json` must include
+`"projectId": "app-script-run-function"`.
 
 ---
 
