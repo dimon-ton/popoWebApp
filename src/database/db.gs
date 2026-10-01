@@ -2,7 +2,7 @@
 // All writes use LockService per FR-2
 
 var TABS = [
-  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
+  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'SubjectGroupHeads', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'SubjectSchedules',
   'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'

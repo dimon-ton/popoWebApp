@@ -2,7 +2,32 @@
 
 // Returns all data needed to render the cover report page.
 // Returns: { school_info, class_info, subject_info, teacher_name, homeroom_teacher_name,
+//            subject_group_head_user_id, subject_group_head_name,
 //            total_students, grade_dist, char_dist, rtw_dist, dev_activity }
+function resolveSubjectGroupHead_(subjectGroup) {
+  var normalizedGroup = String(subjectGroup || '').trim();
+  if (!normalizedGroup) return { user_id: '', full_name: '' };
+  try {
+    if (typeof ensureSubjectGroupHeadsSchema_ === 'function') ensureSubjectGroupHeadsSchema_();
+    var assignment = dbGetAll('SubjectGroupHeads').filter(function(row) {
+      return String(row.subject_group || '').trim() === normalizedGroup;
+    })[0];
+    if (!assignment || !String(assignment.head_user_id || '').trim()) {
+      return { user_id: '', full_name: '' };
+    }
+    var headUserId = String(assignment.head_user_id).trim();
+    var user = dbFindOne('Users', 'user_id', headUserId);
+    return {
+      user_id: headUserId,
+      full_name: user ? String(user.full_name || '').trim() : ''
+    };
+  } catch (e) {
+    // Older databases remain reportable until the normal schema ensure path
+    // creates SubjectGroupHeads.
+    return { user_id: '', full_name: '' };
+  }
+}
+
 function getReportData(token, class_id, subject_id) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
@@ -27,6 +52,7 @@ function getReportData(token, class_id, subject_id) {
   // Homeroom teachers. Supports the new JSON list and the old single-teacher field.
   var homeroom_teacher_names = getHomeroomTeacherNames(cls);
   var homeroom_teacher_name = homeroom_teacher_names.join(', ');
+  var subject_group_head = resolveSubjectGroupHead_(subj.subject_group);
 
   // Students in this class
   var students = dbFind('Students', 'class_id', class_id);
@@ -127,6 +153,8 @@ function getReportData(token, class_id, subject_id) {
     teacher_names: teacher_names,
     homeroom_teacher_name: homeroom_teacher_name,
     homeroom_teacher_names: homeroom_teacher_names,
+    subject_group_head_user_id: subject_group_head.user_id,
+    subject_group_head_name: subject_group_head.full_name,
     total_students: total_students,
     grade_dist: grade_dist,
     char_dist: char_dist,
