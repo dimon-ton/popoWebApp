@@ -3871,7 +3871,11 @@ function btnReset(btn) {
   btn.disabled = false;
   btn.textContent = btn.dataset.origText || btn.textContent;
 }
+function isForcePasswordChangeFlow() {
+  return !!document.body && document.body.getAttribute('data-force-password-change') === 'true';
+}
 function injectBackBtn() {
+  if (isForcePasswordChangeFlow()) return;
   if (document.title.indexOf('หน้าหลัก') > -1) return;
   var h2 = document.querySelector('h2');
   if (!h2) return;
@@ -3968,6 +3972,7 @@ if (typeof MutationObserver !== 'undefined') {
 }
 
 function initNavbarDropdown() {
+  if (isForcePasswordChangeFlow()) return;
   var trigger = document.querySelector('.navbar-user-trigger');
   var dropdown = document.querySelector('.navbar-dropdown');
   if (!trigger || !dropdown) return;
@@ -4053,6 +4058,7 @@ function getDefaultProfileAvatarUrl() {
 }
 
 function initNavbarAvatar() {
+  if (isForcePasswordChangeFlow()) return;
   var titleEl = document.querySelector('.navbar-title');
   var userTrigger = document.querySelector('.navbar-user-trigger');
   
@@ -4232,7 +4238,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initNavbarAvatar();
 
 function initFeedbackFooter() {
-  if (document.body.classList.contains('page-login') || document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
+  if (isForcePasswordChangeFlow() || document.body.classList.contains('page-login') || document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
   var footer = document.createElement('footer');
   footer.id = 'appFeedbackFooter'; footer.className = 'app-feedback-footer';
   footer.innerHTML = '<div class="feedback-footer-card"><div class="feedback-footer-copy"><span class="feedback-footer-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-1.8 5.2A8.5 8.5 0 0 1 12.5 20a8.7 8.7 0 0 1-3.3-.7L3 21l1.7-5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg></span><div><p class="feedback-footer-title">ช่วยเราพัฒนาระบบ</p><p class="feedback-footer-description">แจ้งปัญหาที่พบ หรือเสนอฟีเจอร์ที่อยากให้มีได้ทุกเวลา</p></div></div><a href="#" id="feedbackLink" aria-label="เปิดแบบฟอร์มแจ้งปัญหาหรือเสนอฟีเจอร์">ส่งข้อเสนอแนะ</a></div>';
@@ -4240,7 +4246,7 @@ function initFeedbackFooter() {
   document.body.appendChild(footer);
 }
 function openFeedbackModal() {
-  if (document.getElementById('feedbackModalBackdrop')) return;
+  if (isForcePasswordChangeFlow() || document.getElementById('feedbackModalBackdrop')) return;
   var backdrop = document.createElement('div'); backdrop.id = 'feedbackModalBackdrop'; backdrop.className = 'feedback-modal-backdrop';
   backdrop.innerHTML = '<section class="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle"><h2 id="feedbackTitle">ส่งข้อเสนอแนะ</h2><p>แจ้งปัญหาที่พบ หรือเสนอฟีเจอร์ที่อยากให้มี ข้อความจะถูกส่งให้ผู้ดูแลระบบทาง Telegram</p><label for="feedbackType">ประเภท</label><select id="feedbackType"><option value="bug">แจ้งปัญหา</option><option value="feature">เสนอฟีเจอร์ใหม่</option></select><label for="feedbackSubject">หัวข้อ</label><input id="feedbackSubject" maxlength="160" required><label for="feedbackDetails">รายละเอียด</label><textarea id="feedbackDetails" maxlength="5000" required></textarea><label for="feedbackImage">ภาพหน้าจอ (ไม่บังคับ)</label><label class="feedback-image-picker" for="feedbackImage">เพิ่มภาพหน้าจอหรือรูปภาพประกอบ</label><input class="feedback-image-input" type="file" id="feedbackImage" accept="image/png,image/jpeg,image/webp" multiple><p class="feedback-image-help">แนบได้สูงสุด 5 ภาพ (JPG, PNG หรือ WebP) ภาพละไม่เกิน 3 MB</p><div class="feedback-image-preview" id="feedbackImagePreview" hidden></div><div class="feedback-modal-actions"><button type="button" class="btn btn-secondary" id="feedbackCancel">ยกเลิก</button><button type="button" class="btn btn-primary" id="feedbackSend">ส่งข้อความ</button></div></section>';
   backdrop.onclick = function(event) { if (event.target === backdrop) closeFeedbackModal(); };

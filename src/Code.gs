@@ -83,6 +83,11 @@ function doGet(e) {
       });
     }
 
+    // Keep first-login users inside the mandatory password-change flow.
+    if (session && session.must_change_pwd) {
+      return buildPage('change_password', { session: session, token: params.token || '' });
+    }
+
     // Admin-only pages
     var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1) {
@@ -348,6 +353,7 @@ function sortClassRows(classes) {
 function getDashboardHtml(token) {
   var session = getSession(token);
   if (!session) return getLoginHtml();
+  if (session.must_change_pwd) return getChangePasswordHtml(token);
   var user = dbFindOne('Users', 'user_id', session.user_id);
   if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
   var tmpl = createTemplate('dashboard');
@@ -392,6 +398,7 @@ function getPageHtml(token, page) {
       loginTmpl.data = { error: null };
       return loginTmpl.evaluate().getContent();
     }
+    if (session.must_change_pwd) return getChangePasswordHtml(token);
     var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
@@ -414,6 +421,7 @@ function getPageHtmlWithParams(token, page, classId, subjectId) {
       loginTmpl.data = { error: null };
       return loginTmpl.evaluate().getContent();
     }
+    if (session.must_change_pwd) return getChangePasswordHtml(token);
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
     var templateMap = {

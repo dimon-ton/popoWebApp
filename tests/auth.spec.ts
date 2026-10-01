@@ -221,6 +221,18 @@ test.describe('US-003: User management and password reset', () => {
 
     // Should land on change password page (teacher sees เปลี่ยนรหัสผ่าน)
     await expect(freshPage.locator('h2')).toContainText('เปลี่ยนรหัสผ่าน', { timeout: 30_000 });
+    await expect(freshPage.locator('body')).toHaveAttribute('data-force-password-change', 'true');
+    await expect(freshPage.locator('#appFeedbackFooter')).toHaveCount(0);
+    await expect(freshPage.locator('#feedbackModalBackdrop')).toHaveCount(0);
+    await expect(freshPage.locator('.back-btn')).toHaveCount(0);
+
+    // Completing the required change restores normal authenticated-page UI.
+    await freshPage.fill('#oldPassword', resetPassword);
+    await freshPage.fill('#newPassword', 'changedpass_003');
+    await freshPage.fill('#confirmPassword', 'changedpass_003');
+    await freshPage.click('#changeBtn');
+    await expect(freshPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+    await expect(freshPage.locator('#appFeedbackFooter')).toBeVisible({ timeout: 10_000 });
 
     await freshCtx.close();
   });
