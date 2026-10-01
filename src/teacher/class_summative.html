@@ -141,6 +141,15 @@ function normalizeScore(value, max) {
   return n;
 }
 
+function normalizeFinalOverride(value, allowSpecialResults) {
+  if (value === '' || value === null || value === undefined) return '';
+  var text = String(value).trim();
+  if (allowSpecialResults && (text === 'ร' || text === 'มส')) return text;
+  var n = Number(text);
+  if (isNaN(n) || n < 0 || n > 4) return '';
+  return n;
+}
+
 function loadSummative() {
   document.getElementById('loadingMsg').style.display = 'block';
   document.getElementById('summativeTable').style.display = 'none';
@@ -180,6 +189,7 @@ function renderGrid(data) {
 
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
+  var allowSpecialResults = !!data.allow_special_results;
   document.getElementById('pageHeading').textContent =
     'คะแนนผลการเรียน — ' + (cls.class_label || fmtCls(cls.level, cls.section)) + ' — ' + (subj.subject_name || '');
 
@@ -202,6 +212,11 @@ function renderGrid(data) {
   var midMax = maxes.midterm;
   var finMax = maxes.final;
 
+  var legend = document.getElementById('gridLegend');
+  legend.innerHTML = 'เกณฑ์การให้คะแนน: ≥80=4, ≥75=3.5, ≥70=3, ≥65=2.5, ≥60=2, ≥55=1.5, ≥50=1, &lt;50=0' +
+    '&nbsp;|&nbsp; <span style="color:#e67e22">สอบแก้ตัว</span>: กรอกเพื่อเปลี่ยนผลการประเมินสุดท้าย' +
+    (allowSpecialResults ? ' &nbsp;|&nbsp; ระดับมัธยมสามารถกรอก <b>ร</b> หรือ <b>มส</b> เป็นผลพิเศษได้' : '');
+
   // Build header
   var thead = document.getElementById('summativeHead');
   thead.innerHTML = '<tr>' +
@@ -212,7 +227,7 @@ function renderGrid(data) {
     '<th class="computed-col">สอบปลายภาค<br><span style="font-weight:normal;font-size:11px">/' + finMax + '</span></th>' +
     '<th class="computed-col">รวมทั้งหมด<br><span style="font-weight:normal;font-size:11px">/100</span></th>' +
     '<th class="grade-col">ผลการประเมิน</th>' +
-    '<th class="makeup-col">สอบแก้ตัว</th>' +
+    '<th class="makeup-col">' + (allowSpecialResults ? 'สอบแก้ตัว / ผลพิเศษ' : 'สอบแก้ตัว') + '</th>' +
     '<th class="grade-col">ผลสุดท้าย</th>' +
     '</tr>';
 
@@ -230,7 +245,8 @@ function renderGrid(data) {
 
     var total = computeTotal(cw, mid, fin);
     var grade = cw !== '' && mid !== '' && fin !== '' ? computeGrade(total) : '';
-    var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
+    var finalOverride = normalizeFinalOverride(makeup, allowSpecialResults);
+    var finalGrade = finalOverride !== '' ? finalOverride : grade;
 
     var tr = document.createElement('tr');
     tr.setAttribute('data-student-id', sid);
@@ -246,7 +262,9 @@ function renderGrid(data) {
       ? '<input class="score-input" type="number" min="0" max="' + finMax + '" step="0.5" value="' + escHtml(fin) + '" data-student="' + escHtml(sid) + '" data-col="final" data-max="' + finMax + '" oninput="updateRow(this)" onchange="clampScore(this)">'
       : escHtml(fin);
     var makeupCell = editable
-      ? '<input class="makeup-input" type="number" min="0" max="4" step="0.5" value="' + escHtml(makeup) + '" data-student="' + escHtml(sid) + '" data-col="makeup_grade" oninput="updateFinalGrade(this)">'
+      ? (allowSpecialResults
+        ? '<input class="makeup-input" type="text" maxlength="2" value="' + escHtml(makeup) + '" placeholder="0-4 / ร / มส" data-student="' + escHtml(sid) + '" data-col="makeup_grade" oninput="updateFinalGrade(this)" onchange="normalizeMakeupInput(this)">'
+        : '<input class="makeup-input" type="number" min="0" max="4" step="0.5" value="' + escHtml(makeup) + '" data-student="' + escHtml(sid) + '" data-col="makeup_grade" oninput="updateFinalGrade(this)">')
       : escHtml(makeup);
 
     tr.innerHTML =
@@ -265,7 +283,7 @@ function renderGrid(data) {
   });
 
   document.getElementById('summativeTable').style.display = 'table';
-  document.getElementById('gridLegend').style.display = 'block';
+  legend.style.display = 'block';
 }
 
 function computeTotal(cw, mid, fin) {
@@ -305,7 +323,8 @@ function updateRow(input) {
 
   var total = computeTotal(cw, mid, fin);
   var grade = cw !== '' && mid !== '' && fin !== '' ? computeGrade(total) : '';
-  var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : grade;
+  var finalOverride = normalizeFinalOverride(makeup, !!(currentData && currentData.allow_special_results));
+  var finalGrade = finalOverride !== '' ? finalOverride : grade;
 
   var totalCell = document.getElementById('total-' + sid);
   var gradeCell = document.getElementById('grade-' + sid);
@@ -326,6 +345,31 @@ function clampScore(input) {
   updateRow(input);
 }
 
+function normalizeMakeupInput(input) {
+  var allowSpecialResults = !!(currentData && currentData.allow_special_results);
+  var raw = String(input.value || '').trim();
+  if (raw === '') {
+    input.value = '';
+    updateFinalGrade(input);
+    return;
+  }
+  if (allowSpecialResults && (raw === 'ร' || raw === 'มส')) {
+    input.value = raw;
+    updateFinalGrade(input);
+    return;
+  }
+  var n = Number(raw);
+  if (isNaN(n)) {
+    showToast(allowSpecialResults ? 'กรอกผลสอบแก้ตัวเป็น 0–4 หรือ ร หรือ มส' : 'กรอกผลสอบแก้ตัวเป็น 0–4', 'error');
+    updateFinalGrade(input);
+    return;
+  }
+  if (n < 0) n = 0;
+  if (n > 4) n = 4;
+  input.value = String(n);
+  updateFinalGrade(input);
+}
+
 function updateFinalGrade(input) {
   markUnsavedChanges();
   var sid = input.getAttribute('data-student');
@@ -335,8 +379,8 @@ function updateFinalGrade(input) {
   var makeup = input.value !== '' ? input.value : '';
   var gradeCell = document.getElementById('grade-' + sid);
   var currentGrade = gradeCell ? gradeCell.textContent : '';
-
-  var finalGrade = (makeup !== '' && !isNaN(Number(makeup))) ? makeup : currentGrade;
+  var finalOverride = normalizeFinalOverride(makeup, !!(currentData && currentData.allow_special_results));
+  var finalGrade = finalOverride !== '' ? finalOverride : currentGrade;
   var finalGradeCell = document.getElementById('final-grade-' + sid);
   if (finalGradeCell) finalGradeCell.textContent = finalGrade !== '' ? finalGrade : '';
 }
