@@ -22,6 +22,7 @@ var TEMPLATE_PATHS = {
   'admin_indicators': 'admin/admin_indicators',
   'admin_holidays': 'admin/admin_holidays',
   'admin_school': 'admin/admin_school',
+  'admin_subject_group_heads': 'admin/admin_subject_group_heads',
   'admin_subjects': 'admin/admin_subjects',
   'admin_users': 'admin/admin_users',
   'admin_weights': 'admin/admin_weights',
@@ -89,7 +90,7 @@ function doGet(e) {
     }
 
     // Admin-only pages
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_subject_group_heads', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1) {
       if (!session || session.role !== 'admin') {
         return buildPage('403', { message: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้' });
@@ -120,6 +121,8 @@ function doGet(e) {
         return buildPage('admin_db_status', { session: session, token: token });
       case 'admin_school':
         return buildPage('admin_school', { session: session, token: token });
+      case 'admin_subject_group_heads':
+        return buildPage('admin_subject_group_heads', { session: session, token: token });
       case 'admin_classes':
         return buildPage('admin_classes', { session: session, token: token });
       case 'admin_subjects':
@@ -399,7 +402,7 @@ function getPageHtml(token, page) {
       return loginTmpl.evaluate().getContent();
     }
     if (session.must_change_pwd) return getChangePasswordHtml(token);
-    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
+    var adminPages = ['admin_enrollments', 'admin_workload', 'admin_users', 'admin_setup', 'admin_db_status', 'admin_school', 'admin_subject_group_heads', 'admin_classes', 'admin_subjects', 'admin_indicators', 'admin_holidays', 'admin_weights', 'admin_audit'];
     if (adminPages.indexOf(page) !== -1 && session.role !== 'admin') {
       return '<div style="font-family:sans-serif;padding:32px;color:#c0392b">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>';
     }

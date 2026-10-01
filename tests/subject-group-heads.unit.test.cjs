@@ -175,14 +175,19 @@ test('approvalBlock uses subject_group_head_name and never falls back to homeroo
   assert.doesNotMatch(missing, /ครูประจำชั้นที่ไม่ควรใช้แทน/);
 });
 
-test('subject-group-head settings render on the admin dashboard, not the school page', () => {
+test('subject-group-head settings open from the admin dashboard general-management menu', () => {
   const dashboard = fs.readFileSync(path.join(root, 'shared', 'dashboard.html'), 'utf8');
   const school = fs.readFileSync(path.join(root, 'admin', 'admin_school.html'), 'utf8');
+  const settings = fs.readFileSync(path.join(root, 'admin', 'admin_subject_group_heads.html'), 'utf8');
+  const router = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
   assert.match(dashboard, /ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้/);
-  assert.match(dashboard, /<\? if \(data\.session && data\.session\.role === 'admin'\) \{ \?>\s*<div class="card" id="subjectGroupHeadsCard"/);
-  assert.match(dashboard, /-- ยังไม่ได้กำหนด --/);
-  assert.match(dashboard, /getSubjectGroupHeadsSettings\(TOKEN\)/);
-  assert.match(dashboard, /serverSaveSubjectGroupHeads\(TOKEN, assignments\)/);
+  assert.match(dashboard, /navigate\('admin_subject_group_heads'\)/);
+  assert.doesNotMatch(dashboard, /id="subjectGroupHeadsCard"/);
+  assert.match(settings, /-- ยังไม่ได้กำหนด --/);
+  assert.match(settings, /getSubjectGroupHeadsSettings\(TOKEN\)/);
+  assert.match(settings, /serverSaveSubjectGroupHeads\(TOKEN, assignments\)/);
+  assert.match(router, /'admin_subject_group_heads': 'admin\/admin_subject_group_heads'/);
+  assert.match(router, /case 'admin_subject_group_heads':\s*return buildPage\('admin_subject_group_heads'/);
   assert.doesNotMatch(school, /ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้/);
   assert.doesNotMatch(school, /getSubjectGroupHeadsSettings\(TOKEN\)/);
   assert.match(school, /serverSaveSchoolInfo\(TOKEN,/);
