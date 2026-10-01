@@ -281,7 +281,7 @@ test('print attendance summary appears only on the final page and uses whole-sco
   assert.doesNotMatch(pages[1], /<td>ล<\/td>/);
 });
 
-test('score-grid report has a two-row header and leaves the summary page unchanged', () => {
+test('score-grid detail keeps indicators while summary removes the indicator column', () => {
   const html = fs.readFileSync(path.join(root, 'teacher', 'class_report.html'), 'utf8');
   const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
     .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/loadReport\(\);\s*$/, '');
@@ -300,7 +300,11 @@ test('score-grid report has a two-row header and leaves the summary page unchang
       full_name: 'นักเรียน ตัวอย่าง',
       scores: { indicator_a: 2, indicator_b: 3 },
     }],
-    summative_students: [],
+    summative_students: [
+      { seq_no: 1, full_name: 'นักเรียน ตัวเลข', coursework: 40, midterm: 18, final: 27, total: 85, final_grade: 4 },
+      { seq_no: 2, full_name: 'นักเรียน ร', coursework: 35, midterm: 15, final: 20, total: 70, final_grade: 'ร' },
+      { seq_no: 3, full_name: 'นักเรียน มส', coursework: 30, midterm: 12, final: 18, total: 60, final_grade: 'มส' },
+    ],
   };
 
   const scoreGrid = context.pageReferenceScoreGrid(data, 1);
@@ -322,9 +326,23 @@ test('score-grid report has a two-row header and leaves the summary page unchang
 
   const summary = context.pageReferenceScoreGridSummary(data, 2);
   const summaryHead = summary.match(/<thead>([\s\S]*?)<\/thead>/)[1];
-  assert.equal((summaryHead.match(/<tr>/g) || []).length, 3);
-  assert.match(summaryHead, /rowspan="3"/);
+  const summaryHeaderRows = [...summaryHead.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(match => match[1]);
+  const summaryBody = summary.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
+  const summaryBodyRows = [...summaryBody.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(match => match[1]);
+  assert.equal(summaryHeaderRows.length, 3);
+  assert.equal((summaryHeaderRows[0].match(/rowspan="3"/g) || []).length, 4);
+  assert.equal((summaryHeaderRows[0].match(/<th\b/g) || []).length, 5);
   assert.match(summaryHead, /<th colspan="4">รวมคะแนน<\/th>/);
+  assert.equal(2 + Number(summaryHeaderRows[0].match(/colspan="(\d+)"/)[1]) + 2, 8);
+  assert.match(summaryHeaderRows[1], /ระหว่างเรียน.*สอบกลางภาค.*สอบปลายภาค.*ทั้งหมด/s);
+  assert.match(summaryHeaderRows[2], />50<.*>20<.*>30<.*>100</s);
+  assert.doesNotMatch(summary, /ตัวชี้วัดการเรียนรู้/);
+  assert.equal(summaryBodyRows.length, 3);
+  summaryBodyRows.forEach(row => assert.equal((row.match(/<td\b/g) || []).length, 8));
+  assert.match(summaryBodyRows[0], /<td class="bold">4<\/td>/);
+  assert.match(summaryBodyRows[1], /<td class="bold">ร<\/td>/);
+  assert.match(summaryBodyRows[2], /<td class="bold">มส<\/td>/);
+  assert.match(summaryBodyRows[0], /<td class="bold">4<\/td><td><\/td>$/);
 });
 
 test('report aggregation counts period records and retains separate same-date values', () => {
