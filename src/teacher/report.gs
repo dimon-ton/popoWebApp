@@ -334,13 +334,14 @@ function summarizeReportAttendanceRows_(rows, subjectId, studentSet, sessionSet,
     if (['/', 'ล', 'ข'].indexOf(status) === -1) return;
     var dateStr = reportNormalizeAttendanceDate(row.date);
     if (yearDateSet && !yearDateSet[dateStr]) return;
+    var key = dateStr + '|' + period;
+    if (!sessionSet || !sessionSet[key]) return;
     var bucket = totals[studentId];
     if (status === '/') bucket.present++;
     else if (status === 'ล') bucket.leave++;
     else if (status === 'ข') bucket.absent++;
     bucket.total = bucket.present + bucket.leave + bucket.absent;
-    var key = dateStr + '|' + period;
-    if (sessionSet[key]) byStudent[studentId][key] = status;
+    byStudent[studentId][key] = status;
   });
   return { totals: totals, by_student: byStudent };
 }

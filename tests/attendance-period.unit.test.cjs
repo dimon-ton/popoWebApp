@@ -238,6 +238,49 @@ test('report attendance cells distinguish periods on the same date', () => {
   assert.doesNotMatch(indicatorHead, /ต 2|ต 3|ต 4/);
 });
 
+test('print attendance summary appears only on the final page and uses whole-scope totals', () => {
+  const html = fs.readFileSync(path.join(root, 'teacher', 'class_report.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
+    .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/loadReport\(\);\s*$/, '');
+  const context = vm.createContext({ Math, Number, String, Date, Array, setTimeout: () => {} });
+  vm.runInContext(script, context);
+  context.referenceShell = (_n, body) => body;
+  context.standardReportSectionHeading = () => '';
+  context.attendanceHolidayNote = () => '';
+
+  const sessions = Array.from({ length: 26 }, (_, index) => ({
+    date: `2026-10-${String(index + 1).padStart(2, '0')}`,
+    period: 1,
+    week: Math.floor(index / 5) + 1,
+  }));
+  const student = {
+    student_id: 'student_a', seq_no: 1, student_code: '100', full_name: 'นักเรียน',
+    absent: 1, leave: 1, present: 2,
+    attendance: {
+      '2026-10-01|1': '/',
+      '2026-10-02|1': 'ล',
+      '2026-10-25|1': 'ข',
+      '2026-10-26|1': '/',
+    },
+  };
+
+  const onePage = context.pageReferenceAttendance({
+    attendance_sessions: sessions.slice(0, 2), attendance_students: [student],
+  }, 1);
+  assert.equal(onePage.length, 1);
+  assert.match(onePage[0], /<th colspan="3" class="attendance-summary-group">สรุปรวม<\/th>/);
+  assert.match(onePage[0], /ขาด<\/th>.*ลา<\/th>.*มา<\/th>/s);
+
+  const pages = context.pageReferenceAttendance({ attendance_sessions: sessions, attendance_students: [student] }, 1);
+  assert.equal(pages.length, 2);
+  assert.doesNotMatch(pages[0], /สรุปรวม|attendance-summary-column/);
+  assert.match(pages[1], /สรุปรวม/);
+  assert.equal((pages[1].match(/สรุปรวม/g) || []).length, 1);
+  assert.match(pages[1], /attendance-summary-absent">1<\/td>.*attendance-summary-leave">1<\/td>.*attendance-summary-present">2<\/td>/s);
+  assert.match(pages[1], /<td>ข<\/td><td>\/<\/td>/);
+  assert.doesNotMatch(pages[1], /<td>ล<\/td>/);
+});
+
 test('report aggregation counts period records and retains separate same-date values', () => {
   const context = vm.createContext({ Date, Math, Number, String, Object, Array, JSON, isNaN });
   vm.runInContext(fs.readFileSync(path.join(root, 'teacher', 'attendance.gs'), 'utf8'), context);
@@ -246,9 +289,20 @@ test('report aggregation counts period records and retains separate same-date va
     { student_id: 'a', subject_id: 'math', date: '2026-09-30', period: 3, status: '/' },
     { student_id: 'a', subject_id: 'math', date: '2026-09-30', period: 4, status: 'ข' },
     { student_id: 'a', subject_id: 'math', date: '2026-10-02', period: 1, status: 'ล' },
-    { student_id: 'a', subject_id: 'math', date: '2026-09-30', period: '', status: '/' },
+    { student_id: 'a', subject_id: 'math', date: '2026-10-05', period: 2, status: '' },
+    { student_id: 'a', subject_id: 'math', date: '2026-09-30', period: 9, status: '/' },
+    { student_id: 'a', subject_id: 'science', date: '2026-09-30', period: 3, status: '/' },
     { student_id: 'b', subject_id: 'math', date: '2026-09-30', period: 3, status: '/' },
-  ], 'math', { a: true }, { '2026-09-30|3': true, '2026-09-30|4': true });
+  ], 'math', { a: true }, {
+    '2026-09-30|3': true,
+    '2026-09-30|4': true,
+    '2026-10-02|1': true,
+    '2026-10-05|2': true,
+  }, {
+    '2026-09-30': true,
+    '2026-10-02': true,
+    '2026-10-05': true,
+  });
   assert.equal(result.totals.a.present, 1);
   assert.equal(result.totals.a.leave, 1);
   assert.equal(result.totals.a.absent, 1);

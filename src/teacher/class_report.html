@@ -517,24 +517,41 @@ function pageReferenceSubjectDescription(d, n) {
 
 function pageReferenceAttendance(d, n) {
   var allSessions = d.attendance_sessions || [];
-  return chunkArray(allSessions, 24).map(function(sessions, pageIndex) {
-    return pageReferenceAttendanceChunk(d, n + pageIndex, sessions, pageIndex * 24);
+  var chunks = chunkArray(allSessions, 24);
+  return chunks.map(function(sessions, pageIndex) {
+    return pageReferenceAttendanceChunk(d, n + pageIndex, sessions, pageIndex * 24, pageIndex === chunks.length - 1);
   });
 }
 
-function pageReferenceAttendanceChunk(d, n, dates, startIndex) {
+function pageReferenceAttendanceChunk(d, n, dates, startIndex, isFinalPage) {
   var startWeek = dates.length ? dates[0].week : 1;
   var endWeek = dates.length ? dates[dates.length - 1].week : startWeek;
   var rows = (d.attendance_students || studentRows(d)).map(function(s, i) {
     var attendance = s.attendance || {};
-    var marks = dates.map(function(item) { return '<td>' + blank(attendance[item.date + '|' + item.period] || '') + '</td>'; }).join('');
-    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + '</tr>';
+    var marks = dates.length
+      ? dates.map(function(item) { return '<td>' + blank(attendance[item.date + '|' + item.period] || '') + '</td>'; }).join('')
+      : '<td></td>';
+    var summary = isFinalPage
+      ? '<td class="attendance-summary-column attendance-summary-absent">' + num(s.absent) + '</td>' +
+        '<td class="attendance-summary-column attendance-summary-leave">' + num(s.leave) + '</td>' +
+        '<td class="attendance-summary-column attendance-summary-present">' + num(s.present) + '</td>'
+      : '';
+    return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td>' + blank(s.student_code) + '</td><td class="left">' + blank(studentName(s)) + '</td>' + marks + summary + '</tr>';
   }).join('');
   var weekLabel = startWeek === endWeek ? String(startWeek) : startWeek + ' - ' + endWeek;
   var heading = d.curriculum_data
     ? curriculumPageHeading(d, 'บันทึกเวลาเรียน', true)
     : startIndex === 0 ? standardReportSectionHeading(d, 'บันทึกการมาเรียน') : '';
-  var body = heading + '<table class="report-table form-grid-table attendance-table"><thead><tr><th rowspan="4" style="width:8mm">เลขที่</th><th rowspan="4" style="width:23mm">เลขประจำตัว</th><th rowspan="4" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + Math.max(1, dates.length) + '">สัปดาห์ที่ ' + weekLabel + '</th></tr><tr>' + attendanceMonthHeaders(dates) + '</tr><tr>' + attendanceDayHeaders(dates) + '</tr><tr>' + attendancePeriodHeaders(dates) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
+  var sessionColumnCount = Math.max(1, dates.length);
+  var emptySessionHeader = dates.length ? '' : '<th></th>';
+  var summaryGroupHeader = isFinalPage ? '<th colspan="3" class="attendance-summary-group">สรุปรวม</th>' : '';
+  var summaryColumnHeaders = isFinalPage
+    ? '<th rowspan="3" class="attendance-summary-column">ขาด</th>' +
+      '<th rowspan="3" class="attendance-summary-column">ลา</th>' +
+      '<th rowspan="3" class="attendance-summary-column">มา</th>'
+    : '';
+  var tableClass = 'report-table form-grid-table attendance-table' + (isFinalPage ? ' attendance-table-with-summary' : '');
+  var body = heading + '<table class="' + tableClass + '"><thead><tr><th rowspan="4" style="width:8mm">เลขที่</th><th rowspan="4" style="width:23mm">เลขประจำตัว</th><th rowspan="4" class="student-name-head" style="width:54mm">ชื่อ - สกุล</th><th colspan="' + sessionColumnCount + '">สัปดาห์ที่ ' + weekLabel + '</th>' + summaryGroupHeader + '</tr><tr>' + (dates.length ? attendanceMonthHeaders(dates) : emptySessionHeader) + summaryColumnHeaders + '</tr><tr>' + (dates.length ? attendanceDayHeaders(dates) : emptySessionHeader) + '</tr><tr>' + (dates.length ? attendancePeriodHeaders(dates) : emptySessionHeader) + '</tr></thead><tbody>' + rows + '</tbody></table>' + attendanceHolidayNote(d);
   return referenceShell(n, body, 'landscape-table');
 }
 
