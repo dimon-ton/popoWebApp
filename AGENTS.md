@@ -62,6 +62,7 @@ The single master Google Sheet (ID specified in the script's `DB_SHEET_ID` prope
 - **`SchoolInfo`**: `school_name`, `district`, `province`, `academic_year`, `semester_start_date`, `required_attendance_days`, `semester`, `school_address`, `phone_number`, `education_area`, `school_logo`, `measurement_head_name`, `academic_head_name`, `director_name`
 - **`Classes`**: `class_id`, `level`, `section`, `homeroom_teacher_user_id`, `homeroom_teacher_user_ids` (CSV import uses `homeroom_teacher_fullname`, supports multiple comma-separated teacher names, resolved to `user_id` server-side)
 - **`Subjects`**: `subject_id`, `class_id`, `subject_name`, `subject_code`, `hours_per_year`, `weight_group`, `subject_group`
+- **`SubjectGroupHeads`**: `subject_group`, `head_user_id`, `updated_by`, `updated_at`
 - **`Enrollments`**: `enrollment_id`, `class_id`, `subject_id`, `teacher_user_id`, `dev_activity_result`
 - **`Students`**: `student_id`, `class_id`, `seq_no`, `student_code`, `citizen_id`, `full_name`, `dob`, `note`
 - **`Indicators`**: `indicator_id`, `subject_id`, `code`, `description`, `max_score`, `display_order`
@@ -105,12 +106,12 @@ Use this development deployment for testing `feature/secondary-special-grades` w
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `362`
+- Stable production version: `363`
 - Development deployment ID: `AKfycbyEMtKmla-A9vYPRELKN19cFr-vl5eDlVDeVyN-cIDFGNeGUS0_uHSUYREGIigV_50`
 - Development version: `361`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Release secondary special grades`
+- Latest verified production release: `Release subject group heads`
 
 The script uses standard Google Cloud project `app-script-run-function` (project number
 `458875230672`). The Apps Script API is enabled, and the HEAD deployment has an API

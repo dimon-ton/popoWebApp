@@ -405,7 +405,7 @@ function gradeCountMap(d) {
 
 function approvalBlock(d) {
   var teacher = blank(d.teacher_name || '');
-  var homeroom = blank(d.homeroom_teacher_name || '');
+  var subjectGroupHead = blank(d.subject_group_head_name || '........................................');
   var school = d.school_info || {};
   var measurementHead = blank(school.measurement_head_name || '........................................');
   var academicHead = blank(school.academic_head_name || '........................................');
@@ -413,7 +413,7 @@ function approvalBlock(d) {
   var schoolName = school.school_name || 'โรงเรียน';
   return '<div class="approval-layout">' +
     approvalSignature('ลงชื่อ', teacher, 'ครูผู้สอน', 'approval-signature-block') +
-    approvalSignature('ลงชื่อ', homeroom, 'หัวหน้ากลุ่มสาระการเรียนรู้', 'approval-signature-block') +
+    approvalSignature('ลงชื่อ', subjectGroupHead, 'หัวหน้ากลุ่มสาระการเรียนรู้', 'approval-signature-block') +
     approvalSignature('ลงชื่อ', measurementHead, 'หัวหน้างานวัดผลและประเมินผล', 'approval-signature-block') +
     '<div class="approval-academic-block">' +
       '<div class="approval-intro">เรียนเสนอ เพื่อโปรดพิจารณา</div>' +

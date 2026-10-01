@@ -12,6 +12,7 @@ var SCHOOL_INFO_COLUMNS = [
 ];
 var CLASS_EXTRA_COLUMNS = ['homeroom_teacher_user_ids'];
 var HOLIDAY_HEADERS = ['holiday_id', 'start_date', 'end_date', 'name', 'type', 'description', 'created_by', 'updated_at'];
+var SUBJECT_GROUP_HEAD_HEADERS = ['subject_group', 'head_user_id', 'updated_by', 'updated_at'];
 
 // ── School Info ───────────────────────────────────────────────────────────────
 
@@ -134,6 +135,133 @@ function normalizeSchoolDateValue(value) {
   var date = new Date(year, month - 1, day);
   if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
   return match[1] + '-' + match[2] + '-' + match[3];
+}
+
+// ── Subject Group Heads ──────────────────────────────────────────────────────
+
+function normalizeSubjectGroup_(value) {
+  return String(value || '').trim();
+}
+
+function compareThaiText_(a, b) {
+  return String(a || '').localeCompare(String(b || ''), 'th', { numeric: true, sensitivity: 'base' });
+}
+
+function ensureSubjectGroupHeadsSchema_() {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  var ss = SpreadsheetApp.openById(id);
+  ensureTab(ss, 'SubjectGroupHeads', SUBJECT_GROUP_HEAD_HEADERS);
+}
+
+function getDistinctSubjectGroups_() {
+  var groupsByName = {};
+  dbGetAll('Subjects').forEach(function(subject) {
+    var group = normalizeSubjectGroup_(subject.subject_group);
+    if (group) groupsByName[group] = true;
+  });
+  return Object.keys(groupsByName).sort(compareThaiText_);
+}
+
+function getSubjectGroupHeadsSettings(token) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureSubjectGroupHeadsSchema_();
+
+  var usersById = {};
+  var teachers = dbGetAll('Users').filter(function(user) {
+    var userId = String(user.user_id || '').trim();
+    if (userId) usersById[userId] = user;
+    return userId && user.role === 'teacher';
+  }).map(function(user) {
+    return { user_id: String(user.user_id).trim(), full_name: String(user.full_name || '').trim() };
+  }).sort(function(a, b) {
+    return compareThaiText_(a.full_name || a.user_id, b.full_name || b.user_id);
+  });
+
+  var assignmentsByGroup = {};
+  dbGetAll('SubjectGroupHeads').forEach(function(row) {
+    var group = normalizeSubjectGroup_(row.subject_group);
+    var headUserId = String(row.head_user_id || '').trim();
+    if (!group || !headUserId) return;
+    if (!assignmentsByGroup[group]) assignmentsByGroup[group] = headUserId;
+  });
+
+  return {
+    groups: getDistinctSubjectGroups_().map(function(group) {
+      var headUserId = assignmentsByGroup[group] || '';
+      var head = usersById[headUserId];
+      return {
+        subject_group: group,
+        head_user_id: headUserId,
+        head_name: head ? String(head.full_name || '').trim() : ''
+      };
+    }),
+    teachers: teachers
+  };
+}
+
+function serverSaveSubjectGroupHeads(token, assignments) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureSubjectGroupHeadsSchema_();
+
+  var availableGroups = {};
+  getDistinctSubjectGroups_().forEach(function(group) { availableGroups[group] = true; });
+  var usersById = {};
+  dbGetAll('Users').forEach(function(user) {
+    var userId = String(user.user_id || '').trim();
+    if (userId) usersById[userId] = user;
+  });
+
+  var requestedByGroup = {};
+  (assignments || []).forEach(function(assignment) {
+    var group = normalizeSubjectGroup_(assignment && assignment.subject_group);
+    var headUserId = String(assignment && assignment.head_user_id || '').trim();
+    if (!group) throw new Error('กรุณาระบุกลุ่มสาระการเรียนรู้');
+    if (!availableGroups[group]) throw new Error('ไม่พบกลุ่มสาระการเรียนรู้: ' + group);
+    if (headUserId && !usersById[headUserId]) throw new Error('ไม่พบผู้ใช้ที่เลือกสำหรับกลุ่มสาระ: ' + group);
+    if (headUserId && usersById[headUserId].role !== 'teacher') throw new Error('ผู้ใช้ที่เลือกไม่ใช่ครู: ' + group);
+    requestedByGroup[group] = headUserId;
+  });
+
+  var changed = 0;
+  withDbLock_(function() {
+    var existingRows = dbGetAll('SubjectGroupHeads');
+    Object.keys(requestedByGroup).forEach(function(group) {
+      var headUserId = requestedByGroup[group];
+      var matches = existingRows.filter(function(row) {
+        return normalizeSubjectGroup_(row.subject_group) === group;
+      });
+      var oldHeadUserId = '';
+      matches.some(function(row) {
+        oldHeadUserId = String(row.head_user_id || '').trim();
+        return !!oldHeadUserId;
+      });
+      var alreadyCanonical = matches.length === 1 &&
+        normalizeSubjectGroup_(matches[0].subject_group) === String(matches[0].subject_group || '') &&
+        oldHeadUserId === headUserId;
+      if (alreadyCanonical || (!matches.length && !headUserId)) return;
+
+      matches.forEach(function(row) {
+        dbDeleteUnlocked_('SubjectGroupHeads', 'subject_group', row.subject_group);
+      });
+      var newValue = null;
+      if (headUserId) {
+        newValue = {
+          subject_group: group,
+          head_user_id: headUserId,
+          updated_by: session.user_id,
+          updated_at: new Date().toISOString()
+        };
+        dbInsertUnlocked_('SubjectGroupHeads', newValue);
+      }
+      appendAuditLogUnlocked_(session.user_id, 'SubjectGroupHeads', group,
+        oldHeadUserId ? { subject_group: group, head_user_id: oldHeadUserId } : null,
+        newValue);
+      changed++;
+    });
+  });
+  return { ok: true, changed: changed };
 }
 
 // ── Holidays ─────────────────────────────────────────────────────────────────

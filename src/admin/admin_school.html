@@ -100,6 +100,24 @@
     </div>
     <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
   </div>
+
+  <div class="card" id="subjectGroupHeadsCard">
+    <h3>ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้</h3>
+    <div class="loading-msg" id="subjectGroupHeadsLoading">กำลังโหลดข้อมูล...</div>
+    <div class="table-responsive" id="subjectGroupHeadsTableWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>กลุ่มสาระการเรียนรู้</th>
+            <th>หัวหน้ากลุ่มสาระ</th>
+          </tr>
+        </thead>
+        <tbody id="subjectGroupHeadsBody"></tbody>
+      </table>
+    </div>
+    <p id="subjectGroupHeadsEmpty" class="loading-msg" style="display:none">ยังไม่มีกลุ่มสาระการเรียนรู้ในข้อมูลรายวิชา</p>
+    <button class="btn-primary" id="saveSubjectGroupHeadsBtn" style="margin-top:16px" onclick="saveSubjectGroupHeads()" disabled>บันทึกหัวหน้ากลุ่มสาระ</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -215,6 +233,90 @@ function saveSchoolInfo() {
     .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days, extra);
 }
 
+function loadSubjectGroupHeads() {
+  var loading = document.getElementById('subjectGroupHeadsLoading');
+  var tableWrap = document.getElementById('subjectGroupHeadsTableWrap');
+  var empty = document.getElementById('subjectGroupHeadsEmpty');
+  var saveBtn = document.getElementById('saveSubjectGroupHeadsBtn');
+  loading.style.display = 'block';
+  loading.textContent = 'กำลังโหลดข้อมูล...';
+  tableWrap.style.display = 'none';
+  empty.style.display = 'none';
+  saveBtn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var groups = result && result.groups ? result.groups : [];
+      var teachers = result && result.teachers ? result.teachers : [];
+      var body = document.getElementById('subjectGroupHeadsBody');
+      body.innerHTML = '';
+      groups.forEach(function(group) {
+        var row = document.createElement('tr');
+        var groupCell = document.createElement('td');
+        groupCell.textContent = group.subject_group || '';
+        var headCell = document.createElement('td');
+        var select = document.createElement('select');
+        select.className = 'subject-group-head-select';
+        select.setAttribute('data-subject-group', group.subject_group || '');
+        select.style.width = '100%';
+        var unassigned = document.createElement('option');
+        unassigned.value = '';
+        unassigned.textContent = '-- ยังไม่ได้กำหนด --';
+        select.appendChild(unassigned);
+        teachers.forEach(function(teacher) {
+          var option = document.createElement('option');
+          option.value = teacher.user_id || '';
+          option.textContent = teacher.full_name || teacher.user_id || '';
+          select.appendChild(option);
+        });
+        select.value = group.head_user_id || '';
+        headCell.appendChild(select);
+        row.appendChild(groupCell);
+        row.appendChild(headCell);
+        body.appendChild(row);
+      });
+      loading.style.display = 'none';
+      tableWrap.style.display = groups.length ? 'block' : 'none';
+      empty.style.display = groups.length ? 'none' : 'block';
+      saveBtn.disabled = !groups.length;
+    })
+    .withFailureHandler(function(err) {
+      loading.style.display = 'none';
+      saveBtn.disabled = true;
+      showToast('โหลดข้อมูลหัวหน้ากลุ่มสาระไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getSubjectGroupHeadsSettings(TOKEN);
+}
+
+function saveSubjectGroupHeads() {
+  var btn = document.getElementById('saveSubjectGroupHeadsBtn');
+  var assignments = Array.prototype.map.call(
+    document.querySelectorAll('.subject-group-head-select'),
+    function(select) {
+      return {
+        subject_group: select.getAttribute('data-subject-group') || '',
+        head_user_id: select.value || ''
+      };
+    }
+  );
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        btn.disabled = false;
+        showToast(result.error, 'error');
+        return;
+      }
+      showToast('บันทึกหัวหน้ากลุ่มสาระการเรียนรู้สำเร็จ', 'success');
+      loadSubjectGroupHeads();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('บันทึกหัวหน้ากลุ่มสาระไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .serverSaveSubjectGroupHeads(TOKEN, assignments);
+}
+
 function setLogoPreview(value) {
   document.getElementById('schoolLogo').value = value || '';
   var img = document.getElementById('schoolLogoPreview');
@@ -251,6 +353,7 @@ document.getElementById('schoolLogoFile').addEventListener('change', function() 
 });
 
 loadSchoolInfo();
+loadSubjectGroupHeads();
 </script>
 </body>
 </html>

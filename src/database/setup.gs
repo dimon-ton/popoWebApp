@@ -16,6 +16,7 @@ var TAB_SCHEMA = {
   'SchoolInfo':       ['school_name', 'district', 'province', 'academic_year', 'semester_start_date', 'required_attendance_days', 'semester', 'school_address', 'phone_number', 'education_area', 'school_logo', 'measurement_head_name', 'academic_head_name', 'director_name'],
   'Classes':          ['class_id', 'level', 'section', 'homeroom_teacher_user_id', 'homeroom_teacher_user_ids'],
   'Subjects':         ['subject_id', 'class_id', 'subject_name', 'subject_code', 'hours_per_year', 'weight_group', 'subject_group', 'curriculum_ability_type', 'curriculum_ability_name'],
+  'SubjectGroupHeads': ['subject_group', 'head_user_id', 'updated_by', 'updated_at'],
   'Enrollments':      ['enrollment_id', 'class_id', 'subject_id', 'teacher_user_id', 'dev_activity_result'],
   'Students':         ['student_id', 'class_id', 'seq_no', 'student_code', 'citizen_id', 'full_name', 'dob', 'note'],
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],
@@ -35,7 +36,7 @@ var TAB_SCHEMA = {
 };
 
 var TAB_ORDER = [
-  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'Enrollments',
+  'Users', 'SchoolInfo', 'Classes', 'Subjects', 'SubjectGroupHeads', 'Enrollments',
   'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'SubjectSchedules',
   'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
