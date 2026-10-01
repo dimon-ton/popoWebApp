@@ -578,7 +578,7 @@ function pageReferenceScoreGrid(d, n) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td class="left">' + blank(studentName(s)) + '</td><td></td>' + cells + '</tr>';
   }).join('');
   var body = standardReportSectionHeading(d, 'บันทึกผลการประเมิน') +
-    '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:60mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="16">คะแนนระหว่างเรียน</th></tr><tr><th colspan="16">ตัวชี้วัดการเรียนรู้/ผลการเรียนรู้ที่คาดหวัง</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="2" style="width:8mm">เลขที่</th><th rowspan="2" style="width:60mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="2" style="width:12mm"') + '<th colspan="16">คะแนนระหว่างเรียน</th></tr><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body, 'landscape-table');
 }
 

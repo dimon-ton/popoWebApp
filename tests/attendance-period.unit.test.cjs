@@ -281,6 +281,52 @@ test('print attendance summary appears only on the final page and uses whole-sco
   assert.doesNotMatch(pages[1], /<td>ล<\/td>/);
 });
 
+test('score-grid report has a two-row header and leaves the summary page unchanged', () => {
+  const html = fs.readFileSync(path.join(root, 'teacher', 'class_report.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
+    .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/loadReport\(\);\s*$/, '');
+  const context = vm.createContext({ Math, Number, String, Date, Array, setTimeout: () => {} });
+  vm.runInContext(script, context);
+  context.referenceShell = (_n, body) => body;
+  context.standardReportSectionHeading = () => '';
+
+  const data = {
+    indicators: [
+      { indicator_id: 'indicator_a', code: 'พ 1/1' },
+      { indicator_id: 'indicator_b', code: 'พ 1/2' },
+    ],
+    formative_students: [{
+      seq_no: 1,
+      full_name: 'นักเรียน ตัวอย่าง',
+      scores: { indicator_a: 2, indicator_b: 3 },
+    }],
+    summative_students: [],
+  };
+
+  const scoreGrid = context.pageReferenceScoreGrid(data, 1);
+  const scoreTable = scoreGrid.match(/<table class="report-table form-grid-table score-grid-table">([\s\S]*?)<\/table>/)[1];
+  const scoreHead = scoreTable.match(/<thead>([\s\S]*?)<\/thead>/)[1];
+  const headerRows = [...scoreHead.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(match => match[1]);
+  assert.equal(headerRows.length, 2, 'score-grid thead has exactly two non-empty rows');
+  assert.equal((headerRows[0].match(/<th\b/g) || []).length, 4);
+  assert.equal((headerRows[1].match(/<th\b/g) || []).length, 16);
+  assert.equal((scoreHead.match(/rowspan="2"/g) || []).length, 3);
+  assert.doesNotMatch(scoreHead, /rowspan="3"/);
+  assert.match(headerRows[0], /<th colspan="16">คะแนนระหว่างเรียน<\/th>/);
+  assert.match(headerRows[0], /ตัวชี้วัดการเรียนรู้/);
+  assert.match(headerRows[1], /ต พ 1\/1/);
+  assert.match(headerRows[1], /ต พ 1\/2/);
+  assert.equal((headerRows[1].match(/class="rot"/g) || []).length, 16, 'all indicator slots remain rendered');
+  assert.doesNotMatch(scoreGrid, /ตัวชี้วัดการเรียนรู้\/ผลการเรียนรู้ที่คาดหวัง/);
+  assert.equal((scoreTable.match(/<td\b/g) || []).length, 19, 'student rows retain three fixed cells and 16 indicator cells');
+
+  const summary = context.pageReferenceScoreGridSummary(data, 2);
+  const summaryHead = summary.match(/<thead>([\s\S]*?)<\/thead>/)[1];
+  assert.equal((summaryHead.match(/<tr>/g) || []).length, 3);
+  assert.match(summaryHead, /rowspan="3"/);
+  assert.match(summaryHead, /<th colspan="4">รวมคะแนน<\/th>/);
+});
+
 test('report aggregation counts period records and retains separate same-date values', () => {
   const context = vm.createContext({ Date, Math, Number, String, Object, Array, JSON, isNaN });
   vm.runInContext(fs.readFileSync(path.join(root, 'teacher', 'attendance.gs'), 'utf8'), context);
