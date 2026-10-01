@@ -159,6 +159,7 @@ function renderHolidays() {
   holidays.forEach(function(row, index) {
     var range = holidayRangeDisplay(row);
     var tr = document.createElement('tr');
+    tr.setAttribute('data-holiday-id', row.holiday_id);
     if (editingHolidayIndex === index) {
       tr.innerHTML =
         '<td><div style="display:grid;gap:6px;min-width:150px">' +
@@ -189,6 +190,7 @@ function renderHolidays() {
   });
   document.getElementById('holidaysLoading').style.display = 'none';
   document.getElementById('holidaysTable').style.display = 'table';
+  setupBulkDelete('holidaysTable', 'data-holiday-id', 'serverDeleteHoliday', loadHolidays);
 }
 
 function holidayTypeOptions(selected) {

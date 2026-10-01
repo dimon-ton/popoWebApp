@@ -469,6 +469,7 @@ function renderClasses(classes) {
     tbody.appendChild(tr);
   });
   document.getElementById('classesTable').style.display = 'table';
+  setupBulkDelete('classesTable', 'data-class-id', 'serverDeleteClass', loadClasses);
 }
 
 function addClass() {

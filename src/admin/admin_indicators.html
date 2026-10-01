@@ -295,6 +295,7 @@ function renderIndicators(indicators) {
     });
   }
   document.getElementById('indicatorsTable').style.display = 'table';
+  setupBulkDelete('indicatorsTable', 'data-indicator-id', 'serverDeleteIndicator', loadIndicators);
 }
 
 function addIndicator() {

@@ -424,6 +424,7 @@ function renderUsers(users) {
   });
   table.style.display = users.length ? '' : 'none';
   empty.hidden = users.length !== 0;
+  setupBulkDelete('usersTable', 'data-user-id', 'serverDeleteUser', loadUsers);
 }
 
 function escHtml(s) {

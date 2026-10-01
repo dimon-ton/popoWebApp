@@ -1505,6 +1505,29 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .back-btn:hover { color:var(--brand-dark);text-decoration:underline; }
 .back-btn svg { width:16px;height:16px;fill:currentColor; }
 
+/* Subject table actions */
+.bulk-delete-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0; }
+.bulk-delete-toolbar .bulk-delete-count { color:var(--text-muted, #64748b); font-size:13px; }
+.bulk-delete-toolbar .btn-danger:disabled { opacity:.5; cursor:not-allowed; }
+.bulk-select-cell { width:42px; min-width:42px; text-align:center !important; vertical-align:middle !important; }
+.bulk-select-cell input { width:17px; height:17px; cursor:pointer; vertical-align:middle; }
+.bulk-select-cell input:disabled { cursor:not-allowed; }
+.bulk-selected-row { background:rgba(26,86,160,.07); }
+.page-admin-subjects #subjectsTable .subject-actions-heading,
+.page-admin-subjects #subjectsTable .subject-actions-cell { min-width: 250px; }
+.page-admin-subjects #subjectsTable .subject-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.page-admin-subjects #subjectsTable .subject-actions button { flex: 0 0 auto; padding: 5px 12px; font-size: 12px; white-space: nowrap; }
+
+/* Keep table actions together when their cards scroll horizontally. */
+.page-admin-classes #classesTable th:last-child,
+.page-admin-classes #classesTable td:last-child { min-width: 250px; white-space: nowrap; }
+.page-admin-holidays #holidaysTable th:last-child,
+.page-admin-holidays #holidaysTable td:last-child { min-width: 180px; white-space: nowrap; }
+.page-admin-classes #classesTable td:last-child button,
+.page-admin-holidays #holidaysTable td:last-child button { white-space: nowrap; }
+#outcomeBody td:last-child { min-width: 170px; white-space: nowrap; }
+#outcomeBody td:last-child button { white-space: nowrap; }
+
 /* ==========================================================================
    Page styles: admin/admin_users.html (page-admin-users)
    ========================================================================== */
@@ -1582,8 +1605,8 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
 .page-admin-users .user-username-cell span { color: var(--brand-dark); font-weight: 600; }
 .page-admin-users .user-actions-heading { text-align: right; }
 .page-admin-users .user-actions-cell { min-width: 245px; }
-.page-admin-users .user-row-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-.page-admin-users .user-row-actions button { margin: 0; }
+.page-admin-users .user-row-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
+.page-admin-users .user-row-actions button { flex: 0 0 auto; margin: 0; padding: 5px 10px; font-size: 12px; white-space: nowrap; }
 .page-admin-users .user-empty-state {
   padding: 32px 18px;
   border: 1px dashed var(--border);
@@ -1654,12 +1677,14 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
   }
   .page-admin-users #usersTable td { display: block; padding: 0; border: 0; background: transparent; }
   .page-admin-users #usersTable tr:hover td { background: transparent; }
+  .page-admin-users #usersTable tr.bulk-selected-row { background: rgba(26,86,160,.07); }
   .page-admin-users .user-name-cell { grid-column: 1; grid-row: 1; }
   .page-admin-users .user-username-cell { grid-column: 1; grid-row: 2; font-size: 12px; }
-  .page-admin-users .user-role-cell { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .page-admin-users .user-role-cell { grid-column: 2; grid-row: 1; align-self: center; }
+  .page-admin-users #usersTable .bulk-select-cell { grid-column: 2; grid-row: 2; justify-self: end; }
   .page-admin-users .user-actions-cell { grid-column: 1 / -1; grid-row: 3; min-width: 0; margin-top: 8px; padding-top: 10px !important; border-top: 1px solid var(--border) !important; }
-  .page-admin-users .user-row-actions { justify-content: stretch; }
-  .page-admin-users .user-row-actions button { flex: 1 1 auto; }
+  .page-admin-users .user-row-actions { justify-content: flex-start; }
+  .page-admin-users .user-row-actions button { flex: 0 0 auto; }
 }
 /* ==========================================================================
    Page styles: admin/admin_audit.html (page-admin-audit)
@@ -2900,14 +2925,16 @@ body.page-class-report {
    Page styles: teacher/class_students.html (page-class-students)
    ========================================================================== */
 .page-class-students .edit-field { width: 100%; padding: 4px 6px; border: 1.5px solid var(--brand); border-radius: 3px; font-size: 12px; font-family: inherit; }
-    .page-class-students .action-btns { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .page-class-students #studentsTable th:last-child,
+    .page-class-students #studentsTable td:last-child { min-width: 180px; }
+    .page-class-students .action-btns { display: flex; gap: 5px; flex-wrap: nowrap; align-items: center; }
     .page-class-students .btn-secondary { background: var(--button-secondary) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 999px !important; }
     .page-class-students .btn-secondary:hover { background: var(--button-secondary-hover) !important; color: var(--brand-dark) !important; }
     .page-class-students .btn-save { background: var(--button-success) !important; color: white !important; min-height: 32px; font-size: 12px; line-height: 1.25; padding: 5px 12px; border: 1px solid transparent !important; border-radius: 999px !important; }
     .page-class-students .btn-save:hover { background: var(--button-success-strong) !important; }
     .page-class-students .action-btns .btn-secondary,
     .page-class-students .action-btns .btn-danger,
-    .page-class-students .action-btns .btn-save { flex: 0 1 auto; white-space: nowrap; }
+    .page-class-students .action-btns .btn-save { flex: 0 0 auto; white-space: nowrap; }
 
 
 /* ==========================================================================
@@ -3932,4 +3959,95 @@ function sendFeedback() {
   google.script.run.withSuccessHandler(function() { closeFeedbackModal(); if (typeof showToast === 'function') showToast('ส่งข้อเสนอแนะเรียบร้อยแล้ว', 'success'); else alert('ส่งข้อเสนอแนะเรียบร้อยแล้ว'); }).withFailureHandler(function(error) { button.disabled = false; button.textContent = 'ส่งข้อความ'; alert('ส่งข้อเสนอแนะไม่สำเร็จ: ' + (error.message || error)); }).submitFeedback(localStorage.getItem('popo_token'), type, subject, details, window.location.href, feedbackImagePayloads.map(function(image) { return { base64: image.base64, name: image.name, type: image.type }; }));
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFeedbackFooter); else initFeedbackFooter();
+
+// Call after rendering a deletable table. Each render starts with an empty selection.
+function setupBulkDelete(tableId, rowIdAttribute, serverMethod, reload) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var headRow = table.querySelector('thead tr');
+  var body = table.querySelector('tbody');
+  if (!headRow || !body) return;
+  var toolbar = document.getElementById(tableId + 'BulkToolbar');
+  if (!toolbar) {
+    toolbar = document.createElement('div');
+    toolbar.id = tableId + 'BulkToolbar';
+    toolbar.className = 'bulk-delete-toolbar';
+    toolbar.innerHTML = '<span class="bulk-delete-count" aria-live="polite">เลือก 0 รายการ</span><button type="button" class="btn-danger" disabled>ลบรายการที่เลือก</button>';
+    var anchor = table.parentNode.classList.contains('users-table-wrap') ? table.parentNode : table;
+    anchor.parentNode.insertBefore(toolbar, anchor);
+  }
+  var countLabel = toolbar.querySelector('.bulk-delete-count');
+  var deleteButton = toolbar.querySelector('button');
+  var headCell = headRow.querySelector('.bulk-select-cell');
+  if (!headCell) {
+    headCell = document.createElement('th');
+    headCell.className = 'bulk-select-cell';
+    headRow.insertBefore(headCell, headRow.firstChild);
+  }
+  headCell.innerHTML = '<input type="checkbox" aria-label="เลือกทุกรายการในตาราง">';
+  var selectAll = headCell.querySelector('input');
+  var rows = Array.prototype.slice.call(body.querySelectorAll('tr[' + rowIdAttribute + ']'));
+  rows.forEach(function(row) {
+    var cell = document.createElement('td');
+    cell.className = 'bulk-select-cell';
+    cell.innerHTML = '<input type="checkbox" aria-label="เลือกรายการ">';
+    cell.querySelector('input').setAttribute('aria-label', 'เลือกรายการ ' + row.getAttribute(rowIdAttribute));
+    row.insertBefore(cell, row.firstChild);
+  });
+  var boxes = rows.map(function(row) { return row.querySelector('.bulk-select-cell input'); });
+  toolbar.style.display = rows.length ? 'flex' : 'none';
+  selectAll.disabled = !rows.length;
+  function updateSelection() {
+    var selected = 0;
+    boxes.forEach(function(box, index) {
+      if (box.checked) selected++;
+      rows[index].classList.toggle('bulk-selected-row', box.checked);
+    });
+    countLabel.textContent = 'เลือก ' + selected + ' รายการ';
+    deleteButton.disabled = selected === 0;
+    selectAll.checked = rows.length > 0 && selected === rows.length;
+    selectAll.indeterminate = selected > 0 && selected < rows.length;
+  }
+  boxes.forEach(function(box) { box.onchange = updateSelection; });
+  selectAll.onchange = function() {
+    boxes.forEach(function(box) { box.checked = selectAll.checked; });
+    updateSelection();
+  };
+  deleteButton.onclick = function() {
+    var ids = rows.filter(function(row, index) { return boxes[index].checked; })
+      .map(function(row) { return row.getAttribute(rowIdAttribute); });
+    if (!ids.length || !confirm('ยืนยันการลบ ' + ids.length + ' รายการที่เลือก? การลบไม่สามารถย้อนกลับได้')) return;
+    deleteButton.disabled = true;
+    selectAll.disabled = true;
+    boxes.forEach(function(box) { box.disabled = true; });
+    var completed = 0;
+    var deleted = 0;
+    var failed = [];
+    function next() {
+      if (completed === ids.length) {
+        if (failed.length) {
+          showToast('ลบสำเร็จ ' + deleted + ' รายการ; ลบไม่สำเร็จ ' + failed.length + ' รายการ: ' + failed.slice(0, 3).join(', '), 'error');
+        } else {
+          showToast('ลบสำเร็จ ' + deleted + ' รายการ', 'success');
+        }
+        reload();
+        return;
+      }
+      countLabel.textContent = 'กำลังลบ ' + (completed + 1) + '/' + ids.length + ' รายการ';
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.error) failed.push(ids[completed] + ': ' + result.error);
+          else deleted++;
+          completed++;
+          next();
+        })
+        .withFailureHandler(function(error) {
+          failed.push(ids[completed] + ': ' + (error.message || error));
+          completed++;
+          next();
+        })[serverMethod](localStorage.getItem('popo_token'), ids[completed]);
+    }
+    next();
+  };
+}
 </script>
