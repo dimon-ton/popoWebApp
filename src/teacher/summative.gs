@@ -39,11 +39,18 @@ function parseSummativeScore(value, max, label, student_id) {
   return n;
 }
 
-function parseMakeupGrade(value, student_id) {
+function isSecondarySummativeLevel_(level) {
+  return String(level || '').replace(/\s+/g, '').indexOf('ม') === 0;
+}
+
+function parseMakeupGrade(value, student_id, allowSpecialResults) {
   if (value === '' || value === null || value === undefined) return '';
-  var n = Number(value);
+  var text = String(value).trim();
+  if (allowSpecialResults && (text === 'ร' || text === 'มส')) return text;
+  var n = Number(text);
   if (isNaN(n) || n < 0 || n > 4) {
-    throw new Error('คะแนนสอบแก้ตัวของนักเรียน ' + student_id + ' ต้องอยู่ระหว่าง 0 ถึง 4');
+    var rule = allowSpecialResults ? '0 ถึง 4 หรือเป็น ร หรือ มส' : '0 ถึง 4';
+    throw new Error('ผลสอบแก้ตัวของนักเรียน ' + student_id + ' ต้องอยู่ระหว่าง ' + rule);
   }
   return n;
 }
@@ -130,13 +137,15 @@ function validCourseworkOverride_(value, courseworkMax) {
   return isNaN(score) || score < 0 || score > courseworkMax ? '' : score;
 }
 
-function validStoredMakeupGrade_(value) {
+function validStoredMakeupGrade_(value, allowSpecialResults) {
   if (isBlankScore_(value)) return '';
-  var grade = Number(value);
+  var text = String(value).trim();
+  if (allowSpecialResults && (text === 'ร' || text === 'มส')) return text;
+  var grade = Number(text);
   return isNaN(grade) || grade < 0 || grade > 4 ? '' : grade;
 }
 
-function calculateSummativeResult_(coursework, midterm, finalScore, makeupGrade) {
+function calculateSummativeResult_(coursework, midterm, finalScore, makeupGrade, allowSpecialResults) {
   var complete = !isBlankScore_(coursework) && !isBlankScore_(midterm) && !isBlankScore_(finalScore);
   var total = '';
   if (!isBlankScore_(coursework) || !isBlankScore_(midterm) || !isBlankScore_(finalScore)) {
@@ -145,7 +154,7 @@ function calculateSummativeResult_(coursework, midterm, finalScore, makeupGrade)
       (isBlankScore_(finalScore) ? 0 : Number(finalScore)));
   }
   var computedGrade = complete ? computeGrade(total) : '';
-  var validMakeup = validStoredMakeupGrade_(makeupGrade);
+  var validMakeup = validStoredMakeupGrade_(makeupGrade, allowSpecialResults);
   return {
     total: total,
     computed_grade: computedGrade,
@@ -157,6 +166,7 @@ function calculateSummativeResult_(coursework, midterm, finalScore, makeupGrade)
 function syncSummativeCoursework_(classId, subjectId, studentIds, updatedBy) {
   var cls = dbFindOne('Classes', 'class_id', classId);
   if (!cls || isCurriculumLevel_(cls.level)) return { skipped: true, rows_synced: 0 };
+  var allowSpecialResults = isSecondarySummativeLevel_(cls.level);
 
   var ids = (studentIds || []).map(function(studentId) { return String(studentId); });
   if (!ids.length) return { skipped: false, rows_synced: 0 };
@@ -176,7 +186,7 @@ function syncSummativeCoursework_(classId, subjectId, studentIds, updatedBy) {
     var derivedCoursework = calculateCourseworkScore_(subjectId, studentId, context);
     var courseworkOverride = validCourseworkOverride_(existing.coursework_override, context.coursework_max);
     var coursework = courseworkOverride !== '' ? courseworkOverride : derivedCoursework;
-    var result = calculateSummativeResult_(coursework, existing.midterm, existing.final, existing.makeup_grade);
+    var result = calculateSummativeResult_(coursework, existing.midterm, existing.final, existing.makeup_grade, allowSpecialResults);
     return {
       student_id: studentId,
       subject_id: String(subjectId),
@@ -218,7 +228,7 @@ function syncSummativeCourseworkForSubjectClasses_(subjectId, updatedBy) {
 }
 
 // Returns all data needed to render the summative scoring grid.
-// Returns: { students, weights, scores, subject_info, class_info, can_edit }
+// Returns: { students, weights, scores, subject_info, class_info, can_edit, allow_special_results }
 // scores: map of student_id -> { coursework, midterm, final, total, computed_grade, makeup_grade, final_grade }
 function getSummativeData(token, class_id, subject_id) {
   var session = requireSession_(token);
@@ -262,17 +272,20 @@ function getSummativeData(token, class_id, subject_id) {
     scores: scoreMap,
     subject_info: subj,
     class_info: withClassLabel(cls),
-    can_edit: can_edit
+    can_edit: can_edit,
+    allow_special_results: isSecondarySummativeLevel_(cls.level)
   };
 }
 
 // Save summative scores for a (class, subject) pair.
 // rows: array of { student_id, coursework, midterm, final, makeup_grade }
+// Secondary classes may store ร or มส in makeup_grade as a final-result override.
 // Uses upsert pattern inside one LockService acquisition.
 function serverSaveSummative(token, class_id, subject_id, rows) {
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
   if (isCurriculumLevel_(access.class_info.level)) throw new Error('ชั้น ป.1–ป.3 ใช้คะแนนรายภาคเรียน');
+  var allowSpecialResults = isSecondarySummativeLevel_(access.class_info.level);
 
   if (!rows || rows.length === 0) return { ok: true };
   validateRowsBelongToClass_(rows, class_id);
@@ -294,8 +307,8 @@ function serverSaveSummative(token, class_id, subject_id, rows) {
     var cw = courseworkOverride !== '' ? courseworkOverride : derivedCoursework;
     var mid = parseSummativeScore(row.midterm, maxes.midterm, 'สอบกลางภาค', student_id);
     var fin = parseSummativeScore(row.final, maxes.final, 'สอบปลายภาค', student_id);
-    var makeup = parseMakeupGrade(row.makeup_grade, student_id);
-    var result = calculateSummativeResult_(cw, mid, fin, makeup);
+    var makeup = parseMakeupGrade(row.makeup_grade, student_id, allowSpecialResults);
+    var result = calculateSummativeResult_(cw, mid, fin, makeup, allowSpecialResults);
     return {
       student_id: student_id,
       subject_id: String(subject_id),
