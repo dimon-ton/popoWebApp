@@ -382,36 +382,45 @@ function serverLogin(username, password) {
 
 function serverChangePassword(token, old_password, new_password) {
   try {
-    ensureUserAuthColumns();
     var session = getSession(token);
-    if (!session) return { error: 'ไม่ได้เข้าสู่ระบบ' };
+    if (!session) return { error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง' };
+    ensureUserAuthColumns();
+
+    old_password = String(old_password || '');
+    new_password = String(new_password || '');
     if (!old_password || !new_password) return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' };
     if (new_password.length < MIN_PASSWORD_LENGTH) return { error: 'รหัสผ่านต้องมีอย่างน้อย ' + MIN_PASSWORD_LENGTH + ' ตัวอักษร' };
+    if (new_password === old_password) return { error: 'รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านเดิม' };
 
-    var user = dbFindOne('Users', 'user_id', session.user_id);
-    if (!user) return { error: 'ไม่พบผู้ใช้' };
+    var changeResult = withDbLock_(function() {
+      var user = dbFindOne('Users', 'user_id', session.user_id);
+      if (!user) return { error: 'ไม่พบข้อมูลผู้ใช้' };
 
-    var hash = computeHash(old_password, user.salt);
-    if (hash !== user.password_hash) return { error: 'รหัสผ่านเดิมไม่ถูกต้อง' };
+      var currentHash = computeHash(old_password, user.salt);
+      if (currentHash !== user.password_hash) return { error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' };
 
-    var newSalt = Utilities.getUuid();
-    var newHash = computeHash(new_password, newSalt);
-    dbUpdate('Users', 'user_id', session.user_id, { password_hash: newHash, salt: newSalt, must_change_pwd: '' });
+      var newSalt = Utilities.getUuid();
+      var newHash = computeHash(new_password, newSalt);
+      var updated = dbUpdateUnlocked_('Users', 'user_id', session.user_id, {
+        password_hash: newHash,
+        salt: newSalt,
+        must_change_pwd: ''
+      });
+      if (!updated) return { error: 'ไม่สามารถเปลี่ยนรหัสผ่านได้ กรุณาลองใหม่' };
 
-    var updatedSession = {
-      user_id: session.user_id,
-      username: session.username,
-      full_name: session.full_name,
-      avatar: session.avatar || '',
-      role: session.role,
-      must_change_pwd: false,
-      expires_at: session.expires_at
-    };
-    CacheService.getScriptCache().put('session_' + token, JSON.stringify(updatedSession), SESSION_TTL_SECONDS);
+      appendAuditLogUnlocked_(session.user_id, 'Users', session.user_id, null, {
+        action: 'password_changed_self'
+      });
+      return { ok: true };
+    });
+    if (changeResult.error) return changeResult;
+
+    session.must_change_pwd = false;
+    CacheService.getScriptCache().put('session_' + token, JSON.stringify(session), SESSION_TTL_SECONDS);
 
     return { ok: true };
   } catch (err) {
-    return { error: 'เกิดข้อผิดพลาด: ' + err.message };
+    return { error: 'ไม่สามารถเปลี่ยนรหัสผ่านได้ กรุณาลองใหม่' };
   }
 }
 
@@ -420,7 +429,7 @@ function getChangePasswordHtml(token) {
     var session = getSession(token);
     if (!session) return getLoginHtml();
     var tmpl = createTemplate('change_password');
-    tmpl.data = { session: session, token: token };
+    tmpl.data = { session: session, token: token, min_password_length: MIN_PASSWORD_LENGTH };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return safeErrorHtml_('เกิดข้อผิดพลาด', err);
