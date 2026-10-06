@@ -217,7 +217,7 @@ function renderGrid(data) {
 
       if (data.can_edit) {
         cells += '<td><input class="score-input" type="number" min="0" max="' + escHtml(ind.max_score) + '" ' +
-          'step="1" value="' + (scoreVal !== '' ? escHtml(scoreVal) : '') + '" ' +
+          'step="any" inputmode="decimal" value="' + (scoreVal !== '' ? escHtml(scoreVal) : '') + '" ' +
           'data-student="' + escHtml(student.student_id) + '" ' +
           'data-indicator="' + escHtml(ind.indicator_id) + '" ' +
           'data-max="' + escHtml(ind.max_score) + '" ' +
