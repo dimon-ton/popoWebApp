@@ -128,6 +128,7 @@
         <? if (data.session && data.session.role === 'admin') { ?>
         <a class="menu-item" href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
         <a class="menu-item" href="#" onclick="navigate('admin_holidays'); return false;">วันหยุดโรงเรียน</a>
+        <a class="menu-item" href="#" onclick="navigate('admin_subject_group_heads'); return false;">ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้</a>
         <? } ?>
         <a class="menu-item" href="#" onclick="navigate('help'); return false;">คู่มือการใช้งาน</a>
         <a class="menu-item" href="#" onclick="navigate('weights_ref'); return false;">น้ำหนักคะแนน</a>
@@ -164,6 +165,7 @@
     </div>
     <? } ?>
   </div>
+<div class="toast" id="toast"></div>
 <script>
 var TOKEN = '<?= data.token || '' ?>';
 var ROLE = '<?= data.session ? data.session.role : "" ?>';
@@ -181,6 +183,14 @@ setTimeout(function() {
 <? if (data.session && data.session.role !== 'admin') { ?>
 loadTeacherClasses();
 <? } ?>
+
+function showToast(msg, type) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + (type || 'success');
+  toast.style.display = 'block';
+  setTimeout(function() { toast.style.display = 'none'; }, 4000);
+}
 
 function loadTeacherClasses() {
   google.script.run

@@ -99,7 +99,7 @@ function renderDevActivity(data) {
     var resultHtml = data.can_edit
       ? '<select class="dev-result-select" data-student="' + escHtml(student.student_id) + '">' +
           '<option value=""></option>' +
-          ['ผ่าน','ไม่ผ่าน','ร','มส'].map(function(opt) {
+          ['ผ่าน','ไม่ผ่าน'].map(function(opt) {
             return '<option value="' + escHtml(opt) + '"' + (student.result === opt ? ' selected' : '') + '>' + escHtml(opt) + '</option>';
           }).join('') +
         '</select>'
@@ -113,7 +113,7 @@ function renderDevActivity(data) {
 
 function normalizeDevActivityResult(value) {
   var result = String(value || '').trim();
-  var allowed = ['', 'ผ่าน', 'ไม่ผ่าน', 'ร', 'มส'];
+  var allowed = ['', 'ผ่าน', 'ไม่ผ่าน'];
   return allowed.indexOf(result) >= 0 ? result : null;
 }
 
@@ -121,7 +121,7 @@ function getColumnFillSelectHtml() {
   return '<select class="column-fill-select" onchange="fillDevActivityColumn(this)">' +
     '<option value="__noop">ใส่ทั้งคอลัมน์...</option>' +
     '<option value="">ว่าง</option>' +
-    ['ผ่าน','ไม่ผ่าน','ร','มส'].map(function(opt) {
+    ['ผ่าน','ไม่ผ่าน'].map(function(opt) {
       return '<option value="' + escHtml(opt) + '">' + escHtml(opt) + '</option>';
     }).join('') +
   '</select>';
@@ -136,7 +136,7 @@ function fillDevActivityColumn(control) {
 
   var value = normalizeDevActivityResult(selected);
   if (value === null) {
-    showToast('กรุณากรอกเฉพาะ ผ่าน, ไม่ผ่าน, ร หรือ มส', 'error');
+    showToast('กรุณาเลือกเฉพาะ ผ่าน หรือ ไม่ผ่าน', 'error');
     if (control) control.value = '__noop';
     return;
   }

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้ — PopoWebApp</title>
+  <?!= include('_styles') ?>
+</head>
+<body class="page-admin-subject-group-heads">
+<div class="navbar">
+  <span class="navbar-title"><div class="navbar-title-skeleton"><div class="skeleton-line-main"></div><div class="skeleton-line-sub"></div></div></span>
+  <a href="#" onclick="navigate('dashboard'); return false;">หน้าหลัก</a>
+  <a href="#" onclick="navigate('admin_school'); return false;">ข้อมูลโรงเรียน</a>
+  <a href="#" onclick="navigate('admin_subjects'); return false;">วิชา</a>
+  <a href="#" onclick="navigate('admin_users'); return false;">ผู้ใช้</a>
+  <div class="navbar-user">
+    <div class="navbar-user-trigger"><div class="navbar-user-skeleton"><div class="skeleton-avatar"></div><div class="skeleton-name"></div></div></div>
+    <div class="navbar-dropdown">
+      <a href="#" onclick="navigate('profile_edit'); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> แก้ไขโปรไฟล์</a>
+      <div class="dropdown-divider"></div>
+      <a href="#" onclick="doLogout(); return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> ออกจากระบบ</a>
+    </div>
+  </div>
+</div>
+
+<div class="container narrow">
+  <h2 class="page-title">ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้</h2>
+  <div class="card">
+    <p style="color:var(--text-muted);margin-top:0">เลือกครูผู้รับผิดชอบแต่ละกลุ่มสาระการเรียนรู้สำหรับแสดงในรายงานผลการเรียน</p>
+    <div class="loading-msg" id="subjectGroupHeadsLoading">กำลังโหลดข้อมูล...</div>
+    <div class="table-responsive" id="subjectGroupHeadsTableWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>กลุ่มสาระการเรียนรู้</th>
+            <th>หัวหน้ากลุ่มสาระ</th>
+          </tr>
+        </thead>
+        <tbody id="subjectGroupHeadsBody"></tbody>
+      </table>
+    </div>
+    <p id="subjectGroupHeadsEmpty" class="loading-msg" style="display:none">ยังไม่มีกลุ่มสาระการเรียนรู้ในข้อมูลรายวิชา</p>
+    <button class="btn-primary" id="saveSubjectGroupHeadsBtn" style="margin-top:16px" onclick="saveSubjectGroupHeads()" disabled>บันทึกหัวหน้ากลุ่มสาระ</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+var TOKEN = '<?= data.token || '' ?>';
+
+function navigate(page) {
+  showNavLoading();
+  google.script.run
+    .withSuccessHandler(function(html) { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(function(err) { hideNavLoading(); showToast('เกิดข้อผิดพลาด: ' + err.message, 'error'); })
+    .getPageHtml(TOKEN, page);
+}
+
+function doLogout() {
+  google.script.run.withSuccessHandler(function() {
+    localStorage.removeItem('popo_token');
+    location.reload();
+  }).serverLogout(TOKEN);
+}
+
+function showToast(msg, type) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + (type || 'success');
+  toast.style.display = 'block';
+  setTimeout(function() { toast.style.display = 'none'; }, 4000);
+}
+
+function loadSubjectGroupHeads() {
+  var loading = document.getElementById('subjectGroupHeadsLoading');
+  var tableWrap = document.getElementById('subjectGroupHeadsTableWrap');
+  var empty = document.getElementById('subjectGroupHeadsEmpty');
+  var saveBtn = document.getElementById('saveSubjectGroupHeadsBtn');
+  loading.style.display = 'block';
+  loading.textContent = 'กำลังโหลดข้อมูล...';
+  tableWrap.style.display = 'none';
+  empty.style.display = 'none';
+  saveBtn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      var groups = result && result.groups ? result.groups : [];
+      var teachers = result && result.teachers ? result.teachers : [];
+      var body = document.getElementById('subjectGroupHeadsBody');
+      body.innerHTML = '';
+      groups.forEach(function(group) {
+        var row = document.createElement('tr');
+        var groupCell = document.createElement('td');
+        groupCell.textContent = group.subject_group || '';
+        var headCell = document.createElement('td');
+        var select = document.createElement('select');
+        select.className = 'subject-group-head-select';
+        select.setAttribute('data-subject-group', group.subject_group || '');
+        select.style.width = '100%';
+        var unassigned = document.createElement('option');
+        unassigned.value = '';
+        unassigned.textContent = '-- ยังไม่ได้กำหนด --';
+        select.appendChild(unassigned);
+        teachers.forEach(function(teacher) {
+          var option = document.createElement('option');
+          option.value = teacher.user_id || '';
+          option.textContent = teacher.full_name || teacher.user_id || '';
+          select.appendChild(option);
+        });
+        select.value = group.head_user_id || '';
+        headCell.appendChild(select);
+        row.appendChild(groupCell);
+        row.appendChild(headCell);
+        body.appendChild(row);
+      });
+      loading.style.display = 'none';
+      tableWrap.style.display = groups.length ? 'block' : 'none';
+      empty.style.display = groups.length ? 'none' : 'block';
+      saveBtn.disabled = !groups.length;
+    })
+    .withFailureHandler(function(err) {
+      loading.style.display = 'none';
+      saveBtn.disabled = true;
+      showToast('โหลดข้อมูลหัวหน้ากลุ่มสาระไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .getSubjectGroupHeadsSettings(TOKEN);
+}
+
+function saveSubjectGroupHeads() {
+  var btn = document.getElementById('saveSubjectGroupHeadsBtn');
+  var assignments = Array.prototype.map.call(
+    document.querySelectorAll('.subject-group-head-select'),
+    function(select) {
+      return {
+        subject_group: select.getAttribute('data-subject-group') || '',
+        head_user_id: select.value || ''
+      };
+    }
+  );
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result && result.error) {
+        btn.disabled = false;
+        showToast(result.error, 'error');
+        return;
+      }
+      showToast('บันทึกหัวหน้ากลุ่มสาระการเรียนรู้สำเร็จ', 'success');
+      loadSubjectGroupHeads();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      showToast('บันทึกหัวหน้ากลุ่มสาระไม่สำเร็จ: ' + err.message, 'error');
+    })
+    .serverSaveSubjectGroupHeads(TOKEN, assignments);
+}
+
+loadSubjectGroupHeads();
+</script>
+</body>
+</html>

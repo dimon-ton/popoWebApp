@@ -3,7 +3,7 @@
 // Returns all data needed to render the cover report page.
 // Returns: { school_info, class_info, subject_info, teacher_name, homeroom_teacher_name,
 //            subject_group_head_user_id, subject_group_head_name,
-//            total_students, grade_dist, char_dist, rtw_dist, dev_activity }
+//            total_students, grade_dist, special_grade_counts, char_dist, rtw_dist, dev_activity }
 function resolveSubjectGroupHead_(subjectGroup) {
   var normalizedGroup = String(subjectGroup || '').trim();
   if (!normalizedGroup) return { user_id: '', full_name: '' };
@@ -26,6 +26,40 @@ function resolveSubjectGroupHead_(subjectGroup) {
     // creates SubjectGroupHeads.
     return { user_id: '', full_name: '' };
   }
+}
+
+function summarizeReportFinalGrades_(rows, subjectId, studentIds, classLevel, totalStudents) {
+  var gradeLabels = [4, 3.5, 3, 2.5, 2, 1.5, 1, 0];
+  var gradeCounts = {};
+  var specialGradeCounts = { 'ร': 0, 'มส': 0 };
+  var studentSet = {};
+  gradeLabels.forEach(function(grade) { gradeCounts[String(grade)] = 0; });
+  (studentIds || []).forEach(function(studentId) { studentSet[String(studentId)] = true; });
+  var isSecondary = isSecondarySummativeLevel_(classLevel);
+
+  (rows || []).forEach(function(row) {
+    if (String(row.subject_id) !== String(subjectId) || !studentSet[String(row.student_id)]) return;
+    if (row.final_grade === null || row.final_grade === undefined) return;
+    var finalGrade = String(row.final_grade).trim();
+    if (!finalGrade) return;
+    if (isSecondary && Object.prototype.hasOwnProperty.call(specialGradeCounts, finalGrade)) {
+      specialGradeCounts[finalGrade]++;
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(gradeCounts, finalGrade)) gradeCounts[finalGrade]++;
+  });
+
+  return {
+    grade_dist: gradeLabels.map(function(grade) {
+      var count = gradeCounts[String(grade)] || 0;
+      return {
+        grade: grade,
+        count: count,
+        pct: totalStudents > 0 ? Math.round(count * 100 / totalStudents * 10) / 10 : 0
+      };
+    }),
+    special_grade_counts: specialGradeCounts
+  };
 }
 
 function getReportData(token, class_id, subject_id) {
@@ -63,28 +97,8 @@ function getReportData(token, class_id, subject_id) {
   // --- Grade distribution from SummativeScores ---
   var allSummative = isCurriculumLevel_(cls.level) ? [] : dbGetAll('SummativeScores');
   var gradeLabels = [4, 3.5, 3, 2.5, 2, 1.5, 1, 0];
-  var gradeCounts = {};
-  gradeLabels.forEach(function(g) { gradeCounts[String(g)] = 0; });
-
-  var gradedStudents = 0;
-  allSummative.forEach(function(row) {
-    if (row.subject_id !== subject_id) return;
-    if (studentIds.indexOf(row.student_id) === -1) return;
-    var fg = row.final_grade;
-    if (fg === '' || fg === null || fg === undefined) return;
-    gradedStudents++;
-    var key = String(fg);
-    if (gradeCounts[key] !== undefined) gradeCounts[key]++;
-  });
-
-  var grade_dist = gradeLabels.map(function(g) {
-    var cnt = gradeCounts[String(g)] || 0;
-    return {
-      grade: g,
-      count: cnt,
-      pct: total_students > 0 ? Math.round(cnt * 100 / total_students * 10) / 10 : 0
-    };
-  });
+  var gradeSummary = summarizeReportFinalGrades_(allSummative, subject_id, studentIds, cls.level, total_students);
+  var grade_dist = gradeSummary.grade_dist;
 
   // --- Characteristics distribution ---
   var allChar = dbGetAll('Characteristics');
@@ -157,6 +171,7 @@ function getReportData(token, class_id, subject_id) {
     subject_group_head_name: subject_group_head.full_name,
     total_students: total_students,
     grade_dist: grade_dist,
+    special_grade_counts: gradeSummary.special_grade_counts,
     char_dist: char_dist,
     rtw_dist: rtw_dist,
     dev_counts: devCounts,
@@ -545,7 +560,7 @@ function serverSaveDevActivity(token, class_id, subject_id, rows) {
   if (!rows || rows.length === 0) return { ok: true };
   validateRowsBelongToClass_(rows, class_id);
 
-  var allowedResults = { '': true, 'ผ่าน': true, 'ไม่ผ่าน': true, 'ร': true, 'มส': true };
+  var allowedResults = { '': true, 'ผ่าน': true, 'ไม่ผ่าน': true };
   var now = new Date().toISOString();
   var upsertRows = rows.map(function(row) {
     var result = String(row.result || '');

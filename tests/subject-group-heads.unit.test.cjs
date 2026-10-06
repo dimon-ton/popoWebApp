@@ -175,11 +175,20 @@ test('approvalBlock uses subject_group_head_name and never falls back to homeroo
   assert.doesNotMatch(missing, /ครูประจำชั้นที่ไม่ควรใช้แทน/);
 });
 
-test('admin school page contains the dropdown settings UI and keeps the existing school save flow', () => {
-  const html = fs.readFileSync(path.join(root, 'admin', 'admin_school.html'), 'utf8');
-  assert.match(html, /ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้/);
-  assert.match(html, /-- ยังไม่ได้กำหนด --/);
-  assert.match(html, /getSubjectGroupHeadsSettings\(TOKEN\)/);
-  assert.match(html, /serverSaveSubjectGroupHeads\(TOKEN, assignments\)/);
-  assert.match(html, /serverSaveSchoolInfo\(TOKEN,/);
+test('subject-group-head settings open from the admin dashboard general-management menu', () => {
+  const dashboard = fs.readFileSync(path.join(root, 'shared', 'dashboard.html'), 'utf8');
+  const school = fs.readFileSync(path.join(root, 'admin', 'admin_school.html'), 'utf8');
+  const settings = fs.readFileSync(path.join(root, 'admin', 'admin_subject_group_heads.html'), 'utf8');
+  const router = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
+  assert.match(dashboard, /ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้/);
+  assert.match(dashboard, /navigate\('admin_subject_group_heads'\)/);
+  assert.doesNotMatch(dashboard, /id="subjectGroupHeadsCard"/);
+  assert.match(settings, /-- ยังไม่ได้กำหนด --/);
+  assert.match(settings, /getSubjectGroupHeadsSettings\(TOKEN\)/);
+  assert.match(settings, /serverSaveSubjectGroupHeads\(TOKEN, assignments\)/);
+  assert.match(router, /'admin_subject_group_heads': 'admin\/admin_subject_group_heads'/);
+  assert.match(router, /case 'admin_subject_group_heads':\s*return buildPage\('admin_subject_group_heads'/);
+  assert.doesNotMatch(school, /ตั้งค่าหัวหน้ากลุ่มสาระการเรียนรู้/);
+  assert.doesNotMatch(school, /getSubjectGroupHeadsSettings\(TOKEN\)/);
+  assert.match(school, /serverSaveSchoolInfo\(TOKEN,/);
 });

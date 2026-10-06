@@ -106,12 +106,12 @@ Use this development deployment for testing `feature/secondary-special-grades` w
 
 **Current deployment state**:
 - Stable production deployment ID: `AKfycbxoOgEwrVOCxFvZEQahEiCvfB29gu5rQ8z1kplcMjipkzSBrZe6GrbkGHF4VwO8M4mA`
-- Stable production version: `363`
+- Stable production version: `366`
 - Development deployment ID: `AKfycbyEMtKmla-A9vYPRELKN19cFr-vl5eDlVDeVyN-cIDFGNeGUS0_uHSUYREGIigV_50`
 - Development version: `361`
 - HEAD deployment ID: `AKfycbzqTBsB-Qb4gl7dcbE7KwdM_hqAxUuml9Hk6rfAAIo`
 - The HEAD deployment URL redirects to Google sign-in in automation and should not replace the public production URL unless its access settings are intentionally changed in Apps Script.
-- Latest verified production release: `Release subject group heads`
+- Latest verified production release: `Restrict learner activity results`
 
 The script uses standard Google Cloud project `app-script-run-function` (project number
 `458875230672`). The Apps Script API is enabled, and the HEAD deployment has an API
