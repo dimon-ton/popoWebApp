@@ -86,7 +86,7 @@ function doGet(e) {
 
     // Keep first-login users inside the mandatory password-change flow.
     if (session && session.must_change_pwd) {
-      return buildPage('change_password', { session: session, token: params.token || '' });
+      return buildPage('change_password', { session: session, token: params.token || '', min_password_length: MIN_PASSWORD_LENGTH });
     }
 
     // Admin-only pages
@@ -197,6 +197,8 @@ function doGet(e) {
         return buildPage('dashboard', { session: session, token: token, web_app_url: ScriptApp.getService().getUrl(), setup_status: getAdminSetupStatus(session) });
       case 'profile_edit':
         return buildPage('profile_edit', { session: session, token: token });
+      case 'change_password':
+        return buildPage('change_password', { session: session, token: token, min_password_length: MIN_PASSWORD_LENGTH });
       default:
         return buildPage('404', { message: 'ไม่พบหน้าที่ต้องการ' });
     }
@@ -409,7 +411,7 @@ function getPageHtml(token, page) {
     var user = dbFindOne('Users', 'user_id', session.user_id);
     if (user) { session.avatar = user.avatar || ''; session.full_name = user.full_name; }
     var tmpl = createTemplate(page);
-    tmpl.data = { session: session, token: token, setup_status: page === 'dashboard' ? getAdminSetupStatus(session) : {} };
+    tmpl.data = { session: session, token: token, min_password_length: MIN_PASSWORD_LENGTH, setup_status: page === 'dashboard' ? getAdminSetupStatus(session) : {} };
     return tmpl.evaluate().getContent();
   } catch (err) {
     return safeErrorHtml_('เกิดข้อผิดพลาด', err);

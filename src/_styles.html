@@ -2073,7 +2073,7 @@ input.makeup-input:focus { border-color: #e67e22; outline: none; }
    Page styles: auth/change_password.html (page-change-password)
    ========================================================================== */
 body.page-change-password { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .page-change-password .pw-card { background: white; border-radius: 10px; padding: 36px; width: 380px; box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
+    .page-change-password .pw-card { background: white; border-radius: 10px; padding: 36px; width: min(380px, calc(100% - 32px)); box-sizing: border-box; box-shadow: 0 6px 24px rgba(26,86,160,0.15); border: 1px solid rgba(26,86,160,0.08); }
     .page-change-password .pw-card h2 { font-size: 18px; color: var(--brand); margin-bottom: 6px; text-align: center; }
     .page-change-password .pw-card .pw-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
     .page-change-password .pw-card .form-group { margin-bottom: 14px; }
@@ -2084,6 +2084,14 @@ body.page-change-password { display: flex; align-items: center; justify-content:
     .page-change-password .pw-card .pw-btn:disabled { background: #9ca3af; cursor: not-allowed; box-shadow: none; }
     .page-change-password .pw-card .error { background: #fdecea; color: var(--red-dark); padding: 10px 12px; border-radius: 5px; font-size: 13px; margin-bottom: 14px; display: none; border-left: 3px solid var(--red); }
     .page-change-password .pw-card .error.show { display: block; }
+    .page-change-password .pw-success { display: none; margin-bottom: 14px; padding: 10px 12px; color: #166534; background: #dcfce7; border-left: 3px solid var(--green); border-radius: 5px; font-size: 13px; }
+    .page-change-password .pw-success.show { display: block; }
+    .page-change-password .pw-actions { display: grid; gap: 10px; }
+    .page-change-password .pw-cancel-btn { width: 100%; min-height: 44px; }
+    @media (max-width: 480px) {
+      body.page-change-password { align-items: flex-start; padding: 20px 0; }
+      .page-change-password .pw-card { padding: 28px 22px; }
+    }
 
 
 /* ==========================================================================
@@ -3884,6 +3892,7 @@ function isForcePasswordChangeFlow() {
 }
 function injectBackBtn() {
   if (isForcePasswordChangeFlow()) return;
+  if (document.body && document.body.getAttribute('data-manual-back-button') === 'true') return;
   if (document.title.indexOf('หน้าหลัก') > -1) return;
   var h2 = document.querySelector('h2');
   if (!h2) return;
@@ -4039,6 +4048,23 @@ function initNavbarDropdown() {
 
     dropdown.insertBefore(divider, dropdown.firstChild);
     dropdown.insertBefore(header, dropdown.firstChild);
+  }
+
+  if (!dropdown.querySelector('[data-account-action="change-password"]')) {
+    var changePasswordLink = document.createElement('a');
+    changePasswordLink.href = '#';
+    changePasswordLink.id = 'changePasswordLink';
+    changePasswordLink.setAttribute('data-account-action', 'change-password');
+    changePasswordLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> เปลี่ยนรหัสผ่าน';
+    changePasswordLink.onclick = function(e) {
+      e.preventDefault();
+      dropdown.classList.remove('open');
+      if (typeof navigate === 'function') navigate('change_password');
+    };
+    var profileLink = dropdown.querySelector('a[onclick*="profile_edit"]');
+    if (profileLink && profileLink.nextSibling) dropdown.insertBefore(changePasswordLink, profileLink.nextSibling);
+    else if (profileLink) dropdown.appendChild(changePasswordLink);
+    else dropdown.insertBefore(changePasswordLink, dropdown.lastElementChild);
   }
 
   trigger.addEventListener('click', function(e) {
@@ -4246,7 +4272,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initNavbarAvatar();
 
 function initFeedbackFooter() {
-  if (isForcePasswordChangeFlow() || document.body.classList.contains('page-login') || document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
+  if (isForcePasswordChangeFlow() || document.body.classList.contains('page-login') || document.body.classList.contains('page-change-password') || document.getElementById('appFeedbackFooter') || !localStorage.getItem('popo_token')) return;
   var footer = document.createElement('footer');
   footer.id = 'appFeedbackFooter'; footer.className = 'app-feedback-footer';
   footer.innerHTML = '<div class="feedback-footer-card"><div class="feedback-footer-copy"><span class="feedback-footer-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-1.8 5.2A8.5 8.5 0 0 1 12.5 20a8.7 8.7 0 0 1-3.3-.7L3 21l1.7-5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg></span><div><p class="feedback-footer-title">ช่วยเราพัฒนาระบบ</p><p class="feedback-footer-description">แจ้งปัญหาที่พบ หรือเสนอฟีเจอร์ที่อยากให้มีได้ทุกเวลา</p></div></div><a href="#" id="feedbackLink" aria-label="เปิดแบบฟอร์มแจ้งปัญหาหรือเสนอฟีเจอร์">ส่งข้อเสนอแนะ</a></div>';

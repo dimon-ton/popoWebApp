@@ -48,8 +48,8 @@
           <textarea id="newDesc" placeholder="คำอธิบาย (ไม่บังคับ)" rows="3" style="resize:vertical"></textarea>
         </div>
         <div class="form-group" style="min-width:100px">
-          <label>คะแนนสูงสุด</label>
-          <input type="number" id="newMaxScore" value="3" min="1" max="10">
+          <label>คะแนนเต็ม</label>
+          <input type="number" id="newMaxScore" value="3" min="0" step="any" inputmode="decimal">
         </div>
         <div class="form-group" style="min-width:80px">
           <label>ลำดับ</label>
@@ -98,7 +98,7 @@
             <th>ลำดับ</th>
             <th>รหัสตัวชี้วัด</th>
             <th>คำอธิบาย</th>
-            <th>คะแนนสูงสุด</th>
+            <th>คะแนนเต็ม</th>
             <th class="table-action-heading"></th>
           </tr>
         </thead>
@@ -345,7 +345,7 @@ function editIndicator(indicatorId) {
     '<td><input class="indicator-edit-order" type="number" min="0" step="1" value="' + escHtml(ind.display_order) + '" aria-label="ลำดับ"></td>' +
     '<td><input class="indicator-edit-code" type="text" value="' + escHtml(ind.code) + '" aria-label="รหัสตัวชี้วัด"></td>' +
     '<td><textarea class="indicator-edit-description" rows="2" aria-label="คำอธิบาย">' + escHtml(ind.description) + '</textarea></td>' +
-    '<td><input class="indicator-edit-max" type="number" min="1" max="10" step="1" value="' + escHtml(ind.max_score) + '" aria-label="คะแนนสูงสุด"></td>' +
+    '<td><input class="indicator-edit-max" type="number" min="0" step="any" inputmode="decimal" value="' + escHtml(ind.max_score) + '" aria-label="คะแนนเต็ม"></td>' +
     '<td class="table-action-cell"><div class="table-row-actions">' +
     '<button class="btn-primary btn-save" onclick="saveIndicator(this.closest(\'tr\').getAttribute(\'data-indicator-id\'))" style="font-size:12px;padding:5px 12px">บันทึก</button>' +
     '<button class="btn-secondary btn-cancel" onclick="cancelIndicatorEdit()" style="font-size:12px;padding:5px 12px">ยกเลิก</button>' +
@@ -371,8 +371,8 @@ function saveIndicator(indicatorId) {
   var displayOrder = Number(displayOrderText);
 
   if (!code) { showToast('กรุณากรอกรหัสตัวชี้วัด', 'error'); return; }
-  if (!maxScoreText || !Number.isInteger(maxScore) || maxScore < 1 || maxScore > 10) {
-    showToast('คะแนนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 10', 'error'); return;
+  if (!maxScoreText || !Number.isFinite(maxScore) || maxScore <= 0) {
+    showToast('คะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0', 'error'); return;
   }
   if (displayOrderText === '' || !Number.isInteger(displayOrder) || displayOrder < 0) {
     showToast('ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป', 'error'); return;
@@ -407,6 +407,10 @@ function addIndicator() {
   var display_order = document.getElementById('newOrder').value.trim();
 
   if (!code) { showToast('กรุณากรอกรหัสตัวชี้วัด', 'error'); return; }
+  var maxScoreNumber = Number(max_score);
+  if (max_score !== '' && (!Number.isFinite(maxScoreNumber) || maxScoreNumber <= 0)) {
+    showToast('คะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0', 'error'); return;
+  }
 
   var btn = document.getElementById('addIndicatorBtn');
   btn.disabled = true;

@@ -117,6 +117,36 @@ test('indicator max-score changes and deletion recalculate coursework', () => {
   assert.equal(state.SummativeScores[0].coursework, 40);
 });
 
+test('indicator max scores accept positive decimals and values above ten', () => {
+  const { api, state } = createApi();
+  vm.runInContext(fs.readFileSync(path.join(teacherRoot, 'indicators.gs'), 'utf8'), api);
+
+  api.serverAddIndicator('token', 'subject', 'I3', '', 12.5, 3);
+  assert.equal(state.Indicators[2].max_score, 12.5);
+
+  api.serverUpdateIndicator('token', 'i1', 'I1', '', 25.75, 1);
+  assert.equal(state.Indicators[0].max_score, 25.75);
+
+  const imported = api.serverImportIndicatorsCSV('token', 'subject', [
+    { code: 'I4', description: '', max_score: '100.25', display_order: '4' },
+  ]);
+  assert.equal(imported.created_count, 1);
+  assert.equal(state.Indicators[3].max_score, 100.25);
+
+  assert.throws(() => api.serverUpdateIndicator('token', 'i1', 'I1', '', 0, 1), /มากกว่า 0/);
+  assert.throws(() => api.serverAddIndicator('token', 'subject', 'I4', '', 'abc', 4), /มากกว่า 0/);
+});
+
+test('indicator forms allow arbitrary positive decimal max scores', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'admin_indicators.html'), 'utf8');
+  assert.match(html, /id="newMaxScore"[^>]*step="any"/);
+  assert.match(html, /class="indicator-edit-max"[^>]*step="any"/);
+  assert.doesNotMatch(html, /class="indicator-edit-max"[^>]*max="10"/);
+
+  const formativeHtml = fs.readFileSync(path.join(teacherRoot, 'class_formative.html'), 'utf8');
+  assert.match(formativeHtml, /class="score-input"[\s\S]{0,200}step="any"/);
+});
+
 test('adding an indicator makes coursework incomplete until that indicator is scored', () => {
   const { api, state } = createApi({
     SummativeScores: [{ student_id: 'student', subject_id: 'subject', coursework: 40, midterm: 20, final: 20, makeup_grade: '' }],

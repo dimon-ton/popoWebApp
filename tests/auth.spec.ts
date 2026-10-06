@@ -4,7 +4,7 @@
  * US-003: Admin user management and password reset.
  */
 import { test, expect, wrapPage } from './helpers/custom-test';
-import { seedTestUser, cleanupTestData } from './helpers/seed';
+import { seedTestUser, cleanupTestData, queryTestRows } from './helpers/seed';
 import { readFile } from 'node:fs/promises';
 
 // US-002 tests run in a fresh context without auth.json — we test the login flow itself
@@ -41,6 +41,14 @@ test.describe('US-002: Login form and session', () => {
     expect(renderResult.ok).toBeTruthy();
     expect(renderResult.value).toContain('id="loginBtn"');
     expect(renderResult.value).not.toContain('data is not defined');
+  });
+
+  test('US-002: unauthenticated users cannot open the change-password page', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=change_password`);
+
+    await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#changePasswordForm')).toHaveCount(0);
   });
 
   test('US-002: wrong password shows Thai error message', async ({ page }) => {
@@ -225,6 +233,7 @@ test.describe('US-003: User management and password reset', () => {
     await expect(freshPage.locator('#appFeedbackFooter')).toHaveCount(0);
     await expect(freshPage.locator('#feedbackModalBackdrop')).toHaveCount(0);
     await expect(freshPage.locator('.back-btn')).toHaveCount(0);
+    await expect(freshPage.locator('#cancelBtn')).toHaveCount(0);
 
     // Completing the required change restores normal authenticated-page UI.
     await freshPage.fill('#oldPassword', resetPassword);
@@ -235,6 +244,107 @@ test.describe('US-003: User management and password reset', () => {
     await expect(freshPage.locator('#appFeedbackFooter')).toBeVisible({ timeout: 10_000 });
 
     await freshCtx.close();
+  });
+
+  test('authenticated admin can open voluntary change password and return to the dashboard', async ({ page }) => {
+    const url = process.env.WEB_APP_URL!;
+    await page.goto(`${url}?page=dashboard`);
+    await expect(page.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+
+    await page.locator('.navbar-user-trigger').click();
+    await expect(page.locator('#changePasswordLink')).toBeVisible();
+    await page.locator('#changePasswordLink').click();
+
+    await expect(page.locator('#changePasswordForm')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-force-password-change', 'false');
+    await expect(page.locator('#cancelBtn')).toBeVisible();
+    await page.locator('#cancelBtn').click();
+    await expect(page.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 20_000 });
+  });
+
+  test('authenticated teacher can change their own password securely', async ({ browser }) => {
+    test.setTimeout(180_000);
+    const url = process.env.WEB_APP_URL!;
+    const username = 'test_user_self_change';
+    const oldPassword = 'oldpass_self';
+    const newPassword = 'newpass_self';
+    await seedTestUser({ suffix: 'self_change', role: 'teacher', password: oldPassword, full_name: 'ครูเปลี่ยนรหัส' });
+
+    const teacherContext = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const teacherPage = wrapPage(await teacherContext.newPage());
+    await teacherPage.goto(url);
+    await teacherPage.fill('#username', username);
+    await teacherPage.fill('#password', oldPassword);
+    await teacherPage.click('#loginBtn');
+    await expect(teacherPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+
+    await teacherPage.locator('.navbar-user-trigger').click();
+    await expect(teacherPage.locator('#changePasswordLink')).toBeVisible();
+    await teacherPage.locator('#changePasswordLink').click();
+    await expect(teacherPage.locator('#changePasswordForm')).toBeVisible({ timeout: 20_000 });
+    await expect(teacherPage.locator('body')).toHaveAttribute('data-force-password-change', 'false');
+    await expect(teacherPage.locator('#cancelBtn')).toBeVisible();
+
+    await teacherPage.fill('#oldPassword', oldPassword);
+    await teacherPage.fill('#newPassword', 'short');
+    await teacherPage.fill('#confirmPassword', 'different');
+    await teacherPage.click('#changeBtn');
+    await expect(teacherPage.locator('#errBox')).toContainText('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+
+    await teacherPage.fill('#newPassword', newPassword);
+    await teacherPage.fill('#confirmPassword', 'newpass_other');
+    await teacherPage.click('#changeBtn');
+    await expect(teacherPage.locator('#errBox')).toContainText('รหัสผ่านใหม่ไม่ตรงกัน');
+
+    await teacherPage.fill('#newPassword', oldPassword);
+    await teacherPage.fill('#confirmPassword', oldPassword);
+    await teacherPage.click('#changeBtn');
+    await expect(teacherPage.locator('#errBox')).toContainText('รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านเดิม');
+
+    await teacherPage.fill('#oldPassword', 'wrongpass');
+    await teacherPage.fill('#newPassword', newPassword);
+    await teacherPage.fill('#confirmPassword', newPassword);
+    await teacherPage.click('#changeBtn');
+    await expect(teacherPage.locator('#errBox')).toContainText('รหัสผ่านปัจจุบันไม่ถูกต้อง', { timeout: 20_000 });
+    await expect(teacherPage.locator('#changeBtn')).toBeEnabled();
+
+    await teacherPage.fill('#oldPassword', oldPassword);
+    await teacherPage.click('#changeBtn');
+    await expect(teacherPage.locator('#changeBtn')).toBeDisabled();
+    await expect(teacherPage.locator('#successBox')).toContainText('เปลี่ยนรหัสผ่านสำเร็จ', { timeout: 20_000 });
+    await expect(teacherPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 20_000 });
+    await teacherContext.close();
+
+    const oldPasswordContext = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const oldPasswordPage = wrapPage(await oldPasswordContext.newPage());
+    await oldPasswordPage.goto(url);
+    await oldPasswordPage.fill('#username', username);
+    await oldPasswordPage.fill('#password', oldPassword);
+    await oldPasswordPage.click('#loginBtn');
+    await expect(oldPasswordPage.locator('#errBox')).toContainText('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', { timeout: 20_000 });
+    await oldPasswordContext.close();
+
+    const newPasswordContext = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const newPasswordPage = wrapPage(await newPasswordContext.newPage());
+    await newPasswordPage.goto(url);
+    await newPasswordPage.fill('#username', username);
+    await newPasswordPage.fill('#password', newPassword);
+    await newPasswordPage.click('#loginBtn');
+    await expect(newPasswordPage.locator('h2')).toContainText('ยินดีต้อนรับ', { timeout: 30_000 });
+    await expect(newPasswordPage.locator('body')).not.toHaveAttribute('data-force-password-change', 'true');
+    await newPasswordContext.close();
+
+    const userRows = await queryTestRows('Users', 'user_id');
+    const changedUser = userRows.find(row => row.user_id === username);
+    expect(changedUser?.must_change_pwd || '').toBe('');
+    const auditRows = await queryTestRows('AuditLog', 'user_id');
+    const passwordAudit = auditRows.find(row => row.user_id === username && String(row.new_value).includes('password_changed_self'));
+    expect(passwordAudit).toBeTruthy();
+    const auditText = JSON.stringify(passwordAudit);
+    expect(auditText).not.toContain(oldPassword);
+    expect(auditText).not.toContain(newPassword);
+    expect(auditText).not.toContain('password_hash');
+    expect(auditText).not.toContain('salt');
   });
 
   test('US-003: non-admin hitting /admin/users receives 403 block screen', async ({ browser }) => {

@@ -1,5 +1,15 @@
 // US-006: Indicator catalog (ตัวชี้วัด) CRUD
 
+function parseIndicatorMaxScore_(value, defaultValue) {
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  if (text === '' && defaultValue !== undefined) return Number(defaultValue);
+  var score = Number(text);
+  if (!isFinite(score) || score <= 0) {
+    throw new Error('คะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0');
+  }
+  return score;
+}
+
 function getIndicatorsList(token, subject_id) {
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
@@ -25,13 +35,14 @@ function serverAddIndicator(token, subject_id, code, description, max_score, dis
   }
   if (!subject_id) throw new Error('subject_id is required');
   if (!code) throw new Error('code is required');
+  var maxScore = parseIndicatorMaxScore_(max_score, 3);
   var indicator_id = generateId('ind');
   dbInsert('Indicators', {
     indicator_id: indicator_id,
     subject_id: subject_id,
     code: code,
     description: description || '',
-    max_score: parseInt(max_score) || 3,
+    max_score: maxScore,
     display_order: parseInt(display_order) || 0
   });
   syncSummativeCourseworkForSubjectClasses_(subject_id, session.user_id);
@@ -45,14 +56,11 @@ function serverUpdateIndicator(token, indicator_id, code, description, max_score
   var indicatorId = String(indicator_id || '').trim();
   var cleanCode = String(code || '').trim();
   var cleanDescription = String(description || '').trim();
-  var maxScore = Number(max_score);
+  var maxScore = parseIndicatorMaxScore_(max_score);
   var displayOrder = Number(display_order);
 
   if (!indicatorId) throw new Error('indicator_id is required');
   if (!cleanCode) throw new Error('กรุณากรอกรหัสตัวชี้วัด');
-  if (!isFinite(maxScore) || Math.floor(maxScore) !== maxScore || maxScore < 1 || maxScore > 10) {
-    throw new Error('คะแนนสูงสุดต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 10');
-  }
   if (!isFinite(displayOrder) || Math.floor(displayOrder) !== displayOrder || displayOrder < 0) {
     throw new Error('ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป');
   }
@@ -141,14 +149,19 @@ function serverImportIndicatorsCSV(token, subject_id, rows) {
     var indicatorId = String(row.indicator_id || '').trim();
     var code = String(row.code || '').trim();
     var description = String(row.description || '').trim();
-    var maxScore = parseInt(row.max_score, 10) || 3;
+    var maxScore;
     var displayOrder = parseInt(row.display_order, 10) || 0;
 
     if (!code) {
       warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะไม่ได้ระบุรหัสตัวชี้วัด');
       return;
     }
-    if (maxScore < 1) maxScore = 1;
+    try {
+      maxScore = parseIndicatorMaxScore_(row.max_score, 3);
+    } catch (err) {
+      warnings.push('แถวที่ ' + lineNum + ': ข้ามรายการเพราะคะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0');
+      return;
+    }
 
     var target = null;
     if (indicatorId && byId[indicatorId]) {
