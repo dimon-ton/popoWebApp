@@ -15,19 +15,29 @@ function computeGrade(total) {
   return 0;
 }
 
-function getSummativeScoreMaxes(subject_id) {
-  var weights = dbFindOne('SubjectWeights', 'subject_id', subject_id) || {
-    pre_mid_max: 25, mid_max: 20, post_mid_max: 25, final_exam_max: 30
-  };
+function getSummativeScoreMaxesFromWeights_(weights) {
+  weights = weights || {};
   var preMidMax = weights.pre_mid_max !== undefined && weights.pre_mid_max !== '' ? Number(weights.pre_mid_max) : 25;
   var postMidMax = weights.post_mid_max !== undefined && weights.post_mid_max !== '' ? Number(weights.post_mid_max) : 25;
   var midtermMax = weights.mid_max !== undefined && weights.mid_max !== '' ? Number(weights.mid_max) : 20;
   var finalMax = weights.final_exam_max !== undefined && weights.final_exam_max !== '' ? Number(weights.final_exam_max) : 30;
+  preMidMax = !isNaN(preMidMax) ? preMidMax : 25;
+  postMidMax = !isNaN(postMidMax) ? postMidMax : 25;
+  midtermMax = !isNaN(midtermMax) ? midtermMax : 20;
+  finalMax = !isNaN(finalMax) ? finalMax : 30;
   return {
-    coursework: (!isNaN(preMidMax) ? preMidMax : 25) + (!isNaN(postMidMax) ? postMidMax : 25),
-    midterm: !isNaN(midtermMax) ? midtermMax : 20,
-    final: !isNaN(finalMax) ? finalMax : 30
+    pre_mid: preMidMax,
+    post_mid: postMidMax,
+    coursework: preMidMax + postMidMax,
+    midterm: midtermMax,
+    during_course: preMidMax + midtermMax + postMidMax,
+    final: finalMax,
+    total: preMidMax + midtermMax + postMidMax + finalMax
   };
+}
+
+function getSummativeScoreMaxes(subject_id) {
+  return getSummativeScoreMaxesFromWeights_(dbFindOne('SubjectWeights', 'subject_id', subject_id));
 }
 
 function parseSummativeScore(value, max, label, student_id) {

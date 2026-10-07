@@ -582,11 +582,12 @@ function pageReferenceScoreGrid(d, n) {
 }
 
 function pageReferenceScoreGridSummary(d, n) {
+  var maxes = d.summative_score_maxes || {};
   var rows = (d.summative_students || studentRows(d)).map(function(s, i) {
     return '<tr><td>' + blank(s.seq_no || i + 1) + '</td><td class="left">' + blank(studentName(s)) + '</td><td></td><td>' + num(s.coursework) + '</td><td>' + num(s.midterm) + '</td><td>' + num(s.final) + '</td><td>' + num(s.total) + '</td><td class="bold">' + num(s.final_grade || s.computed_grade) + '</td><td></td></tr>';
   }).join('');
   var body = standardReportSectionHeading(d, 'สรุปผลการประเมิน') +
-    '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:58mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="4">รวมคะแนน</th>' + rotatedTh('ผลการเรียน', 'rowspan="3" style="width:12mm"') + rotatedTh('สอบแก้ตัว', 'rowspan="3" style="width:12mm"') + '</tr><tr><th>ระหว่างเรียน</th><th>สอบกลางภาค</th><th>สอบปลายภาค</th><th>ทั้งหมด</th></tr><tr><th>50</th><th>20</th><th>30</th><th>100</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    '<table class="report-table form-grid-table score-grid-table"><thead><tr><th rowspan="3" style="width:8mm">เลขที่</th><th rowspan="3" style="width:58mm">ชื่อ - สกุล</th>' + rotatedTh('ตัวชี้วัดการเรียนรู้', 'rowspan="3" style="width:12mm"') + '<th colspan="4">รวมคะแนน</th>' + rotatedTh('ผลการเรียน', 'rowspan="3" style="width:12mm"') + rotatedTh('สอบแก้ตัว', 'rowspan="3" style="width:12mm"') + '</tr><tr><th>ระหว่างเรียน</th><th>สอบกลางภาค</th><th>สอบปลายภาค</th><th>ทั้งหมด</th></tr><tr><th>' + num(maxes.coursework) + '</th><th>' + num(maxes.midterm) + '</th><th>' + num(maxes.final) + '</th><th>' + num(maxes.total) + '</th></tr></thead><tbody>' + rows + '</tbody></table>';
   return referenceShell(n, body, 'landscape-table');
 }
 
@@ -814,10 +815,11 @@ function pageCover(d, n) {
 
 function pageSubjectProfile(d, n) {
   var m = meta(d);
+  var maxes = d.summative_score_maxes || {};
   var body = section('ข้อมูลรายวิชา',
     lineRow('รหัสวิชา', m.subj.subject_code, 'ชื่อวิชา', m.subj.subject_name) +
     lineRow('ชั้น', m.classLabel, 'เวลาเรียน', m.subj.hours_per_year ? m.subj.hours_per_year + ' ชั่วโมง/ปี' : '') +
-    lineRow('คะแนนระหว่างเรียน', d.weights && d.weights.coursework_max, 'คะแนนปลายปี', d.weights && d.weights.final_max)
+    lineRow('คะแนนระหว่างเรียน', maxes.during_course, 'คะแนนปลายปี', maxes.final)
   ) + section('คำอธิบายรายวิชา', '<div style="min-height:78mm;white-space:pre-wrap">' + blank(m.subj.description) + '</div>');
   return pageShell(n, 'ข้อมูลพื้นฐานรายวิชา', m.subj.subject_name || '', body);
 }

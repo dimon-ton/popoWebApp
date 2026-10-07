@@ -331,6 +331,7 @@ function getReportBookData(token, class_id, subject_id) {
   d.students = students;
   d.indicators = indicators;
   d.weights = weights;
+  d.summative_score_maxes = getSummativeScoreMaxesFromWeights_(weights);
   d.formative_students = formative_students;
   d.summative_students = summative_students;
   d.attendance_sessions = attendance_sessions;
