@@ -147,6 +147,92 @@ test('indicator forms allow arbitrary positive decimal max scores', () => {
   assert.match(formativeHtml, /class="score-input"[\s\S]{0,200}step="any"/);
 });
 
+test('clicking an editable indicator maximum fills only that column with its dynamic maximum', () => {
+  const html = fs.readFileSync(path.join(teacherRoot, 'class_formative.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
+    .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/loadFormative\(\);\s*$/, '');
+  const elements = new Map();
+  function element(id) {
+    if (!elements.has(id)) elements.set(id, { textContent: '', style: {}, className: '' });
+    return elements.get(id);
+  }
+  const inputs = [];
+  const rows = new Map();
+  function scoreInput(studentId, indicatorId, max, value) {
+    const attrs = { 'data-student': studentId, 'data-indicator': indicatorId, 'data-max': String(max) };
+    const input = {
+      value: String(value),
+      getAttribute(name) { return attrs[name] ?? null; },
+      closest(selector) { return selector === 'tr' ? rows.get(studentId) : null; },
+    };
+    inputs.push(input);
+    return input;
+  }
+  const firstTen = scoreInput('student-1', 'indicator-10', 10, 1);
+  const firstOther = scoreInput('student-1', 'indicator-other', 5, 2);
+  const firstDecimal = scoreInput('student-1', 'indicator-decimal', 12.5, '');
+  const secondTen = scoreInput('student-2', 'indicator-10', 10, 3);
+  const secondOther = scoreInput('student-2', 'indicator-other', 5, 4);
+  const secondDecimal = scoreInput('student-2', 'indicator-decimal', 12.5, '');
+  rows.set('student-1', {
+    getAttribute: () => 'student-1',
+    querySelectorAll: () => [firstTen, firstOther, firstDecimal],
+  });
+  rows.set('student-2', {
+    getAttribute: () => 'student-2',
+    querySelectorAll: () => [secondTen, secondOther, secondDecimal],
+  });
+  const document = {
+    addEventListener() {},
+    getElementById: element,
+    querySelectorAll(selector) {
+      const match = selector.match(/data-indicator="([^"]+)"/);
+      return match ? inputs.filter((input) => input.getAttribute('data-indicator') === match[1]) : inputs;
+    },
+    querySelector(selector) {
+      const student = selector.match(/data-student="([^"]+)"/);
+      const indicator = selector.match(/data-indicator="([^"]+)"/);
+      return inputs.find((input) =>
+        (!student || input.getAttribute('data-student') === student[1]) &&
+        (!indicator || input.getAttribute('data-indicator') === indicator[1])) || null;
+    },
+  };
+  const page = vm.createContext({
+    document,
+    window: { addEventListener() {} },
+    setTimeout() {},
+    Math, Number, String, Date, Array, parseFloat, isNaN,
+  });
+  vm.runInContext(script, page);
+  page.currentData = { students: [{ student_id: 'student-1' }, { student_id: 'student-2' }] };
+
+  const header = {
+    getAttribute: (name) => name === 'data-fill-value' ? '10' : null,
+    closest: () => ({ getAttribute: () => 'indicator-10' }),
+  };
+  page.fillIndicatorColumn(header);
+
+  assert.deepEqual([firstTen.value, secondTen.value], ['10', '10']);
+  assert.deepEqual([firstOther.value, secondOther.value], ['2', '4']);
+  assert.equal(element('row-total-student-1').textContent, 12);
+  assert.equal(element('row-total-student-2').textContent, 14);
+  assert.equal(element('col-avg-indicator-10').textContent, '10.0');
+  assert.equal(page.hasUnsavedChanges, true);
+  assert.match(element('toast').textContent, /ใส่คะแนน 10/);
+
+  assert.match(html, /title="คลิกเพื่อใส่ ' \+ escHtml\(ind\.max_score\) \+ ' ทั้งคอลัมน์"/);
+  assert.match(html, /data-fill-value="' \+ escHtml\(ind\.max_score\) \+ '"/);
+  assert.doesNotMatch(html, /String\(ind\.max_score\) === '3'/);
+
+  page.fillIndicatorColumn({
+    getAttribute: (name) => name === 'data-fill-value' ? '12.5' : null,
+    closest: () => ({ getAttribute: () => 'indicator-decimal' }),
+  });
+  assert.deepEqual([firstDecimal.value, secondDecimal.value], ['12.5', '12.5']);
+  assert.deepEqual([firstOther.value, secondOther.value], ['2', '4']);
+  assert.equal(element('col-avg-indicator-decimal').textContent, '12.5');
+});
+
 test('adding an indicator makes coursework incomplete until that indicator is scored', () => {
   const { api, state } = createApi({
     SummativeScores: [{ student_id: 'student', subject_id: 'subject', coursework: 40, midterm: 20, final: 20, makeup_grade: '' }],

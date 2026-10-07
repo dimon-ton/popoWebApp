@@ -16,6 +16,8 @@
     .curriculum-table input { width:70px; padding:6px; text-align:center }
     .curriculum-table .outcome-description { text-align:left }
     .curriculum-summary { margin:10px 0; color:var(--text-muted) }
+    .curriculum-table .bulk-max-score { color:var(--brand); cursor:pointer; text-decoration:underline; text-underline-offset:2px }
+    .curriculum-table .bulk-max-score:hover { color:var(--brand-dark) }
   </style>
 </head>
 <body>
@@ -152,11 +154,19 @@ function render(){
   document.getElementById('scoreTable').style.display=items.length?'table':'none';
   document.getElementById('saveScoresBtn').style.display=items.length?'inline-block':'none';
   document.getElementById('scoreNote').textContent=items.length?'เกรดจะแสดงเมื่อกรอกคะแนนผลลัพธ์ทุกข้อและคะแนนปลายภาคครบ':'เพิ่มผลลัพธ์การเรียนรู้ก่อนบันทึกคะแนน';
-  document.getElementById('scoreHead').innerHTML='<tr><th>ที่</th><th class="student-name-col">ชื่อ-สกุล</th>'+items.map(function(item){return '<th title="'+esc(item.description)+'">'+esc(item.display_order)+'<br>/'+esc(item.max_score)+'</th>';}).join('')+'<th>ปลายภาค<br>/15</th><th>ผลลัพธ์<br>/35</th><th>รวม<br>/50</th><th>เกรด</th><th>ระดับ</th></tr>';
+  document.getElementById('scoreHead').innerHTML='<tr><th>ที่</th><th class="student-name-col">ชื่อ-สกุล</th>'+items.map(function(item){var maxText='/'+esc(item.max_score);var maxHtml=currentData.can_edit?'<span class="bulk-max-score" title="คลิกเพื่อใส่ '+esc(item.max_score)+' ทั้งคอลัมน์" data-outcome="'+esc(item.outcome_id)+'" data-fill-value="'+esc(item.max_score)+'" onclick="fillOutcomeColumn(this)">'+maxText+'</span>':maxText;return '<th title="'+esc(item.description)+'">'+esc(item.display_order)+'<br>'+maxHtml+'</th>';}).join('')+'<th>ปลายภาค<br>/15</th><th>ผลลัพธ์<br>/35</th><th>รวม<br>/50</th><th>เกรด</th><th>ระดับ</th></tr>';
   document.getElementById('scoreBody').innerHTML=(currentData.students||[]).map(function(student){
     var result=student['term'+term]||{};
     return '<tr data-student="'+esc(student.student_id)+'"><td>'+esc(student.seq_no)+'</td><td class="student-name-col">'+esc(student.full_name)+'</td>'+items.map(function(item){var value=student.scores[item.outcome_id];return '<td><input class="outcome-score" type="number" min="0" max="'+esc(item.max_score)+'" step="0.5" data-outcome="'+esc(item.outcome_id)+'" value="'+esc(value===undefined?'':value)+'" oninput="updateRow(this)"></td>';}).join('')+'<td><input class="assessment-score" type="number" min="0" max="15" step="0.5" value="'+esc(student.assessments[String(term)])+'" oninput="updateRow(this)"></td><td class="scaled">'+esc(result.scaled)+'</td><td class="term-total">'+esc(result.total)+'</td><td class="term-grade">'+esc(result.grade)+'</td><td class="term-ability">'+esc(result.ability)+'</td></tr>';
   }).join('');
+}
+function fillOutcomeColumn(el){
+  var outcomeId=el.getAttribute('data-outcome'),fillValue=el.getAttribute('data-fill-value');
+  if(!outcomeId||fillValue===null||fillValue==='')return;
+  var inputs=document.querySelectorAll('.outcome-score[data-outcome="'+outcomeId+'"]');
+  if(!inputs.length)return;
+  inputs.forEach(function(input){input.value=fillValue;updateRow(input);});
+  toast('ใส่คะแนน '+fillValue+' ให้คอลัมน์นี้แล้ว อย่าลืมกดบันทึก','success');
 }
 function updateRow(input){
   dirty=true;var row=input.closest('tr'),items=currentData.outcomes[String(selectedTerm())]||[];

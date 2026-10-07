@@ -182,8 +182,8 @@ function renderGrid(data) {
   var headRow = '<tr><th class="seq-col">ที่</th><th class="name-col student-name-col">ชื่อ-สกุล</th>';
   indicators.forEach(function(ind) {
     var maxText = '/' + escHtml(ind.max_score);
-    var maxHtml = String(ind.max_score) === '3' && data.can_edit
-      ? '<span class="bulk-max-score" title="คลิกเพื่อใส่ 3 ทั้งคอลัมน์" data-fill-value="3" onclick="fillIndicatorColumn(this)">' + maxText + '</span>'
+    var maxHtml = data.can_edit
+      ? '<span class="bulk-max-score" title="คลิกเพื่อใส่ ' + escHtml(ind.max_score) + ' ทั้งคอลัมน์" data-fill-value="' + escHtml(ind.max_score) + '" onclick="fillIndicatorColumn(this)">' + maxText + '</span>'
       : '<span>' + maxText + '</span>';
     headRow += '<th title="' + escHtml(ind.description || ind.code) + '">' +
       escHtml(ind.code) + '<br><span style="font-weight:normal;font-size:11px" data-indicator="' + escHtml(ind.indicator_id) + '">' + maxHtml + '</span></th>';
@@ -298,7 +298,8 @@ function fillIndicatorColumn(el) {
   var wrapper = el.closest('[data-indicator]');
   if (!wrapper) return;
   var indicatorId = wrapper.getAttribute('data-indicator');
-  var fillValue = el.getAttribute('data-fill-value') || '3';
+  var fillValue = el.getAttribute('data-fill-value');
+  if (fillValue === null || fillValue === '') return;
   var inputs = document.querySelectorAll('input.score-input[data-indicator="' + indicatorId + '"]');
   if (!inputs.length) return;
 

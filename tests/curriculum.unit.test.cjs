@@ -33,6 +33,89 @@ test('blank outcome or exam leaves result blank, while zero is a completed score
   assert.equal(context.curriculumTermResult_(outcomes, { a: 0 }, 0).total, 0);
 });
 
+test('P1-P3 maximum header fills only its outcome column and preserves decimals', () => {
+  const html = fs.readFileSync(path.join(root, 'class_curriculum.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
+    .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/load\(\);\s*$/, '');
+  const elements = new Map();
+  function element(id) {
+    if (!elements.has(id)) elements.set(id, {
+      value: id === 'termSelect' ? '1' : '', textContent: '', style: {}, className: '',
+    });
+    return elements.get(id);
+  }
+  function summaryCell() { return { textContent: '' }; }
+  const rows = [];
+  const inputs = [];
+  function makeRow(studentId, firstValue, secondValue) {
+    const cells = {
+      '.scaled': summaryCell(), '.term-total': summaryCell(),
+      '.term-grade': summaryCell(), '.term-ability': summaryCell(),
+    };
+    const rowInputs = {};
+    const row = {
+      title: '', style: {},
+      querySelector(selector) { return rowInputs[selector] || cells[selector] || null; },
+    };
+    function input(outcomeId, max, value) {
+      const field = {
+        value: String(value), style: {},
+        closest: () => row,
+        getAttribute: (name) => name === 'data-outcome' ? outcomeId : name === 'max' ? String(max) : null,
+      };
+      rowInputs[`[data-outcome="${outcomeId}"]`] = field;
+      inputs.push(field);
+      return field;
+    }
+    const first = input('outcome-10', 10, firstValue);
+    const second = input('outcome-decimal', 12.5, secondValue);
+    rowInputs['.assessment-score'] = { value: '10' };
+    rows.push(row);
+    return { studentId, row, first, second, cells };
+  }
+  const firstStudent = makeRow('student-1', 1, 4.5);
+  const secondStudent = makeRow('student-2', 2, 5.5);
+  const document = {
+    body: { style: {}, appendChild() {}, setAttribute() {}, removeAttribute() {} },
+    addEventListener() {},
+    getElementById: element,
+    querySelectorAll(selector) {
+      const match = selector.match(/data-outcome="([^"]+)"/);
+      return match ? inputs.filter((input) => input.getAttribute('data-outcome') === match[1]) : [];
+    },
+    createElement() { return {}; },
+  };
+  const page = vm.createContext({
+    document, window: { addEventListener() {} }, setTimeout() {},
+    Math, Number, String, Array, isFinite, confirm: () => true,
+  });
+  vm.runInContext(script, page);
+  page.currentData = {
+    can_edit: true,
+    outcomes: { '1': [
+      { outcome_id: 'outcome-10', max_score: 10 },
+      { outcome_id: 'outcome-decimal', max_score: 12.5 },
+    ] },
+  };
+
+  page.fillOutcomeColumn({
+    getAttribute: (name) => name === 'data-outcome' ? 'outcome-10' : name === 'data-fill-value' ? '10' : null,
+  });
+  assert.deepEqual([firstStudent.first.value, secondStudent.first.value], ['10', '10']);
+  assert.deepEqual([firstStudent.second.value, secondStudent.second.value], ['4.5', '5.5']);
+  assert.equal(page.dirty, true);
+  assert.match(element('toast').textContent, /ใส่คะแนน 10/);
+  assert.notEqual(firstStudent.cells['.scaled'].textContent, '');
+
+  page.fillOutcomeColumn({
+    getAttribute: (name) => name === 'data-outcome' ? 'outcome-decimal' : name === 'data-fill-value' ? '12.5' : null,
+  });
+  assert.deepEqual([firstStudent.second.value, secondStudent.second.value], ['12.5', '12.5']);
+  assert.match(element('toast').textContent, /ใส่คะแนน 12\.5/);
+  assert.match(html, /title="คลิกเพื่อใส่ '\+esc\(item\.max_score\)\+' ทั้งคอลัมน์"/);
+  assert.match(html, /currentData\.can_edit\?/);
+});
+
 test('P1-P3 print packet renders term and annual results without legacy score headings', () => {
   const html = fs.readFileSync(path.join(root, 'class_report.html'), 'utf8');
   const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
