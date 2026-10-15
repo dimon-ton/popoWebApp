@@ -8,7 +8,7 @@ function isFirstRun() {
 // Step 1: create the DB sheet and seed the default admin
 function wizardCreateDatabase() {
   try {
-    if (!isFirstRun()) throw new Error('ระบบถูกตั้งค่าแล้ว');
+    if (!isFirstRun()) return { already_configured: true };
     var result = setupDatabase_();
     var setupToken = generateToken();
     PropertiesService.getScriptProperties().setProperty('SETUP_WIZARD_TOKEN', setupToken);

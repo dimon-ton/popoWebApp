@@ -7,7 +7,7 @@ function ensureSubjectSchedulesSchema_() {
   var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
   var ss = SpreadsheetApp.openById(id);
   if (ss.getSheetByName('SubjectSchedules')) return;
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     if (!ss.getSheetByName('SubjectSchedules')) {

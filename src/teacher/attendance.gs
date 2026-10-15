@@ -209,7 +209,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells, semester, acad
   var normalizedCells = Object.keys(normalizedByKey).map(function(key) { return normalizedByKey[key]; });
   if (!normalizedCells.length) return { ok: true, saved: 0 };
 
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
     var liveAccess = requireSubjectAccess_(session, class_id, subject_id);
@@ -312,7 +312,7 @@ function serverMarkSemesterPresent(token, class_id, subject_id, semester, academ
   var requestedTerm = resolveAttendanceTerm_(semester, academic_year, access.class_info.level);
   if (!requestedTerm.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + requestedTerm.semester);
   var holidaySet = getHolidayDateSet();
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
 
   var result;

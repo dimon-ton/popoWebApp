@@ -49,7 +49,7 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   }
 
   // SchoolInfo always has at most one data row (row 2); overwrite it directly.
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet('SchoolInfo');
@@ -143,7 +143,7 @@ function normalizeSchoolDateValue(value) {
 function ensureAcademicTermsSchema_() {
   var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
   var ss = SpreadsheetApp.openById(id);
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     ensureTab(ss, 'AcademicTerms', ACADEMIC_TERM_HEADERS);
@@ -225,7 +225,7 @@ function serverSaveAcademicTerms(token, academic_year, terms) {
     throw new Error('ช่วงวันที่ของภาคเรียนที่ 1 และ 2 ต้องไม่ทับซ้อนกัน');
   }
 
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet('AcademicTerms');
@@ -932,7 +932,7 @@ function serverSaveWeights(token, rows) {
   }
 
   ensureColumns('SubjectWeights', ['class_id']);
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
     var subjectMap = {};
@@ -1054,7 +1054,7 @@ function serverImportSubjectsCSV(token, rows) {
   var auditRows = [];
 
   // Process rows inside a transaction/lock
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถล็อกระบบฐานข้อมูลได้ กรุณาลองใหม่ภายหลัง');
 
   try {

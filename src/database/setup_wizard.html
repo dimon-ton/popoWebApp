@@ -95,6 +95,10 @@
 
       google.script.run
         .withSuccessHandler(function(result) {
+          if (result && result.already_configured) {
+            goToLogin();
+            return;
+          }
           if (result && result.error) {
             showError('err1', result.error);
             btn.disabled = false;
