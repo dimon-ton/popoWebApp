@@ -2,6 +2,69 @@
 
 var ATTENDANCE_STATUSES = ['/', 'ล', 'ข'];
 
+function isPrimaryAttendanceLevel_(level) {
+  return /^ป\.[1-6]$/.test(String(level || '').replace(/\s+/g, ''));
+}
+
+function resolveAttendanceTerm_(semester, academicYear, classLevel) {
+  var school = getSchoolInfo() || {};
+  var primary = isPrimaryAttendanceLevel_(classLevel);
+  var term = primary ? String(semester || school.semester || '').trim() : String(school.semester || '').trim();
+  var year = primary ? String(academicYear || school.academic_year || '').trim() : String(school.academic_year || '').trim();
+  if (term !== '1' && term !== '2') throw new Error('ภาคเรียนต้องเป็น 1 หรือ 2');
+  if (!/^\d{4}$/.test(year)) throw new Error('ปีการศึกษาไม่ถูกต้อง');
+  if (primary && String(school.academic_year || '') && year !== String(school.academic_year)) {
+    throw new Error('เลือกได้เฉพาะปีการศึกษาปัจจุบัน');
+  }
+
+  var configured = null;
+  try {
+    configured = dbGetAll('AcademicTerms').filter(function(row) {
+      return String(row.semester) === term && String(row.academic_year) === year;
+    })[0] || null;
+  } catch (e) {}
+  if (configured) {
+    var start = parseISODate(configured.start_date);
+    var end = parseISODate(configured.end_date);
+    if (start && end && end.getTime() >= start.getTime()) {
+      var cap = String(configured.required_attendance_days || '').trim();
+      return {
+        semester: term, academic_year: year, configured: true, legacy: false,
+        start_date: start, end_date: end,
+        required_days: cap === '' ? '' : Math.max(1, Math.min(Number(cap), 130))
+      };
+    }
+  }
+
+  // Backward compatibility is deliberately narrow: only the SchoolInfo current
+  // term/year may use its legacy start date and day count.
+  if (term === String(school.semester || '') && year === String(school.academic_year || '') && parseISODate(school.semester_start_date)) {
+    var legacyDays = Math.max(1, Math.min(parseInt(school.required_attendance_days, 10) || 200, 260));
+    return {
+      semester: term, academic_year: year, configured: true, legacy: true,
+      start_date: parseISODate(school.semester_start_date), end_date: null, required_days: legacyDays
+    };
+  }
+  if (!primary) {
+    var oldConfig = getAttendanceConfig();
+    return {
+      semester: term, academic_year: year, configured: true, legacy: true,
+      start_date: oldConfig.start_date, end_date: null, required_days: oldConfig.required_days
+    };
+  }
+  return { semester: term, academic_year: year, configured: false, legacy: false, start_date: null, end_date: null, required_days: '' };
+}
+
+function attendanceWeeksForTerm_(term, holidaySet) {
+  if (!term || !term.configured || !term.start_date) return [];
+  return buildAttendanceWeeks(term.start_date, term.required_days, holidaySet, term.end_date);
+}
+
+function subjectAttendanceWeeksForTerm_(term, holidaySet, schedule) {
+  if (!term || !term.configured || !term.start_date) return [];
+  return buildSubjectAttendanceSessions(term.start_date, term.required_days, holidaySet, schedule, term.end_date);
+}
+
 // Returns attendance data for a given class/subject/week.
 // week: 1–N integer. Week 1 starts on SchoolInfo.semester_start_date exactly.
 // If no opening date is configured, the academic-year fallback starts on the
@@ -9,7 +72,8 @@ var ATTENDANCE_STATUSES = ['/', 'ล', 'ข'];
 //
 // Returns:
 //   { students, week, weekStart, sessions, attendance, subject_info, class_info, can_edit }
-function getAttendanceData(token, class_id, subject_id, week) {
+function getAttendanceData(token, class_id, subject_id, week, semester, academic_year) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var session = requireSession_(token);
   var access = requireSubjectAccess_(session, class_id, subject_id);
   var cls = access.class_info;
@@ -18,17 +82,16 @@ function getAttendanceData(token, class_id, subject_id, week) {
 
   var weekNum = parseInt(week) || 1;
   if (weekNum < 1) weekNum = 1;
-  var attendanceConfig = getAttendanceConfig();
   var holidaySet = getHolidayDateSet();
-  var term = subjectScheduleTerm_();
+  var term = resolveAttendanceTerm_(semester, academic_year, cls.level);
   var schedule = subjectScheduleRows_(class_id, subject_id, term);
-  var calendarWeeks = buildAttendanceWeeks(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet);
-  var attendanceWeeks = buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule);
+  var calendarWeeks = attendanceWeeksForTerm_(term, holidaySet);
+  var attendanceWeeks = subjectAttendanceWeeksForTerm_(term, holidaySet, schedule);
   var maxWeeks = Math.max(1, attendanceWeeks.length);
   if (weekNum > maxWeeks) weekNum = maxWeeks;
   var sessions = attendanceWeeks[weekNum - 1] || [];
   var weekDates = calendarWeeks[weekNum - 1] || [];
-  var weekStart = weekDates[0] || attendanceConfig.start_date;
+  var weekStart = weekDates[0] || term.start_date;
 
   // Get students ordered by seq_no
   var students = dbFind('Students', 'class_id', class_id);
@@ -71,7 +134,7 @@ function getAttendanceData(token, class_id, subject_id, week) {
     students: students,
     week: weekNum,
     max_weeks: maxWeeks,
-    required_attendance_days: attendanceConfig.required_days,
+    required_attendance_days: term.required_days,
     weekStart: formatDateISO(weekStart),
     sessions: sessions,
     schedule_entries: normalizeScheduleEntries_(schedule),
@@ -79,25 +142,31 @@ function getAttendanceData(token, class_id, subject_id, week) {
     yearly: yearlyMap,
     subject_info: subj,
     class_info: withClassLabel(cls),
-    can_edit: can_edit
+    can_edit: can_edit && term.configured,
+    term_configured: term.configured,
+    semester: term.semester,
+    academic_year: term.academic_year,
+    term_start_date: formatDateISO(term.start_date),
+    term_end_date: formatDateISO(term.end_date),
+    term_legacy: !!term.legacy
   };
 }
 
 // Save attendance for a week.
 // cells: array of { student_id, date, period, status }
 // status: '/' | 'ล' | 'ข' | ''
-function serverSaveAttendance(token, class_id, subject_id, cells) {
+function serverSaveAttendance(token, class_id, subject_id, cells, semester, academic_year) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var session = getSession(token);
   if (!session) throw new Error('กรุณาเข้าสู่ระบบ');
   if (!Array.isArray(cells)) throw new Error('ข้อมูลการเข้าเรียนไม่ถูกต้อง');
 
-  requireSubjectAccess_(session, class_id, subject_id);
-
-  var attendanceConfig = getAttendanceConfig();
-  var term = subjectScheduleTerm_();
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var term = resolveAttendanceTerm_(semester, academic_year, access.class_info.level);
+  if (!term.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + term.semester);
   var schedule = subjectScheduleRows_(class_id, subject_id, term);
   var allowedSessions = {};
-  buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(), schedule).forEach(function(weekSessions) {
+  subjectAttendanceWeeksForTerm_(term, getHolidayDateSet(), schedule).forEach(function(weekSessions) {
     weekSessions.forEach(function(item) { allowedSessions[item.date + '|' + item.period] = true; });
   });
 
@@ -143,10 +212,11 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
-    requireSubjectAccess_(session, class_id, subject_id);
-    var liveTerm = subjectScheduleTerm_();
+    var liveAccess = requireSubjectAccess_(session, class_id, subject_id);
+    var liveTerm = resolveAttendanceTerm_(term.semester, term.academic_year, liveAccess.class_info.level);
+    if (!liveTerm.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + liveTerm.semester);
     var liveSessions = {};
-    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, getHolidayDateSet(),
+    subjectAttendanceWeeksForTerm_(liveTerm, getHolidayDateSet(),
       subjectScheduleRows_(class_id, subject_id, liveTerm)).forEach(function(weekSessions) {
         weekSessions.forEach(function(item) { liveSessions[item.date + '|' + item.period] = true; });
       });
@@ -169,7 +239,7 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
     var existingByKey = {};
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][subjCol]) !== String(subject_id)) continue;
-      var existingDate = formatDateISO(new Date(data[i][dateCol]));
+      var existingDate = normalizeISODate(data[i][dateCol]);
       existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
     }
 
@@ -227,28 +297,32 @@ function serverSaveAttendance(token, class_id, subject_id, cells) {
   }
 
   appendAuditLog(session.user_id, 'Attendance', subject_id, null,
-    { class_id: class_id, subject_id: subject_id, cells_saved: normalizedCells.length });
+    { class_id: class_id, subject_id: subject_id, semester: term.semester,
+      academic_year: term.academic_year, cells_saved: normalizedCells.length });
 
   return { ok: true, saved: normalizedCells.length };
 }
 
 // Mark every blank scheduled period in the current semester as present.
 // Existing present, leave, and absent values are never overwritten.
-function serverMarkSemesterPresent(token, class_id, subject_id) {
+function serverMarkSemesterPresent(token, class_id, subject_id, semester, academic_year) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var session = requireSession_(token);
-  requireSubjectAccess_(session, class_id, subject_id);
-  var attendanceConfig = getAttendanceConfig();
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var requestedTerm = resolveAttendanceTerm_(semester, academic_year, access.class_info.level);
+  if (!requestedTerm.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + requestedTerm.semester);
   var holidaySet = getHolidayDateSet();
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
 
   var result;
   try {
-    requireSubjectAccess_(session, class_id, subject_id);
-    var term = subjectScheduleTerm_();
+    var liveAccess = requireSubjectAccess_(session, class_id, subject_id);
+    var term = resolveAttendanceTerm_(requestedTerm.semester, requestedTerm.academic_year, liveAccess.class_info.level);
+    if (!term.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + term.semester);
     var schedule = subjectScheduleRows_(class_id, subject_id, term);
     var sessions = [];
-    buildSubjectAttendanceSessions(attendanceConfig.start_date, attendanceConfig.required_days, holidaySet, schedule)
+    subjectAttendanceWeeksForTerm_(term, holidaySet, schedule)
       .forEach(function(weekSessions) {
         weekSessions.forEach(function(item) { sessions.push(item); });
       });
@@ -275,7 +349,7 @@ function serverMarkSemesterPresent(token, class_id, subject_id) {
     var existingByKey = {};
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][subjCol]) !== String(subject_id)) continue;
-      var existingDate = formatDateISO(new Date(data[i][dateCol]));
+      var existingDate = normalizeISODate(data[i][dateCol]);
       existingByKey[String(data[i][sidCol]) + '|' + existingDate + '|' + Number(data[i][periodCol])] = i;
     }
 
@@ -345,6 +419,7 @@ function serverMarkSemesterPresent(token, class_id, subject_id) {
 
   appendAuditLog(session.user_id, 'Attendance', subject_id, null, {
     action: 'mark_semester_present', class_id: class_id, subject_id: subject_id,
+    semester: requestedTerm.semester, academic_year: requestedTerm.academic_year,
     cells_saved: result.saved, sessions: result.sessions, students: result.students
   });
   return result;
@@ -407,15 +482,19 @@ function buildAttendanceDates(startDate, requiredDays) {
 // Week 1 begins on the semester opening date and contains weekdays through
 // Friday. Every following week contains Monday through Friday. Saturdays and
 // Sundays are excluded. The last week may be shorter when requiredDays is reached.
-function buildAttendanceWeeks(startDate, requiredDays, holidaySet) {
+function buildAttendanceWeeks(startDate, requiredDays, holidaySet, endDate) {
   var weeks = [];
   var dates = [];
   var cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  var limit = Math.max(1, Math.min(parseInt(requiredDays, 10) || 200, 260));
+  var parsedLimit = parseInt(requiredDays, 10);
+  var hasEnd = endDate && !isNaN(endDate.getTime());
+  var limit = Number.isSafeInteger(parsedLimit) && parsedLimit > 0
+    ? Math.max(1, Math.min(parsedLimit, 260))
+    : (hasEnd ? 260 : 200);
   var total = 0;
   holidaySet = holidaySet || {};
 
-  while (total < limit) {
+  while (total < limit && (!hasEnd || cursor.getTime() <= endDate.getTime())) {
     var day = cursor.getDay();
     var iso = formatDateISO(cursor);
     if (day !== 0 && day !== 6 && !holidaySet[iso]) {
@@ -424,7 +503,7 @@ function buildAttendanceWeeks(startDate, requiredDays, holidaySet) {
     }
     var isEndOfWeek = day === 0;
     cursor.setDate(cursor.getDate() + 1);
-    if ((isEndOfWeek || total === limit) && dates.length > 0) {
+    if ((isEndOfWeek || total === limit || (hasEnd && cursor.getTime() > endDate.getTime())) && dates.length > 0) {
       weeks.push(dates);
       dates = [];
     }

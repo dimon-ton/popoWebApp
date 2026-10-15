@@ -117,17 +117,16 @@ test.describe('Scheduled attendance', () => {
     }
   });
 
-  test('schedule editor supports multiple periods and warns before changing existing data', async ({ page }) => {
+  test('schedule edits preserve historical attendance without a destructive confirmation', async ({ page }) => {
     await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${subjectId}&week=1`);
     await expect(page.locator('#attTable')).toBeVisible({ timeout: 20_000 });
     await page.locator('#openScheduleBtn').click();
     await expect(page.locator('#scheduleModal')).toHaveClass(/open/);
     await expect(page.locator('input[data-day="FRI"][data-period="1"]')).toBeChecked();
     await expect(page.locator('input[data-day="FRI"][data-period="2"]')).toBeChecked();
-    await page.locator('input[data-day="WED"][data-period="4"]').check();
+    await page.locator('input[data-day="FRI"][data-period="1"]').uncheck();
     await page.locator('#saveScheduleBtn').click();
-    await expect(page.locator('#scheduleWarning')).toBeVisible();
-    await page.locator('#saveScheduleBtn').click();
+    await expect(page.locator('#scheduleWarning')).toBeHidden();
     await expect(page.locator('#toast')).toContainText('บันทึกตารางเรียนสำเร็จ', { timeout: 30_000 });
     const rows = (await queryTestRows('Attendance', 'student_id')).filter(row => row.student_id === studentId && row.subject_id === subjectId);
     expect(rows.length).toBeGreaterThanOrEqual(2);
@@ -140,5 +139,84 @@ test.describe('Scheduled attendance', () => {
     await expect(page.locator('#weekLabel')).toContainText('สัปดาห์ที่ 2', { timeout: 20_000 });
     await page.locator('#prevWeekBtn').click();
     await expect(page.locator('#weekLabel')).toContainText('สัปดาห์ที่ 1', { timeout: 20_000 });
+  });
+
+  test('primary semester switch isolates calendars, writes, schedules, and reports', async ({ page }) => {
+    await page.goto(`${url}?page=class_attendance&class_id=${classId}&subject_id=${subjectId}&week=1`);
+    await expect(page.locator('#pageHeading')).toBeVisible({ timeout: 20_000 });
+    const school = await page.evaluate(() => new Promise<any>((resolve, reject) => {
+      (globalThis as any).google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSchoolInfo();
+    }));
+    const year = String(school.academic_year);
+    const original = await page.evaluate((academicYear) => new Promise<any>((resolve, reject) => {
+      const app = globalThis as any;
+      app.google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)
+        .getAcademicTermsSettings(app.TOKEN, academicYear);
+    }), year);
+    const ceYear = Number(year) > 2500 ? Number(year) - 543 : Number(year);
+    const mondayOnOrAfter = (month: number, day: number) => {
+      const date = new Date(ceYear, month, day);
+      date.setDate(date.getDate() + ((8 - date.getDay()) % 7));
+      return date;
+    };
+    const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const term1Start = mondayOnOrAfter(4, 11);
+    const term2Start = mondayOnOrAfter(10, 2);
+    const plusDays = (date: Date, days: number) => { const copy = new Date(date); copy.setDate(copy.getDate() + days); return copy; };
+    const terms = [
+      { semester: '1', start_date: iso(term1Start), end_date: iso(plusDays(term1Start, 4)), required_attendance_days: '' },
+      { semester: '2', start_date: iso(term2Start), end_date: iso(plusDays(term2Start, 4)), required_attendance_days: '' },
+    ];
+    try {
+      await page.evaluate(({ academicYear, configuredTerms }) => new Promise<void>((resolve, reject) => {
+        const app = globalThis as any;
+        app.google.script.run.withSuccessHandler(() => resolve()).withFailureHandler(reject)
+          .serverSaveAcademicTerms(app.TOKEN, academicYear, configuredTerms);
+      }), { academicYear: year, configuredTerms: terms });
+      await seedTestSubjectSchedule({ class_id: classId, subject_id: subjectId, created_by: teacherId, day_of_week: 'MON', period: 7, semester: '1', academic_year: year });
+      await seedTestSubjectSchedule({ class_id: classId, subject_id: subjectId, created_by: teacherId, day_of_week: 'MON', period: 8, semester: '2', academic_year: year });
+      await page.reload();
+      await expect(page.locator('#termControls')).toBeVisible({ timeout: 20_000 });
+      await page.locator('#semesterSelect').selectOption('1');
+      await expect(page.locator('.attendance-date-fill-link[data-period="7"]')).toBeVisible({ timeout: 20_000 });
+      await page.locator('#semesterSelect').selectOption('2');
+      await expect(page.locator('.attendance-date-fill-link[data-period="8"]')).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('.attendance-date-fill-link[data-period="7"]')).toHaveCount(0);
+
+      await page.evaluate(({ sid, termOneDate, termTwoDate, academicYear }) => new Promise<void>((resolve, reject) => {
+        const app = globalThis as any;
+        const save = (semester: string, cell: any) => new Promise<void>((ok, fail) => app.google.script.run
+          .withSuccessHandler(() => ok()).withFailureHandler(fail)
+          .serverSaveAttendance(app.TOKEN, app.CLASS_ID, app.SUBJECT_ID, [cell], semester, academicYear));
+        save('1', { student_id: sid, date: termOneDate, period: 7, status: 'ข' })
+          .then(() => save('2', { student_id: sid, date: termTwoDate, period: 8, status: 'ล' }))
+          .then(resolve, reject);
+      }), { sid: studentId, termOneDate: iso(term1Start), termTwoDate: iso(term2Start), academicYear: year });
+
+      const report = await page.evaluate(() => new Promise<any>((resolve, reject) => {
+        const app = globalThis as any;
+        app.google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)
+          .getReportBookData(app.TOKEN, app.CLASS_ID, app.SUBJECT_ID);
+      }));
+      const annual = report.attendance_annual_summary.find((row: any) => row.student_id === studentId);
+      expect(annual.term1.absent).toBe(1);
+      expect(annual.term2.leave).toBe(1);
+      expect(annual.total).toBe(2);
+
+      await page.evaluate(({ academicYear }) => new Promise<void>((resolve, reject) => {
+        const app = globalThis as any;
+        app.google.script.run.withSuccessHandler(() => resolve()).withFailureHandler(reject)
+          .serverSaveSubjectSchedule(app.TOKEN, app.CLASS_ID, app.SUBJECT_ID, [], false, '2', academicYear);
+      }), { academicYear: year });
+      const rows = (await queryTestRows('Attendance', 'student_id')).filter(row => row.student_id === studentId && row.subject_id === subjectId);
+      expect(rows.some(row => row.date === iso(term1Start) && Number(row.period) === 7)).toBe(true);
+      expect(rows.some(row => row.date === iso(term2Start) && Number(row.period) === 8)).toBe(true);
+    } finally {
+      await page.evaluate(({ academicYear, originalTerms }) => new Promise<void>((resolve, reject) => {
+        const app = globalThis as any;
+        app.google.script.run.withSuccessHandler(() => resolve()).withFailureHandler(reject)
+          .serverSaveAcademicTerms(app.TOKEN, academicYear, originalTerms);
+      }), { academicYear: year, originalTerms: original.terms });
+    }
   });
 });

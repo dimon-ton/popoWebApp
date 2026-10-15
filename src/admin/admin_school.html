@@ -101,12 +101,29 @@
     <button class="btn-primary" id="saveSchoolBtn" onclick="saveSchoolInfo()">บันทึก</button>
   </div>
 
+  <div class="card" id="academicTermsCard">
+    <h3>ปฏิทินภาคเรียน</h3>
+    <p style="color:var(--text-muted)">กำหนดช่วงวันของแต่ละภาคเรียนแยกกัน จำนวนวันเรียนเป็นเพดานเสริม (เว้นว่างเพื่อใช้ทุกวันทำการในช่วงวันที่)</p>
+    <div id="academicTermsRows"></div>
+    <button class="btn-primary" id="saveTermsBtn" onclick="saveAcademicTerms()">บันทึกปฏิทินภาคเรียน</button>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 var TOKEN = '<?= data.token || '' ?>';
+
+function academicTermRow(term) {
+  return '<div class="form-row" data-term="' + term + '" style="align-items:end;border-top:1px solid var(--border);padding-top:12px;margin-top:12px">' +
+    '<div class="form-group"><label>ภาคเรียนที่ ' + term + ' — วันเริ่มต้น</label><div class="thai-date-picker" data-thai-date-picker><input type="hidden" id="termStart' + term + '" data-thai-date-value><input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly></div></div>' +
+    '<div class="form-group"><label>วันสิ้นสุด</label><div class="thai-date-picker" data-thai-date-picker><input type="hidden" id="termEnd' + term + '" data-thai-date-value><input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly></div></div>' +
+    '<div class="form-group"><label>จำนวนวันเรียนสูงสุด (ไม่บังคับ)</label><input type="number" id="termDays' + term + '" min="1" max="130" placeholder="เช่น 100"></div>' +
+    '</div>';
+}
+
+document.getElementById('academicTermsRows').innerHTML = academicTermRow('1') + academicTermRow('2');
 
 function navigate(page) {
   showNavLoading();
@@ -161,9 +178,49 @@ function loadSchoolInfo() {
       document.getElementById('academicHeadName').value = info.academic_head_name || '';
       document.getElementById('directorName').value = info.director_name || '';
       setLogoPreview(info.school_logo || '');
+      loadAcademicTerms(info.academic_year || '');
     })
     .withFailureHandler(function(err) { showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error'); })
     .getSchoolInfo();
+}
+
+function loadAcademicTerms(year) {
+  if (!year) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      (result.terms || []).forEach(function(term) {
+        var startInput = document.getElementById('termStart' + term.semester);
+        var endInput = document.getElementById('termEnd' + term.semester);
+        if (typeof setThaiDatePickerValue === 'function') {
+          setThaiDatePickerValue(startInput, term.start_date || '');
+          setThaiDatePickerValue(endInput, term.end_date || '');
+        } else {
+          startInput.value = term.start_date || '';
+          endInput.value = term.end_date || '';
+        }
+        document.getElementById('termDays' + term.semester).value = term.required_attendance_days || '';
+      });
+    })
+    .withFailureHandler(function(err) { showToast('โหลดปฏิทินภาคเรียนไม่สำเร็จ: ' + err.message, 'error'); })
+    .getAcademicTermsSettings(TOKEN, year);
+}
+
+function saveAcademicTerms() {
+  var year = document.getElementById('academicYear').value.trim();
+  var terms = ['1', '2'].map(function(semester) {
+    return {
+      semester: semester,
+      start_date: document.getElementById('termStart' + semester).value,
+      end_date: document.getElementById('termEnd' + semester).value,
+      required_attendance_days: document.getElementById('termDays' + semester).value
+    };
+  });
+  var button = document.getElementById('saveTermsBtn');
+  button.disabled = true;
+  google.script.run
+    .withSuccessHandler(function() { button.disabled = false; showToast('บันทึกปฏิทินภาคเรียนสำเร็จ', 'success'); loadAcademicTerms(year); })
+    .withFailureHandler(function(err) { button.disabled = false; showToast('บันทึกปฏิทินไม่สำเร็จ: ' + err.message, 'error'); })
+    .serverSaveAcademicTerms(TOKEN, year, terms);
 }
 
 function saveSchoolInfo() {

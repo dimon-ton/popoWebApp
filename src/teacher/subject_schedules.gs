@@ -63,7 +63,7 @@ function removedScheduleEntryKeys_(before, after) {
 
 // Caller must hold the document lock. Return the physical Attendance row
 // numbers whose weekday/period was removed from this class-subject schedule.
-function attendanceRowsForRemovedSchedule_(classId, subjectId, removedKeys) {
+function attendanceRowsForRemovedSchedule_(classId, subjectId, removedKeys, term) {
   if (!Object.keys(removedKeys || {}).length) return [];
   var students = getClassStudentIdSet_(classId);
   var sheet = getSheet('Attendance');
@@ -82,6 +82,8 @@ function attendanceRowsForRemovedSchedule_(classId, subjectId, removedKeys) {
     if (String(data[i][subjectCol]) !== String(subjectId) || !students[String(data[i][studentCol])]) continue;
     var date = parseISODate(data[i][dateCol]);
     if (!date) continue;
+    if (term && term.start_date && date.getTime() < term.start_date.getTime()) continue;
+    if (term && term.end_date && date.getTime() > term.end_date.getTime()) continue;
     var day = SUBJECT_SCHEDULE_DAYS[date.getDay() - 1];
     if (removedKeys[String(day) + '|' + Number(data[i][periodCol])]) positions.push(i + 1);
   }
@@ -98,31 +100,45 @@ function subjectScheduleRows_(classId, subjectId, term, rows) {
   });
 }
 
-function getSubjectSchedule(token, class_id, subject_id) {
+function getSubjectSchedule(token, class_id, subject_id, semester, academic_year) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var session = requireSession_(token);
-  requireSubjectAccess_(session, class_id, subject_id);
-  var term = subjectScheduleTerm_();
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var term = resolveAttendanceTerm_(semester, academic_year, access.class_info.level);
   var rows = subjectScheduleRows_(class_id, subject_id, term);
   var students = getClassStudentIdSet_(class_id);
+  var termSessions = {};
+  if (term.configured) {
+    subjectAttendanceWeeksForTerm_(term, getHolidayDateSet(), rows).forEach(function(week) {
+      week.forEach(function(item) { termSessions[item.date + '|' + item.period] = true; });
+    });
+  }
   var hasAttendance = dbGetAll('Attendance').some(function(row) {
-    return String(row.subject_id) === String(subject_id) && students[String(row.student_id)];
+    var key = normalizeISODate(row.date) + '|' + Number(row.period);
+    return String(row.subject_id) === String(subject_id) && students[String(row.student_id)] && termSessions[key];
   });
   return {
     entries: normalizeScheduleEntries_(rows),
     has_attendance: hasAttendance,
     semester: term.semester,
-    academic_year: term.academic_year
+    academic_year: term.academic_year,
+    term_configured: term.configured
   };
 }
 
-function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries, confirmChange) {
+function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries, confirmChange, semester, academic_year) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var session = requireSession_(token);
   var entries = normalizeScheduleEntries_(scheduleEntries);
-  var term = subjectScheduleTerm_();
+  var access = requireSubjectAccess_(session, class_id, subject_id);
+  var requestedTerm = resolveAttendanceTerm_(semester, academic_year, access.class_info.level);
+  if (!requestedTerm.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + requestedTerm.semester);
   ensureSubjectSchedulesSchema_();
   return withDbLock_(function() {
     // Recheck authorization after acquiring the lock so a revoked assignment cannot save.
-    requireSubjectAccess_(session, class_id, subject_id);
+    var liveAccess = requireSubjectAccess_(session, class_id, subject_id);
+    var term = resolveAttendanceTerm_(requestedTerm.semester, requestedTerm.academic_year, liveAccess.class_info.level);
+    if (!term.configured) throw new Error('ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + term.semester);
     var sheet = getSheet('SubjectSchedules');
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
@@ -140,9 +156,8 @@ function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries,
     var changed = oldRows.length !== before.length || JSON.stringify(before) !== JSON.stringify(entries);
     if (!changed) return { ok: true, saved: entries.length, has_attendance: false };
     var removedKeys = removedScheduleEntryKeys_(before, entries);
-    var attendanceRowsToDelete = attendanceRowsForRemovedSchedule_(class_id, subject_id, removedKeys);
-    var hasAttendance = attendanceRowsToDelete.length > 0;
-    if (hasAttendance && !confirmChange) throw new Error('คาบเรียนที่นำออกมีข้อมูลการเช็คชื่ออยู่ กรุณายืนยันการลบข้อมูลที่เกี่ยวข้อง');
+    var preservedAttendanceRows = attendanceRowsForRemovedSchedule_(class_id, subject_id, removedKeys, term);
+    var hasAttendance = preservedAttendanceRows.length > 0;
 
     var now = new Date().toISOString();
     var existingByKey = {};
@@ -163,26 +178,25 @@ function serverSaveSubjectSchedule(token, class_id, subject_id, scheduleEntries,
     for (var j = 0; j < reuse; j++) sheet.getRange(positions[j] + 1, 1, 1, headers.length).setValues([values[j]]);
     for (var k = positions.length - 1; k >= reuse; k--) sheet.deleteRow(positions[k] + 1);
     if (values.length > reuse) sheet.getRange(sheet.getLastRow() + 1, 1, values.length - reuse, headers.length).setValues(values.slice(reuse));
-    var attendanceSheet = getSheet('Attendance');
-    for (var m = attendanceRowsToDelete.length - 1; m >= 0; m--) {
-      attendanceSheet.deleteRow(attendanceRowsToDelete[m]);
-    }
+    // Historical attendance is immutable when schedules change. Removed slots
+    // disappear from active calendars while their rows remain recoverable.
     return {
       ok: true,
       saved: entries.length,
       has_attendance: !!hasAttendance,
-      attendance_deleted: attendanceRowsToDelete.length
+      attendance_deleted: 0,
+      attendance_preserved: preservedAttendanceRows.length
     };
   });
 }
 
-function buildSubjectAttendanceSessions(startDate, requiredDays, holidaySet, scheduleEntries) {
+function buildSubjectAttendanceSessions(startDate, requiredDays, holidaySet, scheduleEntries, endDate) {
   var byDay = {};
   normalizeScheduleEntries_(scheduleEntries).forEach(function(entry) {
     if (!byDay[entry.day_of_week]) byDay[entry.day_of_week] = [];
     byDay[entry.day_of_week].push(entry.period);
   });
-  return buildAttendanceWeeks(startDate, requiredDays, holidaySet).map(function(weekDates) {
+  return buildAttendanceWeeks(startDate, requiredDays, holidaySet, endDate).map(function(weekDates) {
     var sessions = [];
     weekDates.forEach(function(date) {
       var day = SUBJECT_SCHEDULE_DAYS[date.getDay() - 1];

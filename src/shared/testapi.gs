@@ -311,7 +311,12 @@ function handleTestApi(e) {
         var testDay = String(params.day_of_week || '').toUpperCase();
         if (SUBJECT_SCHEDULE_DAYS.indexOf(testDay) === -1) throw new Error('Test API: invalid weekday');
         var testPeriod = schedulePeriod_(params.period);
-        var testTerm = subjectScheduleTerm_();
+        var testTerm = {
+          semester: String(params.semester || subjectScheduleTerm_().semester),
+          academic_year: String(params.academic_year || subjectScheduleTerm_().academic_year)
+        };
+        if (testTerm.semester !== '1' && testTerm.semester !== '2') throw new Error('Test API: invalid semester');
+        if (!/^\d{4}$/.test(testTerm.academic_year)) throw new Error('Test API: invalid academic year');
         var testExisting = subjectScheduleRows_(params.class_id, params.subject_id, testTerm).some(function(row) {
           return row.day_of_week === testDay && Number(row.period) === testPeriod;
         });
