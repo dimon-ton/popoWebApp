@@ -64,17 +64,6 @@
       <label>ภาคเรียน</label>
       <input type="text" id="semester" placeholder="เช่น 1 หรือ 2">
     </div>
-    <div class="form-group">
-      <label>วันเปิดภาคเรียน / วันเริ่มนับเวลาเรียน</label>
-      <div class="thai-date-picker" data-thai-date-picker>
-        <input type="hidden" id="semesterStartDate" data-thai-date-value>
-        <input type="text" class="thai-date-display" data-thai-date-display placeholder="เลือกวันที่" readonly>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>จำนวนวันเรียนที่ต้องนับ</label>
-      <input type="number" id="requiredAttendanceDays" min="1" max="260" placeholder="เช่น 200">
-    </div>
     <div class="form-row">
       <div class="form-group">
         <label>หัวหน้างานวัดผลและประเมินผล</label>
@@ -124,6 +113,44 @@ function academicTermRow(term) {
 }
 
 document.getElementById('academicTermsRows').innerHTML = academicTermRow('1') + academicTermRow('2');
+var suggestedEndRequest = { '1': 0, '2': 0 };
+var suggestedDaysRequest = { '1': 0, '2': 0 };
+
+function suggestTermEndDate(term) {
+  var start = document.getElementById('termStart' + term).value;
+  var days = document.getElementById('termDays' + term).value;
+  if (!start || !days) return;
+  var request = ++suggestedEndRequest[term];
+  google.script.run
+    .withSuccessHandler(function(endDate) {
+      if (request !== suggestedEndRequest[term] || !endDate) return;
+      var endInput = document.getElementById('termEnd' + term);
+      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(endInput, endDate);
+      else endInput.value = endDate;
+    })
+    .withFailureHandler(function(err) { showToast('คำนวณวันสิ้นสุดไม่สำเร็จ: ' + err.message, 'error'); })
+    .getAcademicTermSuggestedEndDate(TOKEN, start, days);
+}
+
+function suggestTermAttendanceDays(term) {
+  var start = document.getElementById('termStart' + term).value;
+  var end = document.getElementById('termEnd' + term).value;
+  if (!start || !end) return;
+  var request = ++suggestedDaysRequest[term];
+  google.script.run
+    .withSuccessHandler(function(days) {
+      if (request !== suggestedDaysRequest[term]) return;
+      document.getElementById('termDays' + term).value = days;
+    })
+    .withFailureHandler(function(err) { showToast('คำนวณจำนวนวันเรียนไม่สำเร็จ: ' + err.message, 'error'); })
+    .getAcademicTermSuggestedAttendanceDays(TOKEN, start, end);
+}
+
+['1', '2'].forEach(function(term) {
+  document.getElementById('termStart' + term).addEventListener('change', function() { suggestTermEndDate(term); });
+  document.getElementById('termDays' + term).addEventListener('change', function() { suggestTermEndDate(term); });
+  document.getElementById('termEnd' + term).addEventListener('change', function() { suggestTermAttendanceDays(term); });
+});
 
 function navigate(page) {
   showNavLoading();
@@ -171,9 +198,6 @@ function loadSchoolInfo() {
       document.getElementById('educationArea').value = info.education_area || '';
       document.getElementById('academicYear').value = info.academic_year || '';
       document.getElementById('semester').value = info.semester || '';
-      if (typeof setThaiDatePickerValue === 'function') setThaiDatePickerValue(document.getElementById('semesterStartDate'), info.semester_start_date || '');
-      else document.getElementById('semesterStartDate').value = info.semester_start_date || '';
-      document.getElementById('requiredAttendanceDays').value = info.required_attendance_days || '';
       document.getElementById('measurementHeadName').value = info.measurement_head_name || '';
       document.getElementById('academicHeadName').value = info.academic_head_name || '';
       document.getElementById('directorName').value = info.director_name || '';
@@ -234,20 +258,6 @@ function saveSchoolInfo() {
   var education_area = document.getElementById('educationArea').value.trim();
   var academic_year = document.getElementById('academicYear').value.trim();
   var semester = document.getElementById('semester').value.trim();
-  var semester_start_date = document.getElementById('semesterStartDate').value.trim();
-  var required_attendance_days = document.getElementById('requiredAttendanceDays').value.trim();
-  if (semester_start_date && !/^\d{4}-\d{2}-\d{2}$/.test(semester_start_date)) {
-    btn.disabled = false;
-    showToast('กรุณาเลือกวันเปิดภาคเรียนใหม่', 'error');
-    return;
-  }
-  var attendanceDays = Number(required_attendance_days);
-  if (required_attendance_days && (!Number.isInteger(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
-    btn.disabled = false;
-    showToast('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260', 'error');
-    return;
-  }
-
   var extra = {
     semester: semester,
     school_address: school_address,
@@ -270,7 +280,7 @@ function saveSchoolInfo() {
       btn.disabled = false;
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, semester_start_date, required_attendance_days, extra);
+    .serverSaveSchoolInfo(TOKEN, school_name, district, province, academic_year, null, null, extra);
 }
 
 function setLogoPreview(value) {

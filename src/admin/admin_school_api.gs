@@ -41,10 +41,15 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSchoolInfoSchema();
   extra = extra || {};
-  var normalizedStartDate = normalizeSchoolDateValue(semester_start_date);
-  if (semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
-  var attendanceDays = required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10);
-  if (attendanceDays !== '' && (!isFinite(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
+  // The single school-wide calendar was replaced by per-semester calendars.
+  // Keep callers that still submit the legacy values working, while callers
+  // that pass null preserve existing values for backward-compatible fallback.
+  var preserveLegacyStartDate = semester_start_date === null || semester_start_date === undefined;
+  var preserveLegacyAttendanceDays = required_attendance_days === null || required_attendance_days === undefined;
+  var normalizedStartDate = preserveLegacyStartDate ? null : normalizeSchoolDateValue(semester_start_date);
+  if (!preserveLegacyStartDate && semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
+  var attendanceDays = preserveLegacyAttendanceDays ? null : (required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10));
+  if (!preserveLegacyAttendanceDays && attendanceDays !== '' && (!isFinite(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
     throw new Error('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260');
   }
 
@@ -54,13 +59,20 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   try {
     var sheet = getSheet('SchoolInfo');
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var existing = {};
+    if (sheet.getLastRow() >= 2) {
+      var existingValues = sheet.getRange(2, 1, 1, headers.length).getValues()[0];
+      headers.forEach(function(header, index) { existing[header] = existingValues[index]; });
+    }
+    var legacyStartDate = preserveLegacyStartDate ? (existing.semester_start_date || '') : normalizedStartDate;
+    var legacyAttendanceDays = preserveLegacyAttendanceDays ? (existing.required_attendance_days || '') : attendanceDays;
     var rowObj = {
       school_name: school_name,
       district: district,
       province: province,
       academic_year: academic_year,
-      semester_start_date: normalizedStartDate,
-      required_attendance_days: attendanceDays,
+      semester_start_date: legacyStartDate,
+      required_attendance_days: legacyAttendanceDays,
       semester: extra.semester || '',
       school_address: extra.school_address || '',
       phone_number: extra.phone_number || '',
@@ -82,7 +94,7 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
     if (startDateCol !== -1) {
       var startDateCell = sheet.getRange(2, startDateCol + 1);
       startDateCell.setNumberFormat('@');
-      startDateCell.setValue(normalizedStartDate);
+      startDateCell.setValue(legacyStartDate);
     }
   } finally {
     lock.releaseLock();
@@ -197,6 +209,55 @@ function getAcademicTermsSettings(token, academic_year) {
       return bySemester[semester] || { academic_year: year, semester: semester, start_date: '', end_date: '', required_attendance_days: '' };
     })
   };
+}
+
+// Suggest an inclusive term end date from a requested count of school days.
+// Weekends and configured Holidays are excluded, matching attendance counting.
+function getAcademicTermSuggestedEndDate(token, start_date, required_attendance_days) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var start = normalizeSchoolDateValue(start_date);
+  var days = Number(required_attendance_days);
+  if (!start) throw new Error('กรุณากำหนดวันเริ่มต้นก่อน');
+  if (!Number.isSafeInteger(days) || days < 1 || days > 130) {
+    throw new Error('จำนวนวันเรียนต่อภาคเรียนต้องอยู่ระหว่าง 1 ถึง 130 วัน');
+  }
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(start);
+  var cursor = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  var holidays = getHolidayDateSet();
+  var counted = 0;
+  while (counted < days) {
+    var iso = cursor.getFullYear() + '-' + ('0' + (cursor.getMonth() + 1)).slice(-2) + '-' + ('0' + cursor.getDate()).slice(-2);
+    var weekday = cursor.getDay();
+    if (weekday !== 0 && weekday !== 6 && !holidays[iso]) counted++;
+    if (counted === days) return iso;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return '';
+}
+
+// Count inclusive school days for a selected term boundary. This is the
+// inverse of getAcademicTermSuggestedEndDate and uses the same calendar rules.
+function getAcademicTermSuggestedAttendanceDays(token, start_date, end_date) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var start = normalizeSchoolDateValue(start_date);
+  var end = normalizeSchoolDateValue(end_date);
+  if (!start || !end) throw new Error('กรุณากำหนดวันเริ่มต้นและวันสิ้นสุดก่อน');
+  if (end < start) throw new Error('วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น');
+  var startMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(start);
+  var endMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(end);
+  var cursor = new Date(Number(startMatch[1]), Number(startMatch[2]) - 1, Number(startMatch[3]));
+  var last = new Date(Number(endMatch[1]), Number(endMatch[2]) - 1, Number(endMatch[3]));
+  var holidays = getHolidayDateSet();
+  var counted = 0;
+  while (cursor.getTime() <= last.getTime()) {
+    var iso = cursor.getFullYear() + '-' + ('0' + (cursor.getMonth() + 1)).slice(-2) + '-' + ('0' + cursor.getDate()).slice(-2);
+    var weekday = cursor.getDay();
+    if (weekday !== 0 && weekday !== 6 && !holidays[iso]) counted++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return counted;
 }
 
 function serverSaveAcademicTerms(token, academic_year, terms) {

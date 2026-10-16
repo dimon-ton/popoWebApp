@@ -38,3 +38,23 @@ test('saving one term rejects overlap with the other persisted term', () => {
   }]), /ไม่ทับซ้อน/);
 });
 
+test('suggested term end date counts weekdays and skips configured holidays', () => {
+  const ctx = context();
+  ctx.getSession = () => ({ role: 'admin', user_id: 'admin' });
+  ctx.getHolidayDateSet = () => ({ '2026-05-20': true });
+  assert.equal(
+    ctx.getAcademicTermSuggestedEndDate('token', '2026-05-18', 4),
+    '2026-05-22'
+  );
+});
+
+test('suggested attendance days counts weekdays and skips configured holidays', () => {
+  const ctx = context();
+  ctx.getSession = () => ({ role: 'admin', user_id: 'admin' });
+  ctx.getHolidayDateSet = () => ({ '2026-05-20': true });
+  assert.equal(
+    ctx.getAcademicTermSuggestedAttendanceDays('token', '2026-05-18', '2026-05-22'),
+    4
+  );
+});
+
