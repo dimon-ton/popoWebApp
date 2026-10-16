@@ -16,6 +16,13 @@ function getSheet(tabName) {
   return sheet;
 }
 
+// A standalone Apps Script project has no active document, so its document
+// lock is null. Production remains document-scoped; isolated standalone TEST
+// deployments use the script-wide lock instead.
+function getDatabaseLock_() {
+  return LockService.getDocumentLock() || LockService.getScriptLock();
+}
+
 function dbGetAll(tabName) {
   var sheet = getSheet(tabName);
   var data = sheet.getDataRange().getValues();
@@ -32,7 +39,7 @@ function dbGetAll(tabName) {
 }
 
 function dbInsert(tabName, row) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -45,7 +52,7 @@ function dbInsert(tabName, row) {
 }
 
 function dbUpdate(tabName, idField, idValue, updates) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -80,7 +87,7 @@ function dbUpdate(tabName, idField, idValue, updates) {
 }
 
 function dbDelete(tabName, idField, idValue) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -102,7 +109,7 @@ function dbDelete(tabName, idField, idValue) {
 
 function dbDeleteWhere(tabName, idField, prefix) {
   // Delete rows where idField starts with prefix (used by test cleanup)
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -135,7 +142,7 @@ function dbFindOne(tabName, field, value) {
 }
 
 function ensureColumns(tabName, requiredHeaders) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -153,7 +160,7 @@ function ensureColumns(tabName, requiredHeaders) {
 }
 
 function removeColumns(tabName, obsoleteHeaders) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet(tabName);
@@ -172,7 +179,7 @@ function removeColumns(tabName, obsoleteHeaders) {
 
 // Transaction helper for multi-step operations that must be atomic.
 function withDbLock_(callback) {
-  var lock = LockService.getDocumentLock();
+  var lock = getDatabaseLock_();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถล็อกฐานข้อมูลได้ กรุณาลองใหม่');
   try {
     return callback();

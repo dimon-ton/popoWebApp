@@ -22,6 +22,7 @@ var TAB_SCHEMA = {
   'Indicators':       ['indicator_id', 'subject_id', 'code', 'description', 'max_score', 'display_order'],
   'SubjectWeights':   ['subject_id', 'class_id', 'coursework_max', 'final_max', 'pre_mid_max', 'mid_max', 'post_mid_max', 'final_exam_max'],
   'Attendance':       ['attendance_id', 'student_id', 'subject_id', 'date', 'period', 'status', 'updated_by', 'updated_at'],
+  'AcademicTerms':    ['academic_year', 'semester', 'start_date', 'end_date', 'required_attendance_days', 'updated_by', 'updated_at'],
   'SubjectSchedules': ['schedule_id', 'class_id', 'subject_id', 'day_of_week', 'period', 'semester', 'academic_year', 'created_by', 'updated_at'],
   'IndicatorScores':  ['id', 'student_id', 'subject_id', 'indicator_id', 'score', 'updated_by', 'updated_at'],
   'LearningOutcomes': ['outcome_id', 'subject_id', 'term', 'code', 'description', 'max_score', 'display_order'],
@@ -37,7 +38,7 @@ var TAB_SCHEMA = {
 
 var TAB_ORDER = [
   'Users', 'SchoolInfo', 'Classes', 'Subjects', 'SubjectGroupHeads', 'Enrollments',
-  'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'SubjectSchedules',
+  'Students', 'Indicators', 'SubjectWeights', 'Attendance', 'AcademicTerms', 'SubjectSchedules',
   'IndicatorScores', 'LearningOutcomes', 'LearningOutcomeScores', 'TermAssessments', 'SummativeScores', 'Characteristics',
   'ReadThinkWrite', 'AuditLog', 'DevActivity', 'Holidays'
 ];

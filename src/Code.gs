@@ -72,6 +72,12 @@ function doGet(e) {
       return buildPage('setup_wizard', {});
     }
 
+    // A browser can keep the setup wizard open after its database has been
+    // created. Do not leave that stale page able to attempt a second setup.
+    if (!isFirstRun() && page === 'setup_wizard') {
+      page = 'login';
+    }
+
     var session = getSession(params.token);
 
     // Unauthenticated: show login (wizard page is accessible without auth)

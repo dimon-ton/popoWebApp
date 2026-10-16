@@ -25,6 +25,11 @@
   <div class="assessment-toolbar"><button type="button" class="btn-secondary" id="openScheduleBtn" onclick="openScheduleEditor()">ตั้งค่าคาบเรียน</button></div>
 
   <div class="week-nav">
+    <span id="termControls" style="display:none;align-items:center;gap:8px">
+      <label for="semesterSelect">ภาคเรียนที่</label>
+      <select id="semesterSelect" onchange="changeSemester(this.value)"><option value="1">1</option><option value="2">2</option></select>
+      <span id="academicYearLabel"></span>
+    </span>
     <button id="prevWeekBtn" onclick="changeWeek(-1)">&#8592; สัปดาห์ก่อน</button>
     <span class="week-label" id="weekLabel">สัปดาห์ที่ —</span>
     <button id="nextWeekBtn" onclick="changeWeek(1)">สัปดาห์ถัดไป &#8594;</button>
@@ -41,6 +46,7 @@
   </div>
 
   <div id="readonlyNotice" class="readonly-notice" style="display:none">คุณมีสิทธิ์อ่านอย่างเดียว — เฉพาะครูผู้สอนหรือผู้ดูแลระบบแก้ไขได้</div>
+  <div id="termUnconfiguredNotice" class="readonly-notice" style="display:none"></div>
 
   <div class="card">
     <div id="scheduleEmpty" style="display:none;text-align:center;padding:32px 12px">
@@ -94,6 +100,8 @@ var SUBJECT_ID = '<?!= data.subject_id || '' ?>';
 
 var currentWeek = <?= data.week || 1 ?>;
 var currentData = null;
+var currentSemester = '';
+var currentAcademicYear = '';
 
 // Status cycle order: '' -> '/' -> 'ล' -> 'ข' -> ''
 var CYCLE = ['', '/', 'ล', 'ข'];
@@ -194,7 +202,19 @@ function loadAttendance() {
       document.getElementById('loadingMsg').style.display = 'none';
       showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
     })
-    .getAttendanceData(TOKEN, CLASS_ID, SUBJECT_ID, currentWeek);
+    .getAttendanceData(TOKEN, CLASS_ID, SUBJECT_ID, currentWeek, currentSemester, currentAcademicYear);
+}
+
+function changeSemester(value) {
+  var select = document.getElementById('semesterSelect');
+  if (!confirmDiscardAttendanceChanges()) {
+    select.value = currentSemester || '1';
+    return;
+  }
+  pendingChanges = {};
+  currentSemester = String(value);
+  currentWeek = 1;
+  loadAttendance();
 }
 
 function overlayPendingAttendance(data) {
@@ -243,7 +263,7 @@ function openScheduleEditor() {
   }).withFailureHandler(function(err) {
     setScheduleEditorLoading(false);
     showToast('โหลดตารางเรียนไม่สำเร็จ: ' + err.message, 'error');
-  }).getSubjectSchedule(TOKEN, CLASS_ID, SUBJECT_ID);
+  }).getSubjectSchedule(TOKEN, CLASS_ID, SUBJECT_ID, currentSemester, currentAcademicYear);
 }
 
 function renderScheduleEditor(entries) {
@@ -320,13 +340,6 @@ function closeScheduleEditor() { document.getElementById('scheduleModal').classL
 function saveScheduleEditor() {
   if (scheduleSaveLoading) return;
   var entries = readScheduleEditor();
-  if (scheduleHasAttendance && originalScheduleEntries.length && !scheduleChangeConfirmed &&
-      hasRemovedScheduleEntries(entries)) {
-    scheduleChangeConfirmed = true;
-    document.getElementById('scheduleWarning').style.display = 'block';
-    document.getElementById('saveScheduleBtn').textContent = 'ยืนยันการแก้ไข';
-    return;
-  }
   if (!confirmDiscardAttendanceChanges()) return;
   setScheduleSaveLoading(true);
   google.script.run.withSuccessHandler(function(result) {
@@ -341,7 +354,7 @@ function saveScheduleEditor() {
   }).withFailureHandler(function(err) {
     setScheduleSaveLoading(false);
     showToast('บันทึกตารางเรียนไม่สำเร็จ: ' + err.message, 'error');
-  }).serverSaveSubjectSchedule(TOKEN, CLASS_ID, SUBJECT_ID, entries, scheduleChangeConfirmed);
+  }).serverSaveSubjectSchedule(TOKEN, CLASS_ID, SUBJECT_ID, entries, false, currentSemester, currentAcademicYear);
 }
 
 function hasPendingAttendanceChanges() {
@@ -378,9 +391,18 @@ function renderGrid(data) {
 
   var cls = data.class_info || {};
   var subj = data.subject_info || {};
+  var primary = /^ป\.[1-6]$/.test(String(cls.level || '').replace(/\s+/g, ''));
+  currentSemester = String(data.semester || currentSemester || '');
+  currentAcademicYear = String(data.academic_year || currentAcademicYear || '');
+  document.getElementById('termControls').style.display = primary ? 'inline-flex' : 'none';
+  if (primary) document.getElementById('semesterSelect').value = currentSemester;
+  document.getElementById('academicYearLabel').textContent = currentAcademicYear ? 'ปีการศึกษา ' + currentAcademicYear : '';
   document.getElementById('pageHeading').textContent =
     'การเข้าเรียน — ' + (cls.class_label || fmtCls(cls.level, cls.section)) + ' — ' + (subj.subject_name || '');
   document.getElementById('weekLabel').textContent = 'สัปดาห์ที่ ' + data.week;
+  var termNotice = document.getElementById('termUnconfiguredNotice');
+  termNotice.style.display = data.term_configured ? 'none' : 'block';
+  termNotice.textContent = data.term_configured ? '' : 'ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ ' + currentSemester + ' กรุณาให้ผู้ดูแลระบบกำหนดปฏิทินก่อนบันทึกข้อมูล';
 
   var readonlyNotice = document.getElementById('readonlyNotice');
   var saveBar = document.getElementById('saveBar');
@@ -537,7 +559,7 @@ function markSemesterPresent() {
       setSemesterMarkLoading(false);
       showToast('เช็คทั้งภาคเรียนไม่สำเร็จ: ' + err.message, 'error');
     })
-    .serverMarkSemesterPresent(TOKEN, CLASS_ID, SUBJECT_ID);
+    .serverMarkSemesterPresent(TOKEN, CLASS_ID, SUBJECT_ID, currentSemester, currentAcademicYear);
 }
 
 function markPresentForSession(dateStr, period) {
@@ -631,7 +653,7 @@ function saveAttendance() {
       document.getElementById('saveStatus').textContent = '';
       showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
     })
-    .serverSaveAttendance(TOKEN, CLASS_ID, SUBJECT_ID, cells);
+    .serverSaveAttendance(TOKEN, CLASS_ID, SUBJECT_ID, cells, currentSemester, currentAcademicYear);
 }
 
 document.getElementById('scheduleModal').addEventListener('click', function(event) {

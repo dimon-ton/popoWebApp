@@ -311,7 +311,12 @@ function handleTestApi(e) {
         var testDay = String(params.day_of_week || '').toUpperCase();
         if (SUBJECT_SCHEDULE_DAYS.indexOf(testDay) === -1) throw new Error('Test API: invalid weekday');
         var testPeriod = schedulePeriod_(params.period);
-        var testTerm = subjectScheduleTerm_();
+        var testTerm = {
+          semester: String(params.semester || subjectScheduleTerm_().semester),
+          academic_year: String(params.academic_year || subjectScheduleTerm_().academic_year)
+        };
+        if (testTerm.semester !== '1' && testTerm.semester !== '2') throw new Error('Test API: invalid semester');
+        if (!/^\d{4}$/.test(testTerm.academic_year)) throw new Error('Test API: invalid academic year');
         var testExisting = subjectScheduleRows_(params.class_id, params.subject_id, testTerm).some(function(row) {
           return row.day_of_week === testDay && Number(row.period) === testPeriod;
         });
@@ -352,7 +357,7 @@ function handleTestApi(e) {
         var attendanceStatusCol = attendanceHeaders.indexOf('status');
         var attendanceUpdatedByCol = attendanceHeaders.indexOf('updated_by');
         var attendanceUpdatedAtCol = attendanceHeaders.indexOf('updated_at');
-        var attendanceLock = LockService.getDocumentLock();
+        var attendanceLock = LockService.getDocumentLock() || LockService.getScriptLock();
         if (!attendanceLock.tryLock(30000)) throw new Error('Test API: could not acquire attendance lock');
         try {
           for (var attendanceRowIndex = attendanceData.length - 1; attendanceRowIndex >= 1; attendanceRowIndex--) {
@@ -445,7 +450,7 @@ function handleTestApi(e) {
           var teachCol = enrHeaders.indexOf('teacher_user_id');
           var enrIdCol = enrHeaders.indexOf('enrollment_id');
           
-          var lock = LockService.getDocumentLock();
+          var lock = LockService.getDocumentLock() || LockService.getScriptLock();
           if (lock.tryLock(30000)) {
             try {
               for (var i = enrData.length - 1; i >= 1; i--) {
@@ -477,7 +482,7 @@ function handleTestApi(e) {
           var oCol = auditHeaders.indexOf('old_value');
           var nCol = auditHeaders.indexOf('new_value');
           
-          var lock = LockService.getDocumentLock();
+          var lock = LockService.getDocumentLock() || LockService.getScriptLock();
           if (lock.tryLock(30000)) {
             try {
               for (var i = auditData.length - 1; i >= 1; i--) {

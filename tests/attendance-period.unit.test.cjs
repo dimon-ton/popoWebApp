@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..', 'src');
 const scheduleHeaders = ['schedule_id','class_id','subject_id','day_of_week','period','semester','academic_year','created_by','updated_at'];
 const attendanceHeaders = ['attendance_id','student_id','subject_id','date','period','status','updated_by','updated_at'];
+const academicTermHeaders = ['academic_year','semester','start_date','end_date','required_attendance_days','updated_by','updated_at'];
 
 function sheet(headers) {
   const rows = [headers];
@@ -165,7 +166,7 @@ test('unscheduled periods, invalid periods, and forged teacher saves are rejecte
   assert.equal(sheets.Attendance.rows.length, 1);
 });
 
-test('unchecking schedule periods deletes only matching attendance rows after confirmation', () => {
+test('unchecking schedule periods preserves historical attendance rows', () => {
   const { context, sheets } = harness();
   context.serverSaveSubjectSchedule('token', 'class_a', 'math', weekly);
   context.serverSaveAttendance('token', 'class_a', 'math', [
@@ -176,11 +177,11 @@ test('unchecking schedule periods deletes only matching attendance rows after co
   sheets.Attendance.rows.push(['other_day', 'student_a', 'math', '2026-09-28', 3, '/', 'teacher_a', '']);
   sheets.Attendance.rows.push(['other_subject', 'student_a', 'science', '2026-09-30', 3, '/', 'teacher_a', '']);
   sheets.Attendance.rows.push(['other_class', 'student_elsewhere', 'math', '2026-09-30', 3, '/', 'teacher_a', '']);
-  assert.throws(() => context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }]), /ยืนยัน/);
-  const result = context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }], true);
-  assert.equal(result.attendance_deleted, 2);
+  const result = context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 2 }]);
+  assert.equal(result.attendance_deleted, 0);
+  assert.equal(result.attendance_preserved, 2);
   assert.deepEqual(sheets.Attendance.rows.slice(1).map(row => row[0]), [
-    'att_7', 'other_day', 'other_subject', 'other_class',
+    'att_5', 'att_6', 'att_7', 'other_day', 'other_subject', 'other_class',
   ]);
 });
 
@@ -214,6 +215,53 @@ test('semester bulk attendance fills only blank scheduled cells and preserves ex
   const secondRun = context.serverMarkSemesterPresent('token', 'class_a', 'math');
   assert.equal(secondRun.saved, 0);
   assert.equal(sheets.Attendance.rows.length, 5);
+});
+
+test('primary terms use independent calendars and schedules without mixing records', () => {
+  const { context, tables, sheets } = harness();
+  tables.Classes[0].level = 'ป.4';
+  tables.AcademicTerms = [
+    { academic_year: '2569', semester: '1', start_date: '2026-05-18', end_date: '2026-05-22', required_attendance_days: '' },
+    { academic_year: '2569', semester: '2', start_date: '2026-11-02', end_date: '2026-11-06', required_attendance_days: '' },
+  ];
+  context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'MON', period: 1 }], false, '1', '2569');
+  context.serverSaveSubjectSchedule('token', 'class_a', 'math', [{ day_of_week: 'TUE', period: 2 }], false, '2', '2569');
+  context.serverSaveAttendance('token', 'class_a', 'math', [
+    { student_id: 'student_a', date: '2026-05-18', period: 1, status: 'ข' },
+  ], '1', '2569');
+  context.serverSaveAttendance('token', 'class_a', 'math', [
+    { student_id: 'student_a', date: '2026-11-03', period: 2, status: 'ล' },
+  ], '2', '2569');
+
+  const term1 = context.getAttendanceData('token', 'class_a', 'math', 1, '1', '2569');
+  const term2 = context.getAttendanceData('token', 'class_a', 'math', 1, '2', '2569');
+  assert.equal(term1.attendance.student_a['2026-05-18|1'], 'ข');
+  assert.equal(term1.attendance.student_a['2026-11-03|2'], undefined);
+  assert.equal(term2.attendance.student_a['2026-11-03|2'], 'ล');
+  assert.equal(term2.attendance.student_a['2026-05-18|1'], undefined);
+
+  const before = sheets.Attendance.rows.map(row => [...row]);
+  const changed = context.serverSaveSubjectSchedule('token', 'class_a', 'math', [], false, '2', '2569');
+  assert.equal(changed.attendance_deleted, 0);
+  assert.deepEqual(sheets.Attendance.rows, before);
+});
+
+test('unconfigured primary term cannot write and date ranges can cross calendar years', () => {
+  const { context, tables } = harness();
+  tables.Classes[0].level = 'ป.6';
+  tables.AcademicTerms = [
+    { academic_year: '2569', semester: '1', start_date: '2026-05-18', end_date: '2026-05-22', required_attendance_days: '' },
+  ];
+  const missing = context.getAttendanceData('token', 'class_a', 'math', 1, '2', '2569');
+  assert.equal(missing.term_configured, false);
+  assert.equal(missing.sessions.length, 0);
+  assert.throws(() => context.serverSaveAttendance('token', 'class_a', 'math', [], '2', '2569'), /ภาคเรียนที่ 2/);
+
+  const weeks = context.buildAttendanceWeeks(new Date(2026, 11, 28), '', {}, new Date(2027, 0, 5));
+  const dates = weeks.flat().map(date => context.formatDateISO(date));
+  assert.equal(dates.includes('2026-12-31'), true);
+  assert.equal(dates.includes('2027-01-01'), true);
+  assert.equal(dates.at(-1), '2027-01-05');
 });
 
 test('report attendance cells distinguish periods on the same date', () => {
@@ -279,6 +327,31 @@ test('print attendance summary appears only on the final page and uses whole-sco
   assert.match(pages[1], /attendance-summary-absent">1<\/td>.*attendance-summary-leave">1<\/td>.*attendance-summary-present">2<\/td>/s);
   assert.match(pages[1], /<td>ข<\/td><td>\/<\/td>/);
   assert.doesNotMatch(pages[1], /<td>ล<\/td>/);
+});
+
+test('primary report renders both term sections and an annual total page', () => {
+  const html = fs.readFileSync(path.join(root, 'teacher', 'class_report.html'), 'utf8');
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1]
+    .replace(/<\?[\s\S]*?\?>/g, 'x').replace(/loadReport\(\);\s*$/, '');
+  const context = vm.createContext({ Math, Number, String, Date, Array, Object, setTimeout: () => {} });
+  vm.runInContext(script, context);
+  context.referenceShell = (_n, body) => body;
+  context.standardReportSectionHeading = (_d, title) => `<h2>${title}</h2>`;
+  context.attendanceHolidayNote = () => '';
+  const baseStudent = { student_id: 's1', seq_no: 1, student_code: '1', full_name: 'Student' };
+  const output = context.pageReferenceAttendance({
+    attendance_terms: {
+      '1': { configured: true, sessions: [{ date: '2026-05-18', period: 1, week: 1 }], students: [{ ...baseStudent, present: 1, leave: 0, absent: 0, attendance: { '2026-05-18|1': '/' } }], holiday_notes: [] },
+      '2': { configured: false, sessions: [], students: [{ ...baseStudent, present: 0, leave: 0, absent: 0, attendance: {} }], holiday_notes: [] },
+    },
+    attendance_annual_summary: [{ ...baseStudent, term1: { present: 1, leave: 0, absent: 0, total: 1 }, term2: { present: 0, leave: 0, absent: 0, total: 0 }, present: 1, leave: 0, absent: 0, total: 1 }],
+    students: [baseStudent], class_info: {}, subject_info: {}, school_info: {},
+  }, 1);
+  assert.equal(output.length, 3);
+  assert.match(output[0], /ภาคเรียนที่ 1/);
+  assert.match(output[1], /ยังไม่ได้กำหนดปฏิทินภาคเรียนที่ 2/);
+  assert.match(output[2], /สรุปเวลาเรียนตลอดปี/);
+  assert.match(output[2], /รวมทั้งปี/);
 });
 
 test('score-grid detail keeps indicators while summary removes the indicator column', () => {
@@ -508,6 +581,8 @@ test('schema includes SubjectSchedules and attendance copy controls are absent',
   vm.runInContext(fs.readFileSync(path.join(root, 'database', 'setup.gs'), 'utf8'), context);
   assert.equal(context.TAB_ORDER.includes('SubjectSchedules'), true);
   assert.deepEqual(Array.from(context.TAB_SCHEMA.SubjectSchedules), scheduleHeaders);
+  assert.equal(context.TAB_ORDER.includes('AcademicTerms'), true);
+  assert.deepEqual(Array.from(context.TAB_SCHEMA.AcademicTerms), academicTermHeaders);
   const html = fs.readFileSync(path.join(root, 'teacher', 'class_attendance.html'), 'utf8');
   assert.equal(html.includes('openCopyBtn'), false);
   assert.equal(html.includes('getAttendanceSourceValues'), false);

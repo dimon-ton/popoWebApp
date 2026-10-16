@@ -393,7 +393,7 @@ function clientImportEnrollmentsCSV(token, rows) {
     if (errors.length > 0) return { error: 'นำเข้าไม่สำเร็จ', errors: errors };
 
     var created = 0, reassigned = 0, unchanged = 0;
-    var lock = LockService.getDocumentLock();
+    var lock = LockService.getDocumentLock() || LockService.getScriptLock();
     if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
     try {
       assignments.forEach(function(a) {

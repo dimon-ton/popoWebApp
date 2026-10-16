@@ -302,6 +302,8 @@ export async function seedTestSubjectSchedule(opts: {
   created_by: string;
   day_of_week: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI';
   period: number;
+  semester?: '1' | '2';
+  academic_year?: string;
 }): Promise<void> {
   await apiCall({ api: 'seed_subject_schedule', ...opts });
 }

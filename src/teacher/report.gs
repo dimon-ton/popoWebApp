@@ -193,10 +193,46 @@ function getReportData(token, class_id, subject_id) {
   return report;
 }
 
+function buildReportAttendanceTerm_(term, classId, subjectId, students, studentSet, allAttendance, holidaySet) {
+  if (!term || !term.configured) {
+    return { semester: term ? term.semester : '', academic_year: term ? term.academic_year : '', configured: false,
+      sessions: [], students: students.map(function(student) {
+        return { student_id: student.student_id, seq_no: student.seq_no, student_code: student.student_code || '',
+          full_name: student.full_name || '', present: 0, leave: 0, absent: 0, total: 0, attendance: {} };
+      }), holiday_notes: [], summary: {} };
+  }
+  var schedule = subjectScheduleRows_(classId, subjectId, term);
+  var sessions = [];
+  subjectAttendanceWeeksForTerm_(term, holidaySet, schedule).forEach(function(weekSessions, weekIndex) {
+    weekSessions.forEach(function(item) {
+      sessions.push({ date: item.date, day_of_week: item.day_of_week, period: item.period, week: weekIndex + 1 });
+    });
+  });
+  var sessionSet = {};
+  sessions.forEach(function(item) { sessionSet[item.date + '|' + item.period] = true; });
+  var summary = summarizeReportAttendanceRows_(allAttendance, subjectId, studentSet, sessionSet, null);
+  var reportStudents = students.map(function(student) {
+    var totals = summary.totals[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+    return {
+      student_id: student.student_id, seq_no: student.seq_no, student_code: student.student_code || '',
+      full_name: student.full_name || '', present: totals.present, leave: totals.leave,
+      absent: totals.absent, total: totals.total, attendance: summary.by_student[student.student_id] || {}
+    };
+  });
+  return {
+    semester: term.semester, academic_year: term.academic_year, configured: true,
+    start_date: formatDateISO(term.start_date), end_date: formatDateISO(term.end_date),
+    sessions: sessions, students: reportStudents,
+    holiday_notes: getReportAttendanceHolidayNotes(sessions.map(function(item) { return item.date; })),
+    summary: summary.totals
+  };
+}
+
 // Full printable ป.พ.5 report packet data.
 // Returns the cover aggregates above plus row-level data for the 17-page A4
 // HTML report book rendered by class_report.html.
 function getReportBookData(token, class_id, subject_id) {
+  if (typeof ensureAcademicTermsSchema_ === 'function') ensureAcademicTermsSchema_();
   var d = getReportData(token, class_id, subject_id);
   var students = dbFind('Students', 'class_id', class_id);
   students.sort(function(a, b) { return Number(a.seq_no) - Number(b.seq_no); });
@@ -313,6 +349,33 @@ function getReportBookData(token, class_id, subject_id) {
     };
   });
 
+  var attendance_terms = null;
+  var attendance_annual_summary = [];
+  if (isPrimaryAttendanceLevel_(d.class_info.level)) {
+    var reportYear = String((d.school_info || {}).academic_year || '');
+    var termOne = resolveAttendanceTerm_('1', reportYear, d.class_info.level);
+    var termTwo = resolveAttendanceTerm_('2', reportYear, d.class_info.level);
+    attendance_terms = {
+      '1': buildReportAttendanceTerm_(termOne, class_id, subject_id, students, studentSet, allAttendance, holidaySet),
+      '2': buildReportAttendanceTerm_(termTwo, class_id, subject_id, students, studentSet, allAttendance, holidaySet)
+    };
+    attendance_annual_summary = students.map(function(student) {
+      var one = attendance_terms['1'].summary[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+      var two = attendance_terms['2'].summary[student.student_id] || { present: 0, leave: 0, absent: 0, total: 0 };
+      return {
+        student_id: student.student_id, seq_no: student.seq_no, student_code: student.student_code || '', full_name: student.full_name || '',
+        term1: one, term2: two,
+        present: one.present + two.present, leave: one.leave + two.leave,
+        absent: one.absent + two.absent, total: one.total + two.total
+      };
+    });
+    // Keep legacy fields for older consumers, bound to the globally selected term.
+    var selected = attendance_terms[String((d.school_info || {}).semester || '1')] || attendance_terms['1'];
+    attendance_sessions = selected.sessions;
+    attendance_holiday_notes = selected.holiday_notes;
+    attendance_students = selected.students;
+  }
+
   var charMap = {};
   dbGetAll('Characteristics').forEach(function(row) {
     if (row.subject_id !== subject_id || !studentSet[row.student_id]) return;
@@ -351,6 +414,8 @@ function getReportBookData(token, class_id, subject_id) {
   d.attendance_sessions = attendance_sessions;
   d.attendance_holiday_notes = attendance_holiday_notes;
   d.attendance_students = attendance_students;
+  d.attendance_terms = attendance_terms;
+  d.attendance_annual_summary = attendance_annual_summary;
   d.characteristics_students = characteristics_students;
   d.readthinkwrite_students = readthinkwrite_students;
   d.report_generated_at = new Date().toISOString();

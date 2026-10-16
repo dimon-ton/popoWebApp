@@ -13,6 +13,7 @@ var SCHOOL_INFO_COLUMNS = [
 var CLASS_EXTRA_COLUMNS = ['homeroom_teacher_user_ids'];
 var HOLIDAY_HEADERS = ['holiday_id', 'start_date', 'end_date', 'name', 'type', 'description', 'created_by', 'updated_at'];
 var SUBJECT_GROUP_HEAD_HEADERS = ['subject_group', 'head_user_id', 'updated_by', 'updated_at'];
+var ACADEMIC_TERM_HEADERS = ['academic_year', 'semester', 'start_date', 'end_date', 'required_attendance_days', 'updated_by', 'updated_at'];
 
 // ── School Info ───────────────────────────────────────────────────────────────
 
@@ -40,26 +41,38 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
   if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
   ensureSchoolInfoSchema();
   extra = extra || {};
-  var normalizedStartDate = normalizeSchoolDateValue(semester_start_date);
-  if (semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
-  var attendanceDays = required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10);
-  if (attendanceDays !== '' && (!isFinite(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
+  // The single school-wide calendar was replaced by per-semester calendars.
+  // Keep callers that still submit the legacy values working, while callers
+  // that pass null preserve existing values for backward-compatible fallback.
+  var preserveLegacyStartDate = semester_start_date === null || semester_start_date === undefined;
+  var preserveLegacyAttendanceDays = required_attendance_days === null || required_attendance_days === undefined;
+  var normalizedStartDate = preserveLegacyStartDate ? null : normalizeSchoolDateValue(semester_start_date);
+  if (!preserveLegacyStartDate && semester_start_date && !normalizedStartDate) throw new Error('รูปแบบวันเปิดภาคเรียนไม่ถูกต้อง');
+  var attendanceDays = preserveLegacyAttendanceDays ? null : (required_attendance_days === '' ? '' : parseInt(required_attendance_days, 10));
+  if (!preserveLegacyAttendanceDays && attendanceDays !== '' && (!isFinite(attendanceDays) || attendanceDays < 1 || attendanceDays > 260)) {
     throw new Error('จำนวนวันเรียนต้องอยู่ระหว่าง 1 ถึง 260');
   }
 
   // SchoolInfo always has at most one data row (row 2); overwrite it directly.
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
   try {
     var sheet = getSheet('SchoolInfo');
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var existing = {};
+    if (sheet.getLastRow() >= 2) {
+      var existingValues = sheet.getRange(2, 1, 1, headers.length).getValues()[0];
+      headers.forEach(function(header, index) { existing[header] = existingValues[index]; });
+    }
+    var legacyStartDate = preserveLegacyStartDate ? (existing.semester_start_date || '') : normalizedStartDate;
+    var legacyAttendanceDays = preserveLegacyAttendanceDays ? (existing.required_attendance_days || '') : attendanceDays;
     var rowObj = {
       school_name: school_name,
       district: district,
       province: province,
       academic_year: academic_year,
-      semester_start_date: normalizedStartDate,
-      required_attendance_days: attendanceDays,
+      semester_start_date: legacyStartDate,
+      required_attendance_days: legacyAttendanceDays,
       semester: extra.semester || '',
       school_address: extra.school_address || '',
       phone_number: extra.phone_number || '',
@@ -81,7 +94,7 @@ function serverSaveSchoolInfo(token, school_name, district, province, academic_y
     if (startDateCol !== -1) {
       var startDateCell = sheet.getRange(2, startDateCol + 1);
       startDateCell.setNumberFormat('@');
-      startDateCell.setValue(normalizedStartDate);
+      startDateCell.setValue(legacyStartDate);
     }
   } finally {
     lock.releaseLock();
@@ -135,6 +148,175 @@ function normalizeSchoolDateValue(value) {
   var date = new Date(year, month - 1, day);
   if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
   return match[1] + '-' + match[2] + '-' + match[3];
+}
+
+// AcademicTerms is additive: legacy SchoolInfo attendance fields remain intact
+// and are only used by the attendance resolver for the matching current term.
+function ensureAcademicTermsSchema_() {
+  var id = PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID');
+  var ss = SpreadsheetApp.openById(id);
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    ensureTab(ss, 'AcademicTerms', ACADEMIC_TERM_HEADERS);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function normalizeAcademicTermInput_(academicYear, input) {
+  input = input || {};
+  var semester = String(input.semester || '').trim();
+  if (semester !== '1' && semester !== '2') throw new Error('ภาคเรียนต้องเป็น 1 หรือ 2');
+  var start = normalizeSchoolDateValue(input.start_date);
+  var end = normalizeSchoolDateValue(input.end_date);
+  var daysText = String(input.required_attendance_days === undefined ? '' : input.required_attendance_days).trim();
+  if (!start && !end && !daysText) return { academic_year: academicYear, semester: semester, blank: true };
+  if (!start || !end) throw new Error('กรุณากำหนดวันเริ่มต้นและวันสิ้นสุดของภาคเรียนที่ ' + semester);
+  if (end < start) throw new Error('วันสิ้นสุดภาคเรียนที่ ' + semester + ' ต้องไม่ก่อนวันเริ่มต้น');
+  var days = daysText === '' ? '' : Number(daysText);
+  if (days !== '' && (!Number.isSafeInteger(days) || days < 1 || days > 130)) {
+    throw new Error('จำนวนวันเรียนต่อภาคเรียนต้องอยู่ระหว่าง 1 ถึง 130 วัน');
+  }
+  return {
+    academic_year: academicYear, semester: semester,
+    start_date: start, end_date: end, required_attendance_days: days
+  };
+}
+
+function getAcademicTermsSettings(token, academic_year) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  ensureAcademicTermsSchema_();
+  var school = getSchoolInfo() || {};
+  var year = String(academic_year || school.academic_year || '').trim();
+  var bySemester = {};
+  dbGetAll('AcademicTerms').forEach(function(row) {
+    if (String(row.academic_year) !== year) return;
+    var semester = String(row.semester);
+    if (semester !== '1' && semester !== '2') return;
+    bySemester[semester] = {
+      academic_year: year,
+      semester: semester,
+      start_date: normalizeSchoolDateValue(row.start_date),
+      end_date: normalizeSchoolDateValue(row.end_date),
+      required_attendance_days: row.required_attendance_days === '' ? '' : Number(row.required_attendance_days)
+    };
+  });
+  return {
+    academic_year: year,
+    terms: ['1', '2'].map(function(semester) {
+      return bySemester[semester] || { academic_year: year, semester: semester, start_date: '', end_date: '', required_attendance_days: '' };
+    })
+  };
+}
+
+// Suggest an inclusive term end date from a requested count of school days.
+// Weekends and configured Holidays are excluded, matching attendance counting.
+function getAcademicTermSuggestedEndDate(token, start_date, required_attendance_days) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var start = normalizeSchoolDateValue(start_date);
+  var days = Number(required_attendance_days);
+  if (!start) throw new Error('กรุณากำหนดวันเริ่มต้นก่อน');
+  if (!Number.isSafeInteger(days) || days < 1 || days > 130) {
+    throw new Error('จำนวนวันเรียนต่อภาคเรียนต้องอยู่ระหว่าง 1 ถึง 130 วัน');
+  }
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(start);
+  var cursor = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  var holidays = getHolidayDateSet();
+  var counted = 0;
+  while (counted < days) {
+    var iso = cursor.getFullYear() + '-' + ('0' + (cursor.getMonth() + 1)).slice(-2) + '-' + ('0' + cursor.getDate()).slice(-2);
+    var weekday = cursor.getDay();
+    if (weekday !== 0 && weekday !== 6 && !holidays[iso]) counted++;
+    if (counted === days) return iso;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return '';
+}
+
+// Count inclusive school days for a selected term boundary. This is the
+// inverse of getAcademicTermSuggestedEndDate and uses the same calendar rules.
+function getAcademicTermSuggestedAttendanceDays(token, start_date, end_date) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var start = normalizeSchoolDateValue(start_date);
+  var end = normalizeSchoolDateValue(end_date);
+  if (!start || !end) throw new Error('กรุณากำหนดวันเริ่มต้นและวันสิ้นสุดก่อน');
+  if (end < start) throw new Error('วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น');
+  var startMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(start);
+  var endMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(end);
+  var cursor = new Date(Number(startMatch[1]), Number(startMatch[2]) - 1, Number(startMatch[3]));
+  var last = new Date(Number(endMatch[1]), Number(endMatch[2]) - 1, Number(endMatch[3]));
+  var holidays = getHolidayDateSet();
+  var counted = 0;
+  while (cursor.getTime() <= last.getTime()) {
+    var iso = cursor.getFullYear() + '-' + ('0' + (cursor.getMonth() + 1)).slice(-2) + '-' + ('0' + cursor.getDate()).slice(-2);
+    var weekday = cursor.getDay();
+    if (weekday !== 0 && weekday !== 6 && !holidays[iso]) counted++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return counted;
+}
+
+function serverSaveAcademicTerms(token, academic_year, terms) {
+  var session = getSession(token);
+  if (!session || session.role !== 'admin') throw new Error('ไม่มีสิทธิ์');
+  var year = String(academic_year || '').trim();
+  if (!/^\d{4}$/.test(year)) throw new Error('กรุณาระบุปีการศึกษาเป็นตัวเลข 4 หลัก');
+  if (!Array.isArray(terms)) throw new Error('ข้อมูลปฏิทินภาคเรียนไม่ถูกต้อง');
+  var normalized = terms.map(function(item) { return normalizeAcademicTermInput_(year, item); });
+  var bySemester = {};
+  var submittedSemesters = {};
+  normalized.forEach(function(item) {
+    if (bySemester[item.semester]) throw new Error('ข้อมูลภาคเรียนซ้ำกัน');
+    bySemester[item.semester] = item;
+    submittedSemesters[item.semester] = true;
+  });
+  ensureAcademicTermsSchema_();
+  dbGetAll('AcademicTerms').forEach(function(row) {
+    var semester = String(row.semester);
+    if (String(row.academic_year) !== year || bySemester[semester] || (semester !== '1' && semester !== '2')) return;
+    bySemester[semester] = normalizeAcademicTermInput_(year, row);
+  });
+  var first = bySemester['1'];
+  var second = bySemester['2'];
+  if (first && second && !first.blank && !second.blank && first.start_date <= second.end_date && second.start_date <= first.end_date) {
+    throw new Error('ช่วงวันที่ของภาคเรียนที่ 1 และ 2 ต้องไม่ทับซ้อนกัน');
+  }
+
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('Could not acquire lock');
+  try {
+    var sheet = getSheet('AcademicTerms');
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var yearCol = headers.indexOf('academic_year');
+    var semesterCol = headers.indexOf('semester');
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][yearCol]) === year && submittedSemesters[String(data[i][semesterCol])]) sheet.deleteRow(i + 1);
+    }
+    var now = new Date().toISOString();
+    normalized.filter(function(item) { return !item.blank; }).forEach(function(item) {
+      var record = {
+        academic_year: year, semester: item.semester, start_date: item.start_date,
+        end_date: item.end_date, required_attendance_days: item.required_attendance_days,
+        updated_by: session.user_id, updated_at: now
+      };
+      var rowNumber = sheet.getLastRow() + 1;
+      var values = headers.map(function(header) { return record[header] === undefined ? '' : record[header]; });
+      var startCol = headers.indexOf('start_date') + 1;
+      var endCol = headers.indexOf('end_date') + 1;
+      if (startCol > 0) sheet.getRange(rowNumber, startCol).setNumberFormat('@');
+      if (endCol > 0) sheet.getRange(rowNumber, endCol).setNumberFormat('@');
+      sheet.getRange(rowNumber, 1, 1, headers.length).setValues([values]);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  appendAuditLog(session.user_id, 'AcademicTerms', year, null, normalized);
+  return getAcademicTermsSettings(token, year);
 }
 
 // ── Subject Group Heads ──────────────────────────────────────────────────────
@@ -811,7 +993,7 @@ function serverSaveWeights(token, rows) {
   }
 
   ensureColumns('SubjectWeights', ['class_id']);
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
   try {
     var subjectMap = {};
@@ -933,7 +1115,7 @@ function serverImportSubjectsCSV(token, rows) {
   var auditRows = [];
 
   // Process rows inside a transaction/lock
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('ไม่สามารถล็อกระบบฐานข้อมูลได้ กรุณาลองใหม่ภายหลัง');
 
   try {
