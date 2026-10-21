@@ -441,6 +441,7 @@ function pageReferenceCover(d, n) {
   var charSummary = qualitySummaryCells(d.char_dist || []);
   var rtwSummary = qualitySummaryCells(d.rtw_dist || []);
   var devCounts = d.dev_counts || {};
+  var specialGradeCounts = d.special_grade_counts || {};
   var totalForPct = Number(d.total_students || studentRows(d).length || 0);
   var gradeKeys = ['4','3.5','3','2.5','2','1.5','1','0'];
   var gradeHeader = gradeKeys.map(function(g) { return '<th>' + g + '</th>'; }).join('');
@@ -465,8 +466,8 @@ function pageReferenceCover(d, n) {
     '</div>' +
     '<div style="fon  t-weight:700;font-size:20px;margin-bottom:1mm">สรุปผลการประเมิน</div>' +
     '<table class="report-table form-summary-table"><thead><tr><th rowspan="2" style="width:28mm">จำนวนนักเรียน</th><th colspan="8">ระดับผลการเรียน</th><th colspan="2" style="width:34mm">กิจกรรมพัฒนาผู้เรียน</th><th colspan="2">ผลการประเมิน</th></tr><tr>' + gradeHeader + '<th>ผ่าน</th><th>ไม่ผ่าน</th><th>ร</th><th>มส</th></tr></thead>' +
-    '<tbody><tr><td>' + num(totalForPct) + '</td>' + countRow + '<td>' + num(devCounts['ผ่าน'] || 0) + '</td><td>' + num(devCounts['ไม่ผ่าน'] || 0) + '</td><td>' + num(devCounts['ร'] || 0) + '</td><td>' + num(devCounts['มส'] || 0) + '</td></tr>' +
-    '<tr><td class="bold">คิดเป็นร้อยละ</td>' + pctRow + '<td>' + num(percentOf(devCounts['ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ไม่ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ร'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['มส'] || 0, totalForPct)) + '</td></tr></tbody></table>' +
+    '<tbody><tr><td>' + num(totalForPct) + '</td>' + countRow + '<td>' + num(devCounts['ผ่าน'] || 0) + '</td><td>' + num(devCounts['ไม่ผ่าน'] || 0) + '</td><td>' + num(specialGradeCounts['ร'] || 0) + '</td><td>' + num(specialGradeCounts['มส'] || 0) + '</td></tr>' +
+    '<tr><td class="bold">คิดเป็นร้อยละ</td>' + pctRow + '<td>' + num(percentOf(devCounts['ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(devCounts['ไม่ผ่าน'] || 0, totalForPct)) + '</td><td>' + num(percentOf(specialGradeCounts['ร'] || 0, totalForPct)) + '</td><td>' + num(percentOf(specialGradeCounts['มส'] || 0, totalForPct)) + '</td></tr></tbody></table>' +
     '<div class="report-grid" style="margin-top:6mm">' +
       '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินคุณลักษณะอันพึงประสงค์</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + charSummary.counts + '</tr><tr>' + charSummary.pcts + '</tr></tbody></table>' +
       '<table class="report-table"><thead><tr><th colspan="4">ผลการประเมินการอ่านคิดวิเคราะห์และเขียน</th></tr><tr><th>3 = ดีเยี่ยม</th><th>2 = ดี</th><th>1 = ผ่าน</th><th>0 = ไม่ผ่าน</th></tr></thead><tbody><tr>' + rtwSummary.counts + '</tr><tr>' + rtwSummary.pcts + '</tr></tbody></table>' +
